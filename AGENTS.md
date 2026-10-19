@@ -31,3 +31,14 @@ Relative symlinks couple the checkouts (`mkct/source/{config,heom.py,library/...
   `.opencode` or `opencode.json`.
 - `bibliography/` (references and former-work code) and `admin/` are **workspace-level data**, outside
   both repositories; keep them here, not inside `mkct/` or `heomXdmrg-spin_boson/`.
+
+## Status check
+
+After any change (and before reporting), check and report all three checkouts:
+
+    git -C oqs                  status -sb
+    git -C mkct                 status -sb
+    git -C heomXdmrg-spin_boson status -sb
+
+A settled state shows `## main...origin/main` with HEAD == origin/main for each; call out a dirty
+tree (and whose change it is) and any unpushed commit.  The full rule is in the `repo-rules` skill.

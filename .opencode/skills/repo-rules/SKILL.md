@@ -67,6 +67,14 @@ Triage pull requests:
   change and its checks, summarize, and ask the user before approving or merging; never merge on
   your own.
 
+### Status check
+
+Before reporting, run `git status -sb` in every checkout of the workspace (the root and each
+repository) and state, for each: the branch, whether `HEAD == origin/main`, and whether the tree is
+dirty.  A settled state is `## main...origin/main` with `HEAD == origin/main`.  Call out uncommitted
+changes (and whether they are the user's or the agent's) and any unpushed commit; never "tidy" the
+index to make it look clean.
+
 ## LaTeX writing style
 
 - Impersonal prose (no first-person "we"); prefer "detailed workflow" over "by hand".

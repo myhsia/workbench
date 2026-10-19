@@ -2,16 +2,16 @@
 
 This directory holds two related repositories:
 
-- `mkct/` — the MKCT manuscript code. Its full guide is `mkct/AGENTS.md`.
+- `mkct-oqs/` — the MKCT manuscript code. Its full guide is `mkct-oqs/AGENTS.md`.
 - `heomXdmrg-spin_boson/` — the public companion repository (shared config / HEOM / library
   files and the MPS/tDMRG reference). Its guide is `heomXdmrg-spin_boson/AGENTS.md`.
 
-Relative symlinks couple the checkouts (`mkct/source/{config,heom.py,library/...}` ->
+Relative symlinks couple the checkouts (`mkct-oqs/source/{config,heom.py,library/...}` ->
 `../heomXdmrg-spin_boson/source/...`), so the two must stay siblings here.
 
 ## Working here
 
-- Before touching a project, read and follow that project's own guide (`mkct/AGENTS.md` or
+- Before touching a project, read and follow that project's own guide (`mkct-oqs/AGENTS.md` or
   `heomXdmrg-spin_boson/AGENTS.md`); those are authoritative.
 - Run git inside the project directory (`cd mkct` or `cd heomXdmrg-spin_boson`); `oqs/` itself is
   not a repository.
@@ -26,11 +26,11 @@ Relative symlinks couple the checkouts (`mkct/source/{config,heom.py,library/...
   and `network-access`.
 - `.opencode/` and `opencode.json` at this root belong to the **workspace**, not to either repository:
   the inner skills/scripts (HPC-update, session hygiene, the daily `update-due.sh`) and the
-  permissions/compaction config.  The physics guide is `mkct/.opencode/skills/SKILL.md` (pointed
-  to by `mkct/AGENTS.md`); this workspace keeps no link to it.  Neither repository carries its own
+  permissions/compaction config.  The physics guide is `mkct-oqs/.opencode/skills/SKILL.md` (pointed
+  to by `mkct-oqs/AGENTS.md`); this workspace keeps no link to it.  Neither repository carries its own
   `.opencode` or `opencode.json`.
 - `bibliography/` (references and former-work code) and `admin/` are **workspace-level data**, outside
-  both repositories; keep them here, not inside `mkct/` or `heomXdmrg-spin_boson/`.
+  both repositories; keep them here, not inside `mkct-oqs/` or `heomXdmrg-spin_boson/`.
 
 ## Status check
 

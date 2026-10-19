@@ -36,9 +36,9 @@ Relative symlinks couple the checkouts (`mkct-oqs/source/{config,heom.py,library
 
 After any change (and before reporting), check and report all three checkouts:
 
-    git -C oqs                  status -sb
+    git -C oqs                    status -sb
     git -C mkct-oqs               status -sb
-    git -C heomXdmrg-spin_boson status -sb
+    git -C heomXdmrg-spin_boson   status -sb
 
 A settled state shows `## main...origin/main` with HEAD == origin/main for each; call out a dirty
 tree (and whose change it is) and any unpushed commit.  The full rule is in the `repo-rules` skill.

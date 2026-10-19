@@ -15,9 +15,12 @@ Relative symlinks couple the checkouts (`mkct/source/{config,heom.py,library/...
   `heomXdmrg-spin_boson/AGENTS.md`); those are authoritative.
 - Run git inside the project directory (`cd mkct` or `cd heomXdmrg-spin_boson`); `oqs/` itself is
   not a repository.
-- The shared rules from `mkct/AGENTS.md` still apply: preserve the user's uncommitted changes and
-  staging, commit only when asked, keep the guides in sync, never put secrets or addresses in
-  commits.
+- The shared rules in the workspace `repo-rules` skill still apply: preserve the user's uncommitted
+  changes and staging, commit only when asked, keep the guides in sync, never put secrets or
+  addresses in commits.
+- Shared conventions for both projects (repo etiquette, Python coding style, git/PR workflow, LaTeX
+  writing and source style, tooling/upkeep, local/CI parity) are in the workspace `repo-rules` skill
+  (`.opencode/skills/repo-rules/SKILL.md`); the project guides keep only their specific rules.
 - Session upkeep uses the `session-hygiene` skill (keep sessions whole; branch into a new session
   for a new topic; `type(things): …` titles); config/upstream upkeep uses `opencode-hpc-update`
   and `network-access`.

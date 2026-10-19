@@ -26,8 +26,8 @@ Relative symlinks couple the checkouts (`mkct/source/{config,heom.py,library/...
   and `network-access`.
 - `.opencode/` and `opencode.json` at this root belong to the **workspace**, not to either repository:
   the inner skills/scripts (HPC-update, session hygiene, the daily `update-due.sh`) and the
-  permissions/compaction config.  The physics guide `.opencode/skills/SKILL.md` is a link to
-  `mkct/.opencode/skills/SKILL.md`, which stays versioned in the private repo.  Neither repository
-  carries its own `.opencode` or `opencode.json`.
+  permissions/compaction config.  The physics guide is `mkct/.opencode/skills/SKILL.md` (pointed
+  to by `mkct/AGENTS.md`); this workspace keeps no link to it.  Neither repository carries its own
+  `.opencode` or `opencode.json`.
 - `bibliography/` (references and former-work code) and `admin/` are **workspace-level data**, outside
   both repositories; keep them here, not inside `mkct/` or `heomXdmrg-spin_boson/`.

@@ -7,7 +7,6 @@
 
 # Local-only workspace state
 /.opencode/.update-check
-/.opencode/skills/SKILL.md
 
 # macOS metadata (any depth)
 **/.DS_Store

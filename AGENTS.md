@@ -6,8 +6,8 @@ This directory holds two related repositories:
 - `heomXdmrg-spin_boson/` — the public companion repository (shared config / HEOM / library
   files and the MPS/tDMRG reference). Its guide is `heomXdmrg-spin_boson/AGENTS.md`.
 
-Relative symlinks couple the checkouts (`mkct/source/...` -> `../heomXdmrg-spin_boson/source/...`,
-and `heomXdmrg-spin_boson/.opencode` -> `../mkct/.opencode`), so the two must stay siblings here.
+Relative symlinks couple the checkouts (`mkct/source/{config,heom.py,library/...}` ->
+`../heomXdmrg-spin_boson/source/...`), so the two must stay siblings here.
 
 ## Working here
 
@@ -23,3 +23,5 @@ and `heomXdmrg-spin_boson/.opencode` -> `../mkct/.opencode`), so the two must st
   and `network-access`.
 - The `.opencode/` and `opencode.json` entries at this root are symlinks into `mkct/`, so skills,
   scripts, permissions, and compaction apply to sessions opened in `oqs/` as well.
+- `bibliography/` (references and former-work code) and `admin/` are **workspace-level data**, outside
+  both repositories; keep them here, not inside `mkct/` or `heomXdmrg-spin_boson/`.

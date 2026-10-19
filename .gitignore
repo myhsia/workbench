@@ -1,0 +1,10 @@
+# The workspace root tracks only the OpenCode setup and this guide.
+/*
+!/.gitignore
+!/.opencode/
+!/opencode.json
+!/AGENTS.md
+
+# Local-only workspace state
+/.opencode/.update-check
+/.opencode/skills/SKILL.md

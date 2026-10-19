@@ -21,7 +21,10 @@ Relative symlinks couple the checkouts (`mkct/source/{config,heom.py,library/...
 - Session upkeep uses the `session-hygiene` skill (keep sessions whole; branch into a new session
   for a new topic; `type(things): …` titles); config/upstream upkeep uses `opencode-hpc-update`
   and `network-access`.
-- The `.opencode/` and `opencode.json` entries at this root are symlinks into `mkct/`, so skills,
-  scripts, permissions, and compaction apply to sessions opened in `oqs/` as well.
+- `.opencode/` and `opencode.json` at this root belong to the **workspace**, not to either repository:
+  the inner skills/scripts (HPC-update, session hygiene, the daily `update-due.sh`) and the
+  permissions/compaction config.  The physics guide `.opencode/skills/SKILL.md` is a link to
+  `mkct/.opencode/skills/SKILL.md`, which stays versioned in the private repo.  Neither repository
+  carries its own `.opencode` or `opencode.json`.
 - `bibliography/` (references and former-work code) and `admin/` are **workspace-level data**, outside
   both repositories; keep them here, not inside `mkct/` or `heomXdmrg-spin_boson/`.

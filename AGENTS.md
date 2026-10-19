@@ -13,7 +13,7 @@ Relative symlinks couple the checkouts (`mkct-oqs/source/{config,heom.py,library
 
 - Before touching a project, read and follow that project's own guide (`mkct-oqs/AGENTS.md` or
   `heomXdmrg-spin_boson/AGENTS.md`); those are authoritative.
-- Run git inside the project directory (`cd mkct` or `cd heomXdmrg-spin_boson`); `oqs/` itself is
+- Run git inside the project directory (`cd mkct-oqs` or `cd heomXdmrg-spin_boson`); `oqs/` itself is
   not a repository.
 - The shared rules in the workspace `repo-rules` skill still apply: preserve the user's uncommitted
   changes and staging, commit only when asked, keep the guides in sync, never put secrets or
@@ -37,7 +37,7 @@ Relative symlinks couple the checkouts (`mkct-oqs/source/{config,heom.py,library
 After any change (and before reporting), check and report all three checkouts:
 
     git -C oqs                  status -sb
-    git -C mkct                 status -sb
+    git -C mkct-oqs               status -sb
     git -C heomXdmrg-spin_boson status -sb
 
 A settled state shows `## main...origin/main` with HEAD == origin/main for each; call out a dirty

@@ -1,6 +1,6 @@
 ---
 name: session-hygiene
-description: Keep OpenCode sessions under the context limit by keeping each session whole and opening a new branch session to continue (a little overlap is fine); compact or split only on explicit request; never edit the session store by hand.
+description: OpenCode session management — remove rubbish, enforce the type(things) title format, and move off-topic content to the right session; records the procedure, never the content of individual sessions.
 license: MIT
 compatibility: opencode
 metadata:
@@ -8,92 +8,48 @@ metadata:
   scope: session store
 ---
 
-# Session hygiene (avoid context limits)
+# Session hygiene (OpenCode session management)
 
-Use when sessions grow long, when the context window bites, or when asked to tidy, rename, continue,
-or split sessions in the current project.
+How to manage OpenCode sessions — the procedure, not a catalog of what any session said. Re-inventory
+the live sessions on every run; never hard-code session ids, titles, sizes, or topics here.
 
-## Hard rule
+## Standard routine
 
-Never edit the session store by hand. `~/.local/share/opencode/opencode.db`, tables `session_v2`
-and `session_message`, must be managed through OpenCode itself. A one-off "prune" script that
-rewrote `session_message.data` dropped the required `model` field and made every session open empty;
-recovering it required re-adding `model` from `session_v2.model` and `VACUUM`.
+When asked to "make up" / tidy the sessions, do these three, in order:
+
+1. **Remove rubbish.** Rebuild each session (*Rebuilding*) with the bulky, low-information parts
+   dropped: truncate `reasoning`, remove tool `file`/image entries and attachments **whole**, drop
+   compaction checkpoints. Keep all user/assistant text, tool commands, and tool results.
+2. **Check titles.** Every title must be `type(things): short sentence covering all items`, with
+   `type` one of `feat`, `fix`, `tune`, `refactor`, `docs`, `chore`. Rename agent auto-titles that do
+   not conform, without waiting to be asked; check titles whenever you open or list sessions.
+3. **Check categories / off-topic content.** Classify each session by theme. If a block of turns
+   clearly belongs elsewhere, move it (*Moving content*); if no session fits, create a new one with a
+   `type(things): …` title. Split only when the themes are obviously different — a little overlap
+   between sessions is fine (a bus branch line).
+
+Report the before/after sizes and the resulting ids when done.
 
 ## Inventory
 
-- List: `opencode session list` (top-level sessions, current project, newest first).
-- Size/tokens per session, read-only:
+- List: `opencode session list` (top-level, current project, newest first).
+- Size and composition, read-only:
 
   ```bash
   sqlite3 "file:$HOME/.local/share/opencode/opencode.db?mode=ro" \
-    "select count(*) msgs, session_id from session_message group by session_id order by msgs desc;"
+    "select session_id, count(*), round(sum(length(data))/1048576.0,2) from session_message group by session_id order by 2 desc;"
   ```
 
-  Or copy the DB to a temp dir and query the copy (never write the live DB while the service runs).
+  Never write the live DB; query it `mode=ro`.
 
-## Decide per session
+## Hard rule
 
-- **Long -> branch.** When a topic gets long, open a **new** session (a branch, like a bus 支线) for the
-  continuation and write a short handoff line. A little duplication of context between the main
-  session and its branch is fine — prefer that over shrinking the original.
-- **Multi-topic -> split only if obvious.** Split into parts only when the themes are clearly
-  different; otherwise keep the session whole and branch for the next topic.
-- **Do not compact by default.** See below.
-
-## Session titles
-
-Convention: `type(things): short sentence covering all items (several words)` with `type` one of
-`feat`, `fix`, `tune`, `refactor`, `docs`, `chore`. Real examples from this repository:
-
-- `chore(pltools): legends, labels, grids, and paper figures`
-- `refactor(io): moments filenames, save_time writer, fsutils, and config`
-- `feat(sf): surface hopping (FSSH/MASH) and sh.py rename`
-- `docs(repo): README, AGENTS, commits, and open items`
-
-**Every session title must follow this convention.** OpenCode auto-titles some new sessions with a
-plain description (e.g. `DMRG implementation for dynamics and correlations`, `Plot Pade orders ...`)
-that does not conform. When a session you start gets such a title, rename it to `type(things): …`
-without waiting to be asked, and check titles whenever you open or list the project's sessions.
-
-Rename with the OpenCode session-rename tool (or the TUI); keep the session id stable.
-
-## Compaction (opt-in only)
-
-- Default is **no compaction**: keep the session whole and branch instead. Compaction is the only
-  native context-reducer (`POST /api/session/{id}/compact`); it keeps the recent `keep.tokens`
-  (60000) verbatim and summarizes the rest, so it is lossy in-context. Raw messages are never
-  deleted, but there is no native un-compact.
-- V2 is checkpoint-based and ignores the V1 `prune` / `tail_turns` fields.
-
-## `/undo` is unsafe in v1-migrated sessions
-
-`/undo` (keybind `session.undo`, default `<leader>u`) is snapshot-based. Sessions created under v1 and
-migrated to v2 have assistant messages without a `snapshot` field, so `/undo` there does not stage a
-clean, reversible rollback: it removes content and leaves a `revert` mark. Native v2 sessions (every
-message carries `snapshot`) behave correctly. Identify a migrated session by its assistant messages
-lacking `snapshot` (roughly, created before the v2 era). In those, do not use `/undo`; to revise,
-revert files with `git` and continue in a new branch session.
-
-Remedy if it has already happened:
-
-- Clear the mark: `DELETE /api/session/{id}/revert` (HTTP 204) -> the hidden messages come back.
-- Re-scan: `select id from session_v2 where revert is not null;`.
-- If messages were truly removed, rebuild it (export -> import).
-
-## Branching and splitting
-
-- **Branch (preferred):** continue in a new session titled by the convention above, carrying a short
-  handoff note. Overlap with the parent is acceptable.
-- **Split (rare):** only when themes are obviously different. `POST /api/session/{id}/fork` takes
-  `{ before: <msg_id> }` and returns **one** new session (a branch, not a partition);
-  `opencode session export` / `import` can move a subset manually. Fork does not carve one session
-  into several.
+Never edit the session store by hand (`session_v2`, `session_message`). A one-off "prune" script that
+rewrote `session_message.data` dropped the required `model` field and made every session open empty;
+recovery meant re-adding `model` from `session_v2.model` and `VACUUM`. All changes go through the API
+(export / import / delete / rename / move / revert).
 
 ## Rebuilding a session (export -> prune -> import)
-
-To get an un-compacted, pruned copy without touching the store, round-trip the session through the
-export/import API:
 
 ```sh
 opencode api get /api/experimental/session/<id>/export > export.json
@@ -113,13 +69,49 @@ Pitfalls, each learned the hard way:
   drop attachments entirely.
 - **`location` goes at the top level** of the import body (`{info, messages, location: {directory}}`);
   a location only inside `info` is ignored and the copy lands in the service's default directory.
-  The CLI form is `opencode session import <file> --directory <dir>`.
 - **Compaction is irreversible in place.** `compaction.auto: false` only stops new automatic runs
-  (installed checkpoints remain; there is no un-compact). Drop the `compaction` message in the
-  payload to un-compact the copy.
-- **Export only works for an existing session**: a deleted one returns `SessionNotFoundError`
-  (HTTP 404).
-- **Verify before deleting the original**: `GET /api/session/<id>/context` returns HTTP 200, and a
-  scan shows no empty inline files. Keep the source until then, then delete it.
-- The import round-trip silently drops invalid or empty inline attachments, which is how the broken
-  copy got cleaned up after the fact.
+  (installed checkpoints remain; there is no un-compact). Drop the `compaction` message to un-compact
+  the copy.
+- **Export only works for an existing session**: a deleted one returns `SessionNotFoundError` (404).
+- **Verify before deleting the original**: `GET /api/session/<id>/context` returns HTTP 200, and a scan
+  shows no empty inline files. Keep the source until then, then delete it.
+- **Pruning the current session** creates a new id and deleting the old one ends the live
+  conversation: create the pruned copy, keep the original, switch to the new id, then delete the old.
+
+## Moving content between sessions (merge / split)
+
+There is no append API: to move turns, rebuild a **new** session from the export(s).
+
+1. Export the source session(s). The export carries message ids, not `seq`, so map the turns to move
+   by querying `session_message.seq` for the ids.
+2. Build the destination message list: the target's messages plus (or minus) the selected ids, in
+   order.
+3. Prune, assign fresh ids, and import as the destination (`info` from the target, title per
+   convention); rebuild the source without those ids if it should be trimmed.
+4. Verify both, then delete the sources. Report the new ids.
+
+`POST /api/session/{id}/fork { before: <msg_id> }` gives one branch (not a partition).
+
+## Session titles
+
+`type(things): short sentence covering all items (several words)`, `type` ∈
+`feat|fix|tune|refactor|docs|chore`. Rename via the session-rename tool; keep the id stable.
+
+## Compaction (opt-in only)
+
+Default is **no compaction**; keep the session whole and branch instead. Compaction
+(`POST /api/session/{id}/compact`) keeps `keep.tokens` verbatim and summarizes the rest — lossy
+in-context. V2 ignores the V1 `prune` / `tail_turns` fields.
+
+## `/undo` is unsafe in v1-migrated sessions
+
+`/undo` (`session.undo`) is snapshot-based; v1-migrated sessions lack the per-message `snapshot`, so
+`/undo` there removes content and leaves a `revert` mark. Do not `/undo` in those; revise files with
+`git` and branch instead. Remedy: `DELETE /api/session/{id}/revert` (HTTP 204), then rescan
+`select id from session_v2 where revert is not null;`; rebuild if rows were truly removed.
+
+## Decide per session
+
+- **Long -> branch:** continue in a new session with a short handoff line; overlap is fine.
+- **Multi-topic -> split only if the themes are obviously different.**
+- **No compaction by default.**

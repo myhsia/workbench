@@ -170,9 +170,12 @@ index to make it look clean.
   `providers` block, `package: "aisdk:@ai-sdk/openai-compatible"`, `settings.baseURL`).  The CLI
   moved under `session` (`opencode session export|import|list|delete`).  Tool names follow v2:
   `shell` (not `bash`), `subagent` (not `task`), and `read`/`edit`/`write` take `path`.
-- **Network access.**  Governed by the global `network-access` skill: try a direct connection
-  first and use the proxy address in `~/.config/opencode/service.json` → `env.HTTPS_PROXY`; only
-  when a host is blocked or times out.
+- **Network access.**  Governed by the global `network-access` skill.  Two regimes: small calls
+  (metadata, `gh api`, a few kB of JSON) go **direct** first; bulk transfers (`gh run download`
+  artifacts, release assets, big clones, `pip download`) go **through the proxy** even when the
+  direct route works, because the GitHub content network (`*.blob.core.windows.net`, where Actions
+  artifacts redirect) is throttled to tens of kB/s directly.  The address lives in
+  `~/.config/opencode/service.json` → `env.HTTPS_PROXY`; never write it into a tracked file.
 - **Daily upkeep (`opencode-hpc-update`).**  Not a scheduled job: when a user message arrives,
   quietly consult `.opencode/scripts/update-due.sh` (from the workspace root).  If it prints
   `DUE`, load the skill, refresh the config, and stamp the day with

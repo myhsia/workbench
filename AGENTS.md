@@ -33,6 +33,23 @@ Relative symlinks couple the checkouts (`mkct-oqs/source/{config,heom.py,library
 - `bibliography/` (references and former-work code) and `admin/` are **workspace-level data**, outside
   both repositories; keep them here, not inside `mkct-oqs/` or `heomXdmrg-spin_boson/`.
 
+## Network access
+
+Governed by the machine-global `network-access` skill; the proxy address is not stored here.  Read it
+at use time from `~/.config/opencode/service.json` → `env.HTTPS_PROXY`.
+
+- Small calls (metadata, `gh api`, a few kB of JSON) go **direct** first.
+- Bulk transfers (CI artifacts via `gh run download`, release assets, big clones, `pip download`) go
+  **through the proxy** even when the direct route works: the GitHub content network
+  (`*.blob.core.windows.net`, which Actions artifacts redirect to) is throttled to tens of kB/s
+  directly against ~1.3 MB/s proxied.
+- `gh` is a Go binary and honours `https_proxy`/`http_proxy`, so export them before downloading.
+
+```bash
+PROXY=$(python3 -c "import json,os;print(json.load(open(os.path.expanduser('~/.config/opencode/service.json')))['env']['HTTPS_PROXY'])")
+https_proxy="$PROXY" http_proxy="$PROXY" gh run download <run-id> -n <name> -D /tmp
+```
+
 ## Status check
 
 After any change (and before reporting), check and report all four checkouts:

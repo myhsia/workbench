@@ -1,10 +1,11 @@
 # oqs workspace
 
-This directory holds two related repositories:
+This directory holds three related repositories:
 
 - `mkct-oqs/` — the MKCT manuscript code. Its full guide is `mkct-oqs/AGENTS.md`.
 - `heomXdmrg-spin_boson/` — the public companion repository (shared config / HEOM / library
   files and the MPS/tDMRG reference). Its guide is `heomXdmrg-spin_boson/AGENTS.md`.
+- `sh-oqs/` — the public surface-hopping (FSSH) reference. Its guide is `sh-oqs/AGENTS.md`.
 
 Relative symlinks couple the checkouts (`mkct-oqs/source/{config,heom.py,library/...}` ->
 `../heomXdmrg-spin_boson/source/...`), so the two must stay siblings here.
@@ -34,11 +35,12 @@ Relative symlinks couple the checkouts (`mkct-oqs/source/{config,heom.py,library
 
 ## Status check
 
-After any change (and before reporting), check and report all three checkouts:
+After any change (and before reporting), check and report all four checkouts:
 
     git -C oqs                    status -sb
     git -C mkct-oqs               status -sb
     git -C heomXdmrg-spin_boson   status -sb
+    git -C sh-oqs                 status -sb
 
 A settled state shows `## main...origin/main` with HEAD == origin/main for each; call out a dirty
 tree (and whose change it is) and any unpushed commit.  The full rule is in the `repo-rules` skill.

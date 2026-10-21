@@ -29,7 +29,9 @@ secret inline. It lives only in `service.json`'s `env` and travels with the Open
 OpenCode (international — try direct first, fall back to the proxy from the `network-access` skill,
 `env.HTTPS_PROXY` in `~/.config/opencode/service.json`):
 
-- `opencode --version`
+- `opencode --version` (CLI) and `opencode api get /api/info` (the running service) — they can differ
+  after an upgrade; the service must be restarted by the user (`opencode service restart`) to pick up
+  a new build, and that restart ends any running session, so never do it yourself.
 - Docs <https://opencode.ai/v2/docs/> and migration guide <https://opencode.ai/v2/docs/migrate-v1>
   (note the three V2 breaking changes: plugins, server API, `cli.json`).
 

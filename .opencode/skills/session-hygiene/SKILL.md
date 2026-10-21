@@ -103,12 +103,23 @@ Default is **no compaction**; keep the session whole and branch instead. Compact
 (`POST /api/session/{id}/compact`) keeps `keep.tokens` verbatim and summarizes the rest — lossy
 in-context. V2 ignores the V1 `prune` / `tail_turns` fields.
 
-## `/undo` is unsafe in v1-migrated sessions
+## `/undo` hides content — avoid it
 
-`/undo` (`session.undo`) is snapshot-based; v1-migrated sessions lack the per-message `snapshot`, so
-`/undo` there removes content and leaves a `revert` mark. Do not `/undo` in those; revise files with
-`git` and branch instead. Remedy: `DELETE /api/session/{id}/revert` (HTTP 204), then rescan
-`select id from session_v2 where revert is not null;`; rebuild if rows were truly removed.
+`/undo` (`session.undo`) is snapshot/revert-based and is unsafe in practice:
+
+- **v1-migrated sessions** (assistant messages lack `snapshot`): `/undo` removes content and leaves a
+  `revert` mark.
+- **v2 sessions, including new ones**: `/undo` can leave the TUI unable to render earlier turns even
+  though the store still holds them (the "memory exists, nothing visible" symptom).
+
+Recovery and prevention:
+
+- Reopen/reload the session (or restart the TUI client) to re-render from the store.
+- If `session_v2.revert` is set, clear it with `DELETE /api/session/{id}/revert` (HTTP 204), then
+  rescan `select id from session_v2 where revert is not null;`. Rebuild (export -> import) if rows
+  were truly removed.
+- Prevent it: set `session.undo` to `"none"` in `~/.config/opencode/cli.json` (reload the TUI), and
+  revise with `git` plus a new branch session instead of `/undo`.
 
 ## Decide per session
 

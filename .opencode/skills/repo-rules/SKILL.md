@@ -10,7 +10,7 @@ metadata:
 
 # Shared repository conventions
 
-Workspace-level rules for every repository under `oqs/` (`mkct`, `heomXdmrg-spin_boson`, ...).
+Workspace-level rules for every repository under `oqs/` (`mkct4oqs`, `dmrg4oqs`, `sh4oqs`).
 Project-specific rules (physics, config schema, figure layout, engine details) stay in each
 repository's `AGENTS.md` and skill.
 

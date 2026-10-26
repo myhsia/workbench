@@ -37,7 +37,7 @@ The three checkouts must stay siblings here: `mkct4oqs` is canonical for the sha
 ## Network access
 
 Governed by the machine-global `network-access` skill; the proxy address is not stored here.  Read it
-at use time from `~/.config/opencode/service.json` → `env.HTTPS_PROXY`.
+at use time from `~/.config/opencode/proxy` (mode 600).
 
 - Small calls (metadata, `gh api`, a few kB of JSON) go **direct** first.
 - Bulk transfers (CI artifacts via `gh run download`, release assets, big clones, `pip download`) go
@@ -47,7 +47,7 @@ at use time from `~/.config/opencode/service.json` → `env.HTTPS_PROXY`.
 - `gh` is a Go binary and honours `https_proxy`/`http_proxy`, so export them before downloading.
 
 ```bash
-PROXY=$(python3 -c "import json,os;print(json.load(open(os.path.expanduser('~/.config/opencode/service.json')))['env']['HTTPS_PROXY'])")
+PROXY=$(cat ~/.config/opencode/proxy)
 https_proxy="$PROXY" http_proxy="$PROXY" gh run download <run-id> -n <name> -D /tmp
 ```
 

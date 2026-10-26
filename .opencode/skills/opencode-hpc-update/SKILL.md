@@ -27,7 +27,7 @@ secret inline. It lives only in `service.json`'s `env` and travels with the Open
 ## Check upstream
 
 OpenCode (international — try direct first, fall back to the proxy from the `network-access` skill,
-`env.HTTPS_PROXY` in `~/.config/opencode/service.json`):
+`~/.config/opencode/proxy`):
 
 - `opencode --version` (CLI) and `opencode api get /api/info` (the running service) — they can differ
   after an upgrade; the service must be restarted by the user (`opencode service restart`) to pick up

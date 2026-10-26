@@ -162,6 +162,11 @@ index to make it look clean.
 
 ## Tooling and upkeep
 
+- **Where to record things.**  Keep skills, docs, and workspace configuration in the workspace
+  `.opencode/` and `AGENTS.md` (they sync to GitHub).  Write to the machine-global locations
+  (`~/.config/opencode`, the shell rc) only when the change is inherently global --- the provider
+  definition, the service env (e.g. `NO_PROXY`), the terminal `cli.json` --- and keep secrets and
+  addresses out of anything that is tracked.
 - **opencode (v2).**  `opencode.json` at the workspace root is kept in strict v2 form.
   `permissions` is an ordered array of `{action, resource, effect}` rules (the `edit` guard on
   restricted paths plus the matching `shell` guard on `rm`); v2 names the shell action `shell`,
@@ -175,7 +180,7 @@ index to make it look clean.
   artifacts, release assets, big clones, `pip download`) go **through the proxy** even when the
   direct route works, because the GitHub content network (`*.blob.core.windows.net`, where Actions
   artifacts redirect) is throttled to tens of kB/s directly.  The address lives in
-  `~/.config/opencode/service.json` → `env.HTTPS_PROXY`; never write it into a tracked file.
+  `~/.config/opencode/proxy` (mode 600); never write it into a tracked file.
 - **Daily upkeep (`opencode-hpc-update`).**  Not a scheduled job: when a user message arrives,
   quietly consult `.opencode/scripts/update-due.sh` (from the workspace root).  If it prints
   `DUE`, load the skill, refresh the config, and stamp the day with

@@ -18,5 +18,6 @@
     "auto": false,
     "keep": { "tokens": 60000 },
     "buffer": 25000
-  }
+  },
+  "tool_output": { "max_lines": 500, "max_bytes": 32768 }
 }

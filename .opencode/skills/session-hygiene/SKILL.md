@@ -75,15 +75,49 @@ Pitfalls, each learned the hard way:
 - **Export only works for an existing session**: a deleted one returns `SessionNotFoundError` (404).
 - **Verify before deleting the original**: `GET /api/session/<id>/context` returns HTTP 200, and a scan
   shows no empty inline files. Keep the source until then, then delete it.
+- **Omit `info.revert`, do not set it to `null`.** The import schema expects a
+  `Session.Revert` object or the key absent; `revert: null` fails with HTTP 400
+  `InvalidRequestError: Expected Session.Revert at ["info"]["revert"]`.
 - **Pruning the current session** creates a new id and deleting the old one ends the live
   conversation: create the pruned copy, keep the original, switch to the new id, then delete the old.
 
-**Conversation-only rebuild.** When the session's value is its *instructions and decisions* rather
-than its tool transcript, keep only the `user` messages and the `assistant` messages that carry
-`text` (drop their `tool`/`reasoning` parts, and drop the `synthetic`/`idle`/`agent-switched`
-markers). The procedure belongs in the skill, not in the transcript, so this shrinks a session by an
-order of magnitude (e.g. 2.8 MB -> 0.2 MB) while keeping what the user asked for and the assistant's
-summaries. Export the full session first if the tool record might be needed.
+## Deep clean (D3, conversation-only)
+
+The default deep clean when sessions approach the context limit. Keep:
+
+- every **`user`** message verbatim (`text`; drop `files`);
+- every **`assistant` `text`** verbatim;
+- each tool call as **one line of text**: `[tool <name>] <path|command head> (<status>)`;
+- `time`, `agent`, `model`, `finish`, `cost`, `tokens` on assistant messages (`model` is required).
+
+Drop: `reasoning`, tool `state` (`input`, `content`, `metadata`), attachments/images, compaction
+messages, and every non-`user`/non-`assistant` marker (`idle`, `synthetic`, `agent-switched`,
+`model-switched`, `location-switched`, `system`, `shell`). Assistant turns left with no text are
+dropped, which removes tool-only steps.
+
+Measured: a 33.7 MB project store (24 sessions, real requests up to ~600 k tokens) becomes ~5.3 MB,
+worst session ~280 k tokens. `git` holds the code, so the dropped tool bodies are recoverable.
+
+Also cap future growth in the project config (V2 field, verified in 2.2.0):
+
+```jsonc
+"tool_output": { "max_lines": 500, "max_bytes": 32768 }
+```
+
+## Removing `/undo` traces
+
+After an `/undo` (or after a raced one), a session can keep `session_v2.revert` plus per-message
+`snapshot` keys, and the TUI then hides turns. To clean it without hand-editing the store:
+
+1. Export the session; keep a backup.
+2. `B` = `seq` of `revert.messageID`. In the export, **drop the undone block** (the messages the mark
+   hides, typically 1–2 right after `B`), but **keep any turn sent after the undo** — resolve it by
+   the first `user` message whose `seq > B` (its turn is new, not undone).
+3. Omit `info.revert` and delete every `snapshot` key from assistant messages, so `/undo` cannot fire
+   on that session again (file rollback then goes through `git`).
+4. Rebuild (fresh ids), verify, delete the original. Confirm `select count(*) from session_v2 where
+   revert is not null;` is 0 afterwards.
+
 
 ## Moving content between sessions (merge / split)
 

@@ -94,19 +94,30 @@ Keep:
 
 - every **`user`** message verbatim (`text`; drop `files`);
 - every **`assistant` `text`** verbatim;
-- each tool call rendered as **native markdown**, never truncated:
-  - `bash`/`shell` -> a fenced code block with info string `sh`, containing the **complete command
-    with its original newlines**; use a four-backtick fence when the command itself contains three;
-  - path/pattern tools -> one line of inline code, e.g. `` `read` /abs/path `` or
-    `` `grep` pattern dir ``;
-  - no `tool <name>` prefix and no status text on success; append ` -- failed` after the block only
-    when the call did not complete;
-  - never trim a target: the bulk is the tool *output*, which the category rules below remove, so
-    trimming the target saves nothing and destroys the part worth keeping;
+- every tool call as a **native tool part** (so the TUI renders a tool row, not prose):
+
+  ```json
+  { "type": "tool", "id": "<new>", "name": "shell", "executed": true,
+    "state": { "status": "completed",
+               "input": { "command": "<full command>" },
+               "content": [{ "type": "text", "text": "" }],
+               "metadata": { "status": "completed" } },
+    "time": { "created": <ms>, "ran": <ms>, "completed": <ms> } }
+  ```
+
+  - `input` keeps only the **identifier** fields: `shell`/`bash` `command`; `read`/`write`/`edit`
+    `path`; `grep` `pattern`+`path`+`include`; `glob` `pattern`+`path`; `webfetch` `url`+`format`;
+    `websearch` `query`; `skill` `name`; `execute` `code`; `todowrite` `todos`; `question` `questions`.
+  - **drop** `state.content` payload (the output), `state.metadata` diffs/diagnostics, and the file
+    **bodies**: `write.input.content`, `edit.input.oldString`/`newString` (the code is in `git`).
+  - import schema requires all of: `state.content` **with at least one item** (use
+    `[{"type":"text","text":""}]`), `state.metadata`, and `time.created/ran/completed`. For
+    `status: "error"` also set `state.error = {"type":"tool.execution","message":"<text>"}`.
+  - never trim `input` values.
 - `time`, `agent`, `model`, `finish`, `cost`, `tokens` on assistant messages (`model` is required).
 
-Drop: `reasoning`, tool `state` (`input`, `content`, `metadata`), attachments/images, compaction
-messages, and every non-`user`/non-`assistant` marker (`idle`, `synthetic`, `agent-switched`,
+Drop: `reasoning`, the tool **outputs** (`state.content`, `state.metadata`) and file bodies,
+attachments/images, compaction messages, and every non-`user`/non-`assistant` marker (`idle`, `synthetic`, `agent-switched`,
 `model-switched`, `location-switched`, `system`, `shell`). Assistant turns left with no text are
 dropped, which removes tool-only steps.
 

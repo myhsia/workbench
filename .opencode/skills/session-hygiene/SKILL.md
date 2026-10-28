@@ -94,10 +94,15 @@ Keep:
 
 - every **`user`** message verbatim (`text`; drop `files`);
 - every **`assistant` `text`** verbatim;
-- each tool call as **one line of text**: `[tool <name>] <target> (<status>)`, with the **complete**
-  target, never truncated: the full command, or the full path/pattern/query (newlines collapsed to
-  spaces). Never trim text: the bulk is the tool *output*, which the category rules below remove;
-  trimming the target saves nothing and destroys the part worth keeping;
+- each tool call rendered as **native markdown**, never truncated:
+  - `bash`/`shell` -> a fenced code block with info string `sh`, containing the **complete command
+    with its original newlines**; use a four-backtick fence when the command itself contains three;
+  - path/pattern tools -> one line of inline code, e.g. `` `read` /abs/path `` or
+    `` `grep` pattern dir ``;
+  - no `tool <name>` prefix and no status text on success; append ` -- failed` after the block only
+    when the call did not complete;
+  - never trim a target: the bulk is the tool *output*, which the category rules below remove, so
+    trimming the target saves nothing and destroys the part worth keeping;
 - `time`, `agent`, `model`, `finish`, `cost`, `tokens` on assistant messages (`model` is required).
 
 Drop: `reasoning`, tool `state` (`input`, `content`, `metadata`), attachments/images, compaction

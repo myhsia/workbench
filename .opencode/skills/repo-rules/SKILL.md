@@ -53,6 +53,14 @@ never commit secrets or `output/` artifacts (gitignored).  Never restage the use
 GitHub endpoints).  Local history operations (`git add`/`commit`/`push`) still use `git`; its remote
 auth is backed by `gh` (run `gh auth setup-git` if push auth ever fails).
 
+### `gh api` request bodies
+
+`-f`/`--raw-field` sends the value **literally**, so `-f body=@file.md` posts the 16-byte string
+`@file.md` (this happened once on a public issue). To read a value from a file use `-F`/`--field`
+(`-F body=@file.md`), or pass a whole JSON body with `--input file.json`. After creating or editing
+an issue/comment/release, print it back once (`--jq '.body'`, `--jq '.html_url'`) to confirm it
+expanded before reporting success.
+
 ### Push and pull-request status
 
 After every push, check the result and report it: `gh run list --limit 3`, or `gh run watch <id>`

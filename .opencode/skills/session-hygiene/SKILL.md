@@ -78,6 +78,13 @@ Pitfalls, each learned the hard way:
 - **Pruning the current session** creates a new id and deleting the old one ends the live
   conversation: create the pruned copy, keep the original, switch to the new id, then delete the old.
 
+**Conversation-only rebuild.** When the session's value is its *instructions and decisions* rather
+than its tool transcript, keep only the `user` messages and the `assistant` messages that carry
+`text` (drop their `tool`/`reasoning` parts, and drop the `synthetic`/`idle`/`agent-switched`
+markers). The procedure belongs in the skill, not in the transcript, so this shrinks a session by an
+order of magnitude (e.g. 2.8 MB -> 0.2 MB) while keeping what the user asked for and the assistant's
+summaries. Export the full session first if the tool record might be needed.
+
 ## Moving content between sessions (merge / split)
 
 There is no append API: to move turns, rebuild a **new** session from the export(s).
@@ -103,23 +110,28 @@ Default is **no compaction**; keep the session whole and branch instead. Compact
 (`POST /api/session/{id}/compact`) keeps `keep.tokens` verbatim and summarizes the rest — lossy
 in-context. V2 ignores the V1 `prune` / `tail_turns` fields.
 
-## `/undo` hides content — avoid it
+## Deleting or hiding turns
 
-`/undo` (`session.undo`) is snapshot/revert-based and is unsafe in practice:
+`/undo` (`session.undo`) only **hides** turns — it sets `session_v2.revert` and does not delete
+anything. It is not a delete tool. Pick the mechanism that matches the intent:
 
-- **v1-migrated sessions** (assistant messages lack `snapshot`): `/undo` removes content and leaves a
-  `revert` mark.
-- **v2 sessions, including new ones**: `/undo` can leave the TUI unable to render earlier turns even
-  though the store still holds them (the "memory exists, nothing visible" symptom).
+- **Delete turns (permanent).** Export the session first as a backup, then stage at the **first
+  message to remove** and commit:
 
-Recovery and prevention:
+  ```sh
+  POST /api/session/{id}/revert/stage  {"messageID": "<first to remove>", "files": false}
+  POST /api/session/{id}/revert/commit
+  ```
 
-- Reopen/reload the session (or restart the TUI client) to re-render from the store.
-- If `session_v2.revert` is set, clear it with `DELETE /api/session/{id}/revert` (HTTP 204), then
-  rescan `select id from session_v2 where revert is not null;`. Rebuild (export -> import) if rows
-  were truly removed.
-- Prevent it: set `session.undo` to `"none"` in `~/.config/opencode/cli.json` (reload the TUI), and
-  revise with `git` plus a new branch session instead of `/undo`.
+  The commit deletes `seq >= boundary`, so stage at the first turn to drop, **never** at the turn you
+  want to keep (staging one message earlier would delete that message too). `files: false` leaves the
+  working tree alone. (Alternative: rebuild via export -> import without those turns — new id.)
+- **Un-hide a stray `/undo`.** `DELETE /api/session/{id}/revert` (HTTP 204), then rescan
+  `select id from session_v2 where revert is not null;`.
+- **In the TUI**, avoid `/undo`: v1-migrated sessions lack `snapshot`s (it drops content), and v2
+  sessions can leave the TUI unable to render earlier turns even though the store keeps them
+  (reopen/reload to re-render). `session.undo` is `"none"` in `cli.json`, though the command palette
+  can still reach it.
 
 ## Decide per session
 

@@ -83,11 +83,22 @@ Pitfalls, each learned the hard way:
 
 ## Deep clean (D3, conversation-only)
 
-The default deep clean when sessions approach the context limit. Keep:
+The default deep clean when sessions approach the context limit.
+
+**Export a backup of every session first** (`~/.local/share/opencode/session-backups/<id>.json`,
+mode 600) and keep it until the rebuild is verified. The rebuilt rows replace the originals
+in place and are **not** recoverable afterwards: deleting the rebuilt session and re-scanning
+the database finds only older generations, not the immediately previous payloads.
+
+Keep:
 
 - every **`user`** message verbatim (`text`; drop `files`);
 - every **`assistant` `text`** verbatim;
-- each tool call as **one line of text**: `[tool <name>] <path|command head> (<status>)`;
+- each tool call as **one line of text**: `[tool <name>] <target> (<status>)`, where
+  - **`bash`/`shell`: the complete command**, newlines collapsed to spaces, **not truncated** (the
+    command is what future-you re-runs);
+  - **path/pattern tools** (`read`/`write`/`edit`/`grep`/`glob`/`ls`): the path or pattern, truncated
+    to ~110 characters (the body is in `git`);
 - `time`, `agent`, `model`, `finish`, `cost`, `tokens` on assistant messages (`model` is required).
 
 Drop: `reasoning`, tool `state` (`input`, `content`, `metadata`), attachments/images, compaction

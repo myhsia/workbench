@@ -112,8 +112,8 @@ in-context. V2 ignores the V1 `prune` / `tail_turns` fields.
 
 ## Deleting or hiding turns
 
-`/undo` (`session.undo`) only **hides** turns — it sets `session_v2.revert` and does not delete
-anything. It is not a delete tool. Pick the mechanism that matches the intent:
+`/undo` (`session.undo`) sets `session_v2.revert`; it never deletes rows, and when it races (next
+section) it does not even reliably hide them. Pick the mechanism that matches the intent:
 
 - **Delete turns (permanent).** Export the session first as a backup, then stage at the **first
   message to remove** and commit:
@@ -128,10 +128,33 @@ anything. It is not a delete tool. Pick the mechanism that matches the intent:
   working tree alone. (Alternative: rebuild via export -> import without those turns — new id.)
 - **Un-hide a stray `/undo`.** `DELETE /api/session/{id}/revert` (HTTP 204), then rescan
   `select id from session_v2 where revert is not null;`.
-- **In the TUI**, avoid `/undo`: v1-migrated sessions lack `snapshot`s (it drops content), and v2
-  sessions can leave the TUI unable to render earlier turns even though the store keeps them
-  (reopen/reload to re-render). `session.undo` is `"none"` in `cli.json`, though the command palette
-  can still reach it.
+
+## `/undo` is an unfixed race — avoid it
+
+`/undo` has a known **race** (upstream #54150, open, labelled `reproduced`; reproducer script in the
+thread):
+
+- If `/undo` lands **before the reply starts streaming**, the turn is **not reverted** at all: the
+  prompt *and* the reply stay in the store **and in the model context**. The UI looks rolled back,
+  but the model still sees the turn — the "memory exists, nothing visible" symptom.
+- Resending the restored prompt then stores it **again**, so the model sees that turn **twice** (and
+  repeated attempts pile up more copies).
+- `/undo` after the reply is streaming or finished removes the turn correctly.
+
+Status: the direct fixes are **open, not merged** (#55394 `park execution while a revert is staged`,
+#55403 `preserve surviving input through committed reverts`); #54163 was **closed unmerged**. No
+commit on `main` references #54150, so current releases have no fix.
+
+Consequences:
+
+- Never use `/undo` to delete turns — use *stage + commit* above.
+- Do not `/undo` immediately after sending; if you must, wait until the reply has finished.
+- Expect **duplicate copies of the same prompt** in sessions where this race happened (a repeated
+  "…didn't render correctly, can you …" prompt many times is the signature). Removing a duplicate in
+  the *middle* of a session needs a rebuild (export -> drop -> import; new id); stage+commit only
+  deletes a suffix.
+- `session.undo` is `"none"` in `cli.json`, but the command palette can still reach `/undo`.
+- A stray mark left behind is still cleared with `DELETE /api/session/{id}/revert`.
 
 ## Decide per session
 

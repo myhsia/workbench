@@ -1,7 +1,0 @@
-version: 2
-updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      # The only dependency here is the actions referenced by the workflows
-      interval: "daily"

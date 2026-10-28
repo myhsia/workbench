@@ -94,11 +94,10 @@ Keep:
 
 - every **`user`** message verbatim (`text`; drop `files`);
 - every **`assistant` `text`** verbatim;
-- each tool call as **one line of text**: `[tool <name>] <target> (<status>)`, where
-  - **`bash`/`shell`: the complete command**, newlines collapsed to spaces, **not truncated** (the
-    command is what future-you re-runs);
-  - **path/pattern tools** (`read`/`write`/`edit`/`grep`/`glob`/`ls`): the path or pattern, truncated
-    to ~110 characters (the body is in `git`);
+- each tool call as **one line of text**: `[tool <name>] <target> (<status>)`, with the **complete**
+  target, never truncated: the full command, or the full path/pattern/query (newlines collapsed to
+  spaces). Never trim text: the bulk is the tool *output*, which the category rules below remove;
+  trimming the target saves nothing and destroys the part worth keeping;
 - `time`, `agent`, `model`, `finish`, `cost`, `tokens` on assistant messages (`model` is required).
 
 Drop: `reasoning`, tool `state` (`input`, `content`, `metadata`), attachments/images, compaction
@@ -106,8 +105,9 @@ messages, and every non-`user`/non-`assistant` marker (`idle`, `synthetic`, `age
 `model-switched`, `location-switched`, `system`, `shell`). Assistant turns left with no text are
 dropped, which removes tool-only steps.
 
-Measured: a 33.7 MB project store (24 sessions, real requests up to ~600 k tokens) becomes ~5.3 MB,
-worst session ~280 k tokens. `git` holds the code, so the dropped tool bodies are recoverable.
+Measured: a 33.7 MB project store (24 sessions, real requests up to ~600 k tokens) becomes
+~13 MB of text, no session above a few hundred k tokens. `git` holds the code, so the dropped
+tool bodies are recoverable there.
 
 Also cap future growth in the project config (V2 field, verified in 2.2.0):
 

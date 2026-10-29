@@ -52,16 +52,30 @@ recovery meant re-adding `model` from `session_v2.model` and `VACUUM`. All chang
 ## Rebuilding a session (export -> prune -> import)
 
 ```sh
-opencode api get /api/experimental/session/<id>/export > export.json
+opencode session export <id> > export.json
 # edit export.json: drop the compaction message, trim bulky parts (remove attachment entries whole), then
-opencode api post /api/experimental/session/import --data @payload.json
+opencode session import payload.json --directory <dir>
 ```
+
+(`opencode api post … --data @file` does **not** read the file: it sends the literal `@file` and
+fails with HTTP 400 `Expected a valid JSON body`. Use `opencode session import`, which resolves the
+location and posts the body, or pass the JSON as a plain string.)
 
 Pitfalls, each learned the hard way:
 
-- **New session id.** Reusing the source `info.id` fails with `ConflictError` (HTTP 409).
+- **The id is yours to choose.** Import uses `info.id`; it fails with `ConflictError` (HTTP 409) only
+  while a session with that id still exists. To keep the id, export, delete the original, then import
+  (keep the export and a DB copy until verified); otherwise import under a new id and delete the
+  original afterwards.
 - **New message ids.** Reusing `msg_…` ids fails (HTTP 500, no body): local ids are globally unique.
   Regenerate every top-level message `id`; part ids (e.g. `chatcmpl-tool-…`) are fine unchanged.
+- **`executed` means provider-executed, not "the tool ran".** Local tools (`shell`, `read`, `write`,
+  `edit`, …) must be written with `executed: false` (or the key omitted). With `executed: true` the
+  transcript replays the tool result *inside* the assistant message; the OpenAI-Chat and
+  Anthropic-Messages encoders accept only text/reasoning/tool-call there, so the next send fails with
+  `… assistant messages only support text, reasoning, and tool-call content for now` — the session
+  still opens and renders, which hides the damage until a prompt is sent. Fix by exporting, setting
+  every local tool part to `executed: false`, and rebuilding (the same id can be kept, see above).
 - **Delete attachment entries, never blank their data.** Emptying `files[].data` while keeping the
   entry (`source: {type: "inline"}`) makes the session unopenable: on send it decodes an empty inline
   file and errors `Failed to load image: cannot identify image file`. Remove the whole file entry.
@@ -73,11 +87,22 @@ Pitfalls, each learned the hard way:
   (installed checkpoints remain; there is no un-compact). Drop the `compaction` message to un-compact
   the copy.
 - **Export only works for an existing session**: a deleted one returns `SessionNotFoundError` (404).
-- **Verify before deleting the original**: `GET /api/session/<id>/context` returns HTTP 200, and a scan
-  shows no empty inline files. Keep the source until then, then delete it.
+- **Verify before deleting the original**: `GET /api/session/<id>/context` returns HTTP 200, a scan
+  shows no empty inline files and no tool part with `executed: true`, and a send actually succeeds
+  (the encoder only runs on send; opening the session proves nothing). Keep the source until then,
+  then delete it.
 - **Omit `info.revert`, do not set it to `null`.** The import schema expects a
   `Session.Revert` object or the key absent; `revert: null` fails with HTTP 400
   `InvalidRequestError: Expected Session.Revert at ["info"]["revert"]`.
+- **A running TUI shows an imported session as blank — restart it.** On `session.created` the client
+  marks `session.message:<id>` as done (`pdu()` in 2.2.0: `complete()` sets the key to `true`, and
+  `run()` on a done key returns without fetching). An `opencode` that was already running when the
+  import happened therefore has that marker for the id (new id or reused id alike) and never loads
+  the transcript: the session opens empty, while `opencode session export <id>` lists every message
+  and `GET /api/session/<id>/context` returns 200. The marker is only cleared by
+  `session.deleted` or a process restart, so quit and relaunch the TUI (or any client) before
+  judging an import. A fresh client fetches the transcript in chronological order (the message list
+  is ordered by `seq`/time, not by id, so regenerated ids do not affect display order).
 - **Pruning the current session** creates a new id and deleting the old one ends the live
   conversation: create the pruned copy, keep the original, switch to the new id, then delete the old.
 
@@ -97,7 +122,7 @@ Keep:
 - every tool call as a **native tool part** (so the TUI renders a tool row, not prose):
 
   ```json
-  { "type": "tool", "id": "<new>", "name": "shell", "executed": true,
+  { "type": "tool", "id": "<new>", "name": "shell", "executed": false,
     "state": { "status": "completed",
                "input": { "command": "<full command>" },
                "content": [{ "type": "text", "text": "" }],

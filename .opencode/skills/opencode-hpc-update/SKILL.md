@@ -49,7 +49,8 @@ Westlake HPC (campus — no proxy):
 
 1. Keep only **online** models, and match the user's compact JSON style (object fields on their own
    lines; `input`, `output`, and `limit` inline).
-2. Preserve `package: "aisdk:@ai-sdk/openai-compatible"`, `settings.baseURL`, and
+2. Preserve `package: "@opencode/ai/providers/openai-compatible"` (the 2.2.x name; older
+   `aisdk:@ai-sdk/openai-compatible` is what 2.0/2.1 wrote), `settings.baseURL`, and
    `settings.apiKey: "{env:WESTLAKE_API_KEY}"`.
 
 ## Apply and verify safely

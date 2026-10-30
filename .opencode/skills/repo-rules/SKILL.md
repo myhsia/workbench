@@ -180,7 +180,8 @@ index to make it look clean.
   restricted paths plus the matching `shell` guard on `rm`); v2 names the shell action `shell`,
   not `bash`.  `compaction` tunes context handling (`auto`, `keep.tokens`, `buffer`).
 - The provider lives in the machine-global `~/.config/opencode/opencode.json` (native v2
-  `providers` block, `package: "aisdk:@ai-sdk/openai-compatible"`, `settings.baseURL`).  The CLI
+  `providers` block, `package: "@opencode/ai/providers/openai-compatible"` since 2.2.x,
+  `settings.baseURL`).  The CLI
   moved under `session` (`opencode session export|import|list|delete`).  Tool names follow v2:
   `shell` (not `bash`), `subagent` (not `task`), and `read`/`edit`/`write` take `path`.
 - **Network access.**  Governed by the global `network-access` skill.  Two regimes: small calls

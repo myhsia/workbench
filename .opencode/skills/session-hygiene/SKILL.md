@@ -87,8 +87,8 @@ Pitfalls, each learned the hard way:
   (installed checkpoints remain; there is no un-compact). Drop the `compaction` message to un-compact
   the copy.
 - **Export only works for an existing session**: a deleted one returns `SessionNotFoundError` (404).
-- **Verify before deleting the original**: `GET /api/session/<id>/context` returns HTTP 200, a scan
-  shows no empty inline files and no tool part with `executed: true`, and a send actually succeeds
+- **Verify before deleting the original**: `GET /api/session/<id>/context` returns HTTP 200, the
+  scan in *Verify a session is encoder-safe* below returns nothing, and a send actually succeeds
   (the encoder only runs on send; opening the session proves nothing). Keep the source until then,
   then delete it.
 - **Omit `info.revert`, do not set it to `null`.** The import schema expects a
@@ -105,6 +105,34 @@ Pitfalls, each learned the hard way:
   is ordered by `seq`/time, not by id, so regenerated ids do not affect display order).
 - **Pruning the current session** creates a new id and deleting the old one ends the live
   conversation: create the pruned copy, keep the original, switch to the new id, then delete the old.
+
+## Verify a session is encoder-safe
+
+The encoder only runs when a prompt is sent, so a damaged transcript still opens and renders. Run
+this scan after **any** rebuild, import or hand edit; all four queries must return nothing (a row
+means that session will fail on its next send):
+
+```bash
+DB="file:$HOME/.local/share/opencode/opencode.db?mode=ro"
+# a) provider-executed tool parts: executed=true replays the result inside the assistant message
+sqlite3 "$DB" "select m.session_id, count(*) from session_message m, json_each(m.data,'\$.content') p
+  where m.type='assistant' and json_extract(p.value,'\$.executed')=1 group by 1;"
+# b) empty inline attachments: the send fails with 'cannot identify image file'
+sqlite3 "$DB" "select m.session_id, count(*) from session_message m, json_each(m.data,'\$.files') f
+  where m.type='user' and json_extract(f.value,'\$.source.type')='inline'
+    and length(coalesce(json_extract(f.value,'\$.data'),''))=0 group by 1;"
+# c) assistant content outside text/reasoning/tool-call
+sqlite3 "$DB" "select m.session_id, json_extract(p.value,'\$.type'), count(*) from session_message m,
+  json_each(m.data,'\$.content') p where m.type='assistant'
+  and json_extract(p.value,'\$.type') not in ('text','reasoning','tool') group by 1,2;"
+# d) compaction messages: only replayable to the provider/API that produced them
+sqlite3 "$DB" "select session_id, count(*) from session_message where type='compaction' group by 1;"
+```
+
+`executed=true` is the only one that appears without a hand edit (an old rebuild template wrote it);
+ordinary runtime writes `false` for every local tool, so a clean scan stays clean. Repair in place
+without export/import: flip `content[*].executed` to false in `session_message.data` inside one
+`BEGIN IMMEDIATE`, then re-run (a) and send.
 
 ## Deep clean (D3, conversation-only)
 

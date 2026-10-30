@@ -67,20 +67,18 @@ Westlake HPC (campus — no proxy):
 - `GET /api/config` returns the provider key in plaintext to any caller holding the local service
   password.
 - Do not put the key in `~/.zshrc`; keep it inside the OpenCode config so it travels with the backup.
-- **Empty `/model` picker on 2.2.x with a custom provider.** The picker is catalog-driven: the
-  service fetches the `models.dev` catalog (international) and caches it in the `kv` table as
-  `models-dev:v2:catalog`. If that fetch times out (`Failed to fetch models.dev`) the picker can show
-  no models even though the server is fine — `/api/model`, `/api/provider/<id>`, and `opencode models`
-  all list them, and the session keeps working because the model id is stored on the session. Check in
-  this order:
-  1. `opencode api get /api/model` — if the models are there, the provider is not at fault;
-  2. `grep "Failed to fetch models.dev" ~/.local/share/opencode/log/opencode.log` — a timeout means
-     the service has no international proxy;
-  3. confirm the **service** env has both `HTTPS_PROXY`/`HTTP_PROXY` (from
-     `~/.config/opencode/proxy`) and `NO_PROXY`/`no_proxy` =
-     `127.0.0.1,localhost,hpc-api.westlake.edu.cn`, so the campus API and the local server stay
-     direct while `models.dev` goes through the proxy;
-  4. restart the **TUI client** (not the service) — the picker also caches its list at startup, so a
-     catalog refreshed later is not picked up until the client restarts.
-  `WestlakeHPC` will never appear in the `models.dev` catalog; that is expected, so do not "fix" the
-  provider config for this.
+- **Empty `/model` picker with a config-only provider.** Upstream issue #60587 (canonical:
+  #49309). With `experimental.new-designs: true` in `~/.config/opencode/cli.json`, the new picker
+  counts only **saved integration connections** (`/connect`) as connected; a provider declared only
+  in `opencode.json` is treated as disconnected, so the dialog falls back to the free-models list and
+  shows **no items** — even though the provider works and the session keeps its model. Diagnosis and
+  fix:
+  1. `opencode api get /api/model --header x-opencode-directory:<project>` — if the models are listed
+     (with `/api/model/default`, `/api/agent`, `/api/command`, `/api/plugin` all valid too), the
+     server is fine and the provider config is not at fault;
+  2. `grep new-designs ~/.config/opencode/cli.json` — set it to `false` (or save a connection via
+     `/connect`) to restore the classic "Select model" dialog; reload the TUI (F5);
+  3. do **not** chase the `models.dev` catalog/proxy for this, and do not treat an empty picker as a
+     provider problem: an earlier version of this note wrongly blamed the catalog fetch and the
+     `ACPCatalogNotReadyError`/"No models are available" strings from the bundle, which belong to the
+     ACP integration used by editor clients, not to the TUI dialog.

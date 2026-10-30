@@ -67,3 +67,20 @@ Westlake HPC (campus — no proxy):
 - `GET /api/config` returns the provider key in plaintext to any caller holding the local service
   password.
 - Do not put the key in `~/.zshrc`; keep it inside the OpenCode config so it travels with the backup.
+- **Empty `/model` picker on 2.2.x with a custom provider.** The picker is catalog-driven: the
+  service fetches the `models.dev` catalog (international) and caches it in the `kv` table as
+  `models-dev:v2:catalog`. If that fetch times out (`Failed to fetch models.dev`) the picker can show
+  no models even though the server is fine — `/api/model`, `/api/provider/<id>`, and `opencode models`
+  all list them, and the session keeps working because the model id is stored on the session. Check in
+  this order:
+  1. `opencode api get /api/model` — if the models are there, the provider is not at fault;
+  2. `grep "Failed to fetch models.dev" ~/.local/share/opencode/log/opencode.log` — a timeout means
+     the service has no international proxy;
+  3. confirm the **service** env has both `HTTPS_PROXY`/`HTTP_PROXY` (from
+     `~/.config/opencode/proxy`) and `NO_PROXY`/`no_proxy` =
+     `127.0.0.1,localhost,hpc-api.westlake.edu.cn`, so the campus API and the local server stay
+     direct while `models.dev` goes through the proxy;
+  4. restart the **TUI client** (not the service) — the picker also caches its list at startup, so a
+     catalog refreshed later is not picked up until the client restarts.
+  `WestlakeHPC` will never appear in the `models.dev` catalog; that is expected, so do not "fix" the
+  provider config for this.

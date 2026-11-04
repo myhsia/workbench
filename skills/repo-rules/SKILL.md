@@ -229,6 +229,47 @@ changes behaviour without touching the guide is incomplete.
   pairings sit on one line.  State the thermal variance and occupation explicitly at their point
   of use.
 
+## expl3 source style
+
+Applies to any `dtx` written in `expl3` under `%<@@=…>`; a project guide points here rather than
+repeating it.
+
+- **Private names come from `@@`.**  The `dtx` sets `%<@@=Module>` once, before the first
+  implementation line, and writes `\l_@@_…`, `\g_@@_…`, `\c_@@_…`, `\@@_…`; DocStrip expands
+  the leading `@@` to `__Module`, and `l3doc` prints the same expansion when an object is
+  documented in the same form.  Never write `@@` inside a Lua block or a Lua string: DocStrip
+  rewrites it there too, and the Lua side would no longer match the TeX register it looks up.  A
+  name that Lua must see crosses with `\cs_to_str:N`, not as a literal.
+- **Prefer the interface to the primitive.**  `\hbox:n`, `\hbox_to_wd:nn`, `\box_move_up:nn` and
+  `\box_move_down:nn`, `\dim_set:Nn \tex_hsize:D`, `\int_use:N \allocationnumber` (not
+  `\the\allocationnumber`), and `\c_zero_dim`/`\c_zero_int` for `\z@`.  Where no interface exists,
+  use the `\tex_…:D` alias (`\tex_leaders:D`, `\tex_vrule:D`, `\tex_par:D`, `\tex_noindent:D`),
+  not the bare primitive.  A module that patches a LaTeX2e package (a `listings` hook, for
+  instance) stays LaTeX2e, and its `\@…`, `\def` and `\newif` are left alone.
+- **Hooks go through `\hook_gput_code:nnn`.**  `\hook_gput_code:nnn { hook } { Package } { code }`,
+  labelled with the package name so the chunk is deterministic; `.` resolves to the module only at
+  load time, where the current file still is the module.  `\AtBeginDocument` is exactly
+  `\hook_gput_code:nnn { begindocument } { … }`; `begindocument` runs after the `aux` is read but
+  still during initialisation, `begindocument/end` at the start of the body.
+- **Alignment.**  One space between arguments.  A multi-line argument list opens with its brace on
+  its own line, one entry per line, padded *inside* the group so the closing braces line up:
+  `{ CJK         }`, not `{ CJK }        `.  A run of two or more similar lines aligns the column
+  that repeats: the function for a `\tl_new:N`/`\tl_set:Nn` pair, the variable for a `\dim_set:Nn`
+  run, and the key, the property and the `=` in `\keys_define:nn`.  In a key block the property
+  column is shared by the whole block while the keys are aligned per option family; a family whose
+  padding would push a line past 79 columns stays unaligned.
+- **Slashes carry spaces.**  `shipout / before`, `cmd / selectfont / after`, `LuaCJK / math`: the
+  space is catcode 9 under `\ExplSyntaxOn`, so the stored name is `shipout/before` while the source
+  reads as words.  Outside expl3, in a LaTeX2e file or a test, the name is written without spaces.
+- **One `\GetIdInfo`.**  Every file derived from one `dtx` takes its information from a single block
+  in a `%<*a|b|c>` guard: `\NeedsTeXFormat`, `\RequirePackage { expl3 }`, the `$Id$` line, then one
+  description line per file and its own `\ProvidesExplPackage` or `\ProvidesExplFile`.  A LaTeX2e
+  module keeps `\ProvidesPackage` and repeats the date, version and description in its optional
+  argument.  `l3build tag` rewrites the single `$Id$`, so a second copy silently goes stale.
+- **No compatibility packages.**  A format floor of 2020-10 or later puts `\NewDocumentCommand` and
+  its siblings in the kernel (`xparse`), and 2022-06 puts `\ProcessKeyOptions` there (`l3keys2e`);
+  load neither.
+
 ## l3doc source style
 
 - `\begin{macrocode}` and `\end{macrocode}` are written with `%` and **exactly four spaces**.
@@ -272,6 +313,10 @@ changes behaviour without touching the guide is incomplete.
 - An option name in running text is `\keys{name}`, not `\texttt{name}`, even outside a
   `keyval` environment.  Inside one it appends `=` (docext's item format), so a reference to
   another key in a `keyval` description stays `\texttt`.
+- A manual whose `codemo` demos execute is typeset by the engine the package targets, with the
+  demos running in the same pass; a demo that only shows code does not need that engine.
+- Never redirect the terminal output of a TeX run to `\jobname.out`: hyperref reads that file as
+  its bookmarks, so the build fails on its own log with errors that point nowhere near the cause.
 
 ## Tooling and upkeep
 

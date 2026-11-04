@@ -7,6 +7,8 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
 - `skills/` — the global skills: `repo-rules` (coding style, git/PR, LaTeX, upkeep),
   `session-hygiene`, `opencode-hpc-update`, `network-access`, `ci-artifacts`.
 - `scripts/update-due.sh` — the daily upkeep check used by `opencode-hpc-update`.
+- `scripts/guides-due.sh` — the guide freshness check used by the commit gate in `repo-rules`
+  (exit 0 = `STALE`, 1 = `OK`, 2 = `MISSING`).
 - `opencode.json` — the global config (providers, compaction, tool output).
 - `templates/` — the skeletons a new repository copies: `templates/AGENTS.md` to its root
   `AGENTS.md`, and `templates/repo-topic/SKILL.md` to `.opencode/skills/<name>/SKILL.md`.

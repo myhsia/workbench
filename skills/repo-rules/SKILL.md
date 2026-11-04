@@ -27,9 +27,11 @@ This file lives in the global repository (`myhsia/workbench`, checked out at
   leave the index exactly as found --- never run `git add`, `git reset`, `git restore --staged`, or
   `git stash` to "tidy" it. Partly-staged work is intentional: the user keeps the remaining changes
   unstaged so they stay visible in `git diff`.
-- **Keep the guides in sync (routine).** At the end of every task, review whether the repository's
+- **Keep the guides in sync (routine).** At the end of every task, run
+  `bash ~/.config/opencode/scripts/guides-due.sh .` in the repository and review whether its
   `AGENTS.md` and skill need updating --- new or changed files/scripts, commands, conventions,
-  figures/plotting, or pitfalls --- and update them as part of the same task.
+  figures/plotting, or pitfalls --- and update them as part of the same task.  The script only says
+  whether the guides are older than the code; what changed in them is still a judgement.
 - **Commit by pathspec.** When another session may have staged files, commit with
   `git commit -- <paths>` so unrelated staged work is not swept into the commit.
 
@@ -88,14 +90,22 @@ agent's) and any unpushed commit; never "tidy" the index to make it look clean.
 
 ### Commit gate (guides)
 
-Before `git commit`, check the repository's guides:
+Before `git commit`, run the check rather than recalling it:
 
-- **No `AGENTS.md` or no `.opencode/skills/SKILL.md`** → **refuse**, and offer to create them from
+```bash
+bash ~/.config/opencode/scripts/guides-due.sh .
+```
+
+It prints `OK`, `MISSING`, or `STALE` (exit 0 = stale, 1 = ok, 2 = missing),
+counting uncommitted changes and commit order.
+
+- **`MISSING`** → **refuse**, and offer to create the guides from
   `~/.config/opencode/templates/AGENTS.md` and `~/.config/opencode/templates/repo-topic/SKILL.md`.
   Only an explicit, one-off instruction from the user lifts this.
-- **Guides present, but the staged diff touches code, config, CI, or output schema while neither
-  guide changed** → **warn**: "this change may alter documented behaviour — update the guide, or
+- **`STALE`** → **warn**: "this change may alter documented behaviour — update the guide, or
   confirm nothing documented changed".  Do not commit until the user answers.
+- **`OK`** → commit, unless the diff plainly changes something the guide documents but the guide is
+  newer for a different reason; the numbers in this skill's tables are the thing to re-read.
 - **Docs-only commits** are never blocked.
 
 ## Project guide standard
@@ -305,6 +315,21 @@ changes behaviour without touching the guide is incomplete.
   rather than compacting; give every session a `type(things): …` title (rename any agent
   auto-title that does not conform).  Load the skill for the export → prune → import procedure
   and its pitfalls.  Never edit the session store by hand.
+- **Never publish a file under another package's name.**  CTAN rejects a duplicate filename, and a
+  copy that sits next to the original silently loses to it.  To take over another package's hook
+  file, ship the logic under your own name and redirect through that package's own configuration
+  entry point, then check the log of a real end-to-end compile for the file it actually resolved.
+- **kpathsea resolves by name, not by intent.**  Within one tree it returns the smallest full
+  path, and `\input` searches the current directory before any tree.  So `tex/latex/<mine>/x.def`
+  never shadows `tex/latex/<theirs>/x.def` in the same tree, and "install it beside the other
+  package" is the one arrangement that cannot work.  A shadowing layer belongs in the document
+  directory or in a tree that precedes the main one, and the test must assert the resolved path
+  rather than a marker string.
+- **A generated config file is read at an arbitrary point.**  A file written at run time for
+  another package to `\input` may be read with category codes and an `expl3` state that are not
+  yours, so write plain LaTeX2e, avoid `%` as a comment character, and guard the engine check with
+  `\@ifundefined`.  An `expl3`-syntax version fails with `Undefined control sequence` at the point
+  of use, not while writing the file.
 
 ## Local and CI parity
 

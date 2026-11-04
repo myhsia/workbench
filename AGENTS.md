@@ -9,6 +9,22 @@ stay authoritative for their own project.
 - Session upkeep uses the `session-hygiene` skill; config/upstream upkeep uses
   `opencode-hpc-update`; bulk CI work uses `ci-artifacts`.
 
+## At session start
+
+Two checks, before the task itself. Both are scripts: run them, do not recall them.
+
+```bash
+bash ~/.config/opencode/scripts/update-due.sh    # exit 0 = DUE
+bash ~/.config/opencode/scripts/guides-due.sh .  # exit 0 = STALE
+```
+
+- `update-due.sh` printing `DUE` means today's upkeep has not run: load
+  `opencode-hpc-update`, refresh the config, and stamp the day with
+  `update-due.sh --mark`. Otherwise say nothing about it.
+- `guides-due.sh` in the current repository printing `STALE` or `MISSING` means the guides are part
+  of this task, not a follow-up. Report the answer with the status at the end; see the commit gate
+  in `repo-rules`.
+
 ## Repository etiquette
 
 - **Preserve the user's uncommitted changes.**  If `git status` shows uncommitted changes you did
@@ -80,4 +96,5 @@ here or in the matching global skill as part of the same task, then commit and p
 (`myhsia/workbench`, checked out at `~/.config/opencode`).  Check every time; never leave a general
 rule trapped in a project guide.
 
-The daily upkeep check is `~/.config/opencode/scripts/update-due.sh` (see `opencode-hpc-update`).
+The daily upkeep check is `~/.config/opencode/scripts/update-due.sh`; the guide freshness check is
+`~/.config/opencode/scripts/guides-due.sh` (both used in "At session start").

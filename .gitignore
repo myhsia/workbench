@@ -1,13 +1,13 @@
-# The workspace root tracks only the OpenCode setup and this guide.
-/*
-!/.gitignore
-!/.opencode/
-!/.github/
-!/opencode.json
-!/AGENTS.md
+node_modules/
+package.json
+package-lock.json
+bun.lock
 
-# Local-only workspace state
-/.opencode/.update-check
+# Machine-local state and secrets — never tracked
+proxy
+service.json
+cli.json
+.update-check
 
-# macOS metadata (any depth)
-**/.DS_Store
+# macOS metadata
+.DS_Store

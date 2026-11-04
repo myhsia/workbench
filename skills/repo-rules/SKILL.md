@@ -10,9 +10,12 @@ metadata:
 
 # Shared repository conventions
 
-Workspace-level rules for every repository under `oqs/` (`mkct4oqs`, `dmrg4oqs`, `sh4oqs`).
+Machine-global rules: they load in every OpenCode session on this Mac, in every repository.
 Project-specific rules (physics, config schema, figure layout, engine details) stay in each
-repository's `AGENTS.md` and skill.
+repository's own `AGENTS.md` and `.opencode/skills/`.
+
+This file lives in the global repository (`myhsia/workbench`, checked out at
+`~/.config/opencode`); general conventions learned anywhere belong here.
 
 ## Repository etiquette
 
@@ -77,8 +80,8 @@ Triage pull requests:
 
 ### Status check
 
-Before reporting, run `git status -sb` in every checkout of the workspace (the root and each
-repository) and state, for each: the branch, whether `HEAD == origin/main`, and whether the tree is
+Before reporting, run `git status -sb` in every checkout of the current workspace (the global
+config repository plus each project repository) and state, for each: the branch, whether `HEAD == origin/main`, and whether the tree is
 dirty.  A settled state is `## main...origin/main` with `HEAD == origin/main`.  Call out uncommitted
 changes (and whether they are the user's or the agent's) and any unpushed commit; never "tidy" the
 index to make it look clean.
@@ -170,12 +173,16 @@ index to make it look clean.
 
 ## Tooling and upkeep
 
-- **Where to record things.**  Keep skills, docs, and workspace configuration in the workspace
-  `.opencode/` and `AGENTS.md` (they sync to GitHub).  Write to the machine-global locations
-  (`~/.config/opencode`, the shell rc) only when the change is inherently global --- the provider
-  definition, the service env (e.g. `NO_PROXY`), the terminal `cli.json` --- and keep secrets and
-  addresses out of anything that is tracked.
-- **opencode (v2).**  `opencode.json` at the workspace root is kept in strict v2 form.
+- **Where to record things.**  General conventions go in the global repository
+  (`~/.config/opencode`: `AGENTS.md`, `skills/`, `scripts/`, `opencode.json`), which syncs to
+  GitHub.  Project-specific rules go in that project's `AGENTS.md` and `.opencode/skills/`.
+  Machine secrets and addresses (`proxy`, `service.json`, `cli.json`, the shell rc) stay untracked,
+  and nothing tracked may contain them.
+- **Keep the global rules current.**  Whenever a session in any repository establishes a general
+  convention — coding style, commit/PR rule, LaTeX style, tool workflow, pitfall — record it in the
+  global repository in the same task, then commit and push.  Check every time.
+- **opencode (v2).**  `opencode.json` (global, plus a workspace one where a project needs its
+  own guards) is kept in strict v2 form.
   `permissions` is an ordered array of `{action, resource, effect}` rules (the `edit` guard on
   restricted paths plus the matching `shell` guard on `rm`); v2 names the shell action `shell`,
   not `bash`.  `compaction` tunes context handling (`auto`, `keep.tokens`, `buffer`).
@@ -191,11 +198,12 @@ index to make it look clean.
   artifacts redirect) is throttled to tens of kB/s directly.  The address lives in
   `~/.config/opencode/proxy` (mode 600); never write it into a tracked file.
 - **Daily upkeep (`opencode-hpc-update`).**  Not a scheduled job: when a user message arrives,
-  quietly consult `.opencode/scripts/update-due.sh` (from the workspace root).  If it prints
-  `DUE`, load the skill, refresh the config, and stamp the day with
-  `.opencode/scripts/update-due.sh --mark`; otherwise carry on without mentioning it.  Timing is
-  Asia/Shanghai, at most once per calendar day (due from 17:00 on a day not yet checked, or
-  immediately if a whole day was skipped); the last date is in `.opencode/.update-check`.
+  quietly consult `~/.config/opencode/scripts/update-due.sh`.  If it prints `DUE`, load the
+  skill, refresh the config, and stamp the day with
+  `~/.config/opencode/scripts/update-due.sh --mark`; otherwise carry on without mentioning it.
+  Timing is Asia/Shanghai, at most once per calendar day (due from 17:00 on a day not yet checked,
+  or immediately if a whole day was skipped); the last date is in
+  `~/.config/opencode/.update-check`.
 - **Session upkeep (`session-hygiene`).**  Keep each session whole and branch into a new session
   rather than compacting; give every session a `type(things): …` title (rename any agent
   auto-title that does not conform).  Load the skill for the export → prune → import procedure

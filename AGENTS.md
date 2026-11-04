@@ -1,43 +1,31 @@
-# oqs workspace
+# Machine-wide OpenCode rules
 
-This directory holds three related repositories:
+These apply to every OpenCode session on this Mac, in every repository.  Project guides
+(`AGENTS.md` in each repository, and any `AGENTS.md` in a parent directory) add the specifics and
+stay authoritative for their own project.
 
-- `mkct4oqs/` — the MKCT manuscript code. Its full guide is `mkct4oqs/AGENTS.md`.
-- `dmrg4oqs/` — the public companion repository (shared config / HEOM / library
-  files and the MPS/tDMRG reference). Its guide is `dmrg4oqs/AGENTS.md`.
-- `sh4oqs/` — the public surface-hopping (FSSH) reference. Its guide is `sh4oqs/AGENTS.md`.
+- General conventions — Python style, git/PR workflow, LaTeX writing and source style, tooling and
+  upkeep, local/CI parity — live in the global `repo-rules` skill.
+- Session upkeep uses the `session-hygiene` skill; config/upstream upkeep uses
+  `opencode-hpc-update`; bulk CI work uses `ci-artifacts`.
 
-The three checkouts must stay siblings here: `mkct4oqs` is canonical for the shared pieces
-(`heom.py`, `config/`, `qutils/fsutils/pltools/extended_heom`), and the public `dmrg4oqs` and
-`sh4oqs` keep synced copies (`tools/sync_from_mkct.sh`).
+## Repository etiquette
 
-## Working here
-
-- Before touching a project, read and follow that project's own guide (`mkct4oqs/AGENTS.md` or
-  `dmrg4oqs/AGENTS.md`); those are authoritative.
-- Run git inside the project directory (`cd mkct4oqs` or `cd dmrg4oqs`); `oqs/` itself is
-  not a repository.
-- The shared rules in the workspace `repo-rules` skill still apply: preserve the user's uncommitted
-  changes and staging, commit only when asked, keep the guides in sync, never put secrets or
-  addresses in commits.
-- Shared conventions for all projects (repo etiquette, Python coding style, git/PR workflow, LaTeX
-  writing and source style, tooling/upkeep, local/CI parity) are in the workspace `repo-rules` skill
-  (`.opencode/skills/repo-rules/SKILL.md`); the project guides keep only their specific rules.
-- Session upkeep uses the `session-hygiene` skill (keep sessions whole; branch into a new session
-  for a new topic; `type(things): …` titles); config/upstream upkeep uses `opencode-hpc-update`
-  and `network-access`.
-- `.opencode/` and `opencode.json` at this root belong to the **workspace**, not to either repository:
-  the inner skills/scripts (HPC-update, session hygiene, the daily `update-due.sh`) and the
-  permissions/compaction config.  Each repository keeps its own physics skill
-  (`mkct4oqs/.opencode/skills/SKILL.md`, `dmrg4oqs/.opencode/skills/SKILL.md`,
-  `sh4oqs/.opencode/skills/SKILL.md`); the workspace keeps no link to them.
-- `bibliography/` (references and former-work code) and `admin/` are **workspace-level data**, outside
-  the repositories; keep them here, not inside `mkct4oqs/` or `dmrg4oqs/`.
+- **Preserve the user's uncommitted changes.**  If `git status` shows uncommitted changes you did
+  not make, treat them as the user's intentional edits: never discard, revert, overwrite, or "fix"
+  them back.  Build on top of them; if they cause a problem (a failing build, an overfull box),
+  flag it instead of silently undoing.
+- **Commit only when asked.**  Leave the user's staging alone; stage by pathspec when committing.
+- **Report status.**  Before reporting, run `git status -sb` in every checkout of the current
+  workspace and state, for each: the branch, whether HEAD == `origin/main`, and whether the tree is
+  dirty.  Call out uncommitted changes (and whose they are) and any unpushed commit.
+- **Never put secrets or addresses in commits.**  Machine endpoints, proxy addresses, API keys and
+  cluster IPs stay in untracked files or environment variables.
 
 ## Network access
 
-Governed by the machine-global `network-access` skill; the proxy address is not stored here.  Read it
-at use time from `~/.config/opencode/proxy` (mode 600).
+Governed by the global `network-access` skill; the proxy address is not stored here.  Read it at use
+time from `~/.config/opencode/proxy` (mode 600).
 
 - Small calls (metadata, `gh api`, a few kB of JSON) go **direct** first.
 - Bulk transfers (CI artifacts via `gh run download`, release assets, big clones, `pip download`) go
@@ -51,14 +39,12 @@ PROXY=$(cat ~/.config/opencode/proxy)
 https_proxy="$PROXY" http_proxy="$PROXY" gh run download <run-id> -n <name> -D /tmp
 ```
 
-## Status check
+## Keeping these rules current
 
-After any change (and before reporting), check and report all four checkouts:
+Whenever a session in **any** repository establishes a convention that is not specific to that
+project — a coding style, a commit/PR rule, a LaTeX style, a tool workflow, a pitfall — record it
+here or in the matching global skill as part of the same task, then commit and push this repository
+(`myhsia/workbench`, checked out at `~/.config/opencode`).  Check every time; never leave a general
+rule trapped in a project guide.
 
-    git -C oqs                    status -sb
-    git -C mkct4oqs               status -sb
-    git -C dmrg4oqs               status -sb
-    git -C sh4oqs                 status -sb
-
-A settled state shows `## main...origin/main` with HEAD == origin/main for each; call out a dirty
-tree (and whose change it is) and any unpushed commit.  The full rule is in the `repo-rules` skill.
+The daily upkeep check is `~/.config/opencode/scripts/update-due.sh` (see `opencode-hpc-update`).

@@ -14,8 +14,8 @@ stay authoritative for their own project.
 Two checks, before the task itself. Both are scripts: run them, do not recall them.
 
 ```bash
-bash ~/.config/opencode/scripts/update-due.sh    # exit 0 = DUE
-bash ~/.config/opencode/scripts/guides-due.sh .  # exit 0 = STALE
+bash ~/.config/opencode/scripts/update-due.sh              # exit 0 = DUE
+bash ~/.config/opencode/scripts/guides-due.sh --committed .  # exit 0 = STALE
 ```
 
 - `update-due.sh` printing `DUE` means today's upkeep has not run: load
@@ -23,7 +23,8 @@ bash ~/.config/opencode/scripts/guides-due.sh .  # exit 0 = STALE
   `update-due.sh --mark`. Otherwise say nothing about it.
 - `guides-due.sh` in the current repository printing `STALE` or `MISSING` means the guides are part
   of this task, not a follow-up. Report the answer with the status at the end; see the commit gate
-  in `repo-rules`.
+  in `repo-rules`.  The `--committed` form judges the history only: a repository being edited is
+  dirty by design, and the pre-commit gate runs the default form.
 
 ## Repository etiquette
 

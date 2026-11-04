@@ -8,6 +8,9 @@ proxy
 service.json
 cli.json
 .update-check
+.models-check
+opencode.json.bak
+*.tmp
 
 # macOS metadata
 .DS_Store

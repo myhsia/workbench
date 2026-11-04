@@ -1,0 +1,204 @@
+import { Plugin } from "@opencode/plugin"
+import { execFile } from "node:child_process"
+import { readFile, writeFile, rename } from "node:fs/promises"
+import { homedir } from "node:os"
+import { join } from "node:path"
+import { promisify } from "node:util"
+
+// Daily upkeep, done rather than remembered: refresh the Westlake model list
+// once a day, and say so when the OpenCode half of `opencode-hpc-update` is
+// due.  The OpenCode version check stays with the skill: a plugin cannot
+// install a binary, and a wrong guess ends the session that runs it.
+
+const run = promisify(execFile)
+
+const configDir = join(homedir(), ".config", "opencode")
+const configPath = join(configDir, "opencode.json")
+const modelMarker = join(configDir, ".models-check")
+const modelList = "https://hpc-api.westlake.edu.cn/v1/models"
+
+// The endpoint also lists embeddings and rerankers, which are not chat models
+// and would show up in the model picker.
+const notChat = /embed|rerank/i
+
+const today = () =>
+  new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" })
+
+const readText = async (path) => {
+  try {
+    return await readFile(path, "utf8")
+  } catch {
+    return undefined
+  }
+}
+
+const modelsCheckedToday = async () =>
+  (await readText(modelMarker))?.trim() === today()
+
+const upkeepDue = async () => {
+  try {
+    await run("bash", [join(configDir, "scripts", "update-due.sh")], {
+      timeout: 10_000,
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Insert entries into the `"models"` object of the text, leaving every other
+// byte alone: the configuration is hand-formatted, and a JSON round trip
+// would reprint the permission table.  The indentation is taken from an
+// existing entry, and the block keeps its own closing brace column.
+const addModels = (text, entries) => {
+  const key = text.indexOf('"models"')
+  if (key < 0) return text
+  const open = text.indexOf("{", key)
+  if (open < 0) return text
+
+  let depth = 0
+  let close = -1
+  let quoted = false
+  for (let i = open; i < text.length; i++) {
+    const c = text[i]
+    if (quoted) {
+      if (c === "\\") i++
+      else if (c === '"') quoted = false
+      continue
+    }
+    if (c === '"') quoted = true
+    else if (c === "{") depth++
+    else if (c === "}" && --depth === 0) {
+      close = i
+      break
+    }
+  }
+  if (close < 0) return text
+
+  const keyIndent = text.slice(text.lastIndexOf("\n", key) + 1, key)
+  const body = text.slice(open + 1, close)
+  const pad = body.match(/\n([ \t]+)"/)?.[1] ?? `${keyIndent}  `
+
+  const added = entries.map(([id, value]) => {
+    const json = JSON.stringify(value, null, "  ")
+      .split("\n")
+      .map((line, index) => (index === 0 ? line : pad + line))
+      .join("\n")
+    return `${pad}${JSON.stringify(id)}: ${json}`
+  })
+
+  const kept = body.replace(/^\s*\n/, "").replace(/\s+$/, "").replace(/,$/, "")
+  const merged = kept ? `${kept},\n${added.join(",\n")}` : added.join(",\n")
+  return `${text.slice(0, open + 1)}\n${merged}\n${keyIndent}${text.slice(close)}`
+}
+
+// Add the chat models the endpoint reports and the configuration does not
+// have yet.  Nothing is removed: a model that disappeared upstream may still
+// be the one a session is using, so it is reported instead.  A new entry
+// copies the capability block of an existing one, which the user then
+// reviews.
+const refreshModels = async () => {
+  const key = process.env.WESTLAKE_API_KEY
+  if (!key) return []
+
+  const response = await fetch(modelList, {
+    headers: { Authorization: `Bearer ${key}` },
+    signal: AbortSignal.timeout(20_000),
+  })
+  if (!response.ok) throw new Error(`model list: HTTP ${response.status}`)
+
+  const body = await response.json()
+  const online = (body.data ?? []).map((model) => model.id).filter(Boolean)
+  if (online.length === 0) return []
+
+  const before = await readText(configPath)
+  if (!before) return []
+  const config = JSON.parse(before)
+  const provider = config.providers?.WestlakeHPC
+  if (!provider) return []
+  provider.models ??= {}
+
+  const template = Object.values(provider.models)[0] ?? {}
+  const notes = []
+  const entries = []
+  for (const id of online) {
+    if (provider.models[id]) continue
+    if (notChat.test(id)) {
+      notes.push(`skipped ${id} (not a chat model)`)
+      continue
+    }
+    entries.push([
+      id,
+      {
+        name: id,
+        capabilities: structuredClone(
+          template.capabilities ?? {
+            tools: true,
+            input: ["text", "image"],
+            output: ["text"],
+          },
+        ),
+        limit: structuredClone(
+          template.limit ?? { context: 1_048_576, output: 393_216 },
+        ),
+      },
+    ])
+    notes.push(`added ${id}`)
+  }
+
+  const gone = Object.keys(provider.models).filter(
+    (id) => !online.includes(id),
+  )
+  if (gone.length > 0) notes.push(`kept ${gone.join(", ")} (not upstream)`)
+  if (entries.length === 0) return notes
+
+  const after = addModels(before, entries)
+  if (after === before) return notes
+
+  const tmp = `${configPath}.tmp`
+  await writeFile(`${configPath}.bak`, before)
+  await writeFile(tmp, after)
+  await rename(tmp, configPath)
+  return notes
+}
+
+export default Plugin.define({
+  id: "upkeep",
+  async setup(ctx) {
+    const seen = new Set()
+
+    await ctx.session.hook("prompt", async (event) => {
+      try {
+        const session = event.sessionID
+        if (session && seen.has(session)) return
+        if (session) seen.add(session)
+
+        const lines = []
+
+        if (!(await modelsCheckedToday())) {
+          const notes = await refreshModels()
+          await writeFile(modelMarker, `${today()}\n`)
+          if (notes.length > 0) {
+            lines.push(`Westlake model list refreshed: ${notes.join("; ")}.`)
+          }
+        }
+
+        if (await upkeepDue()) {
+          lines.push(
+            "The daily OpenCode / HPC upkeep is due: load the `opencode-hpc-update` skill, finish the OpenCode half, then stamp the day with `update-due.sh --mark`.",
+          )
+        }
+
+        if (lines.length > 0 && session) {
+          await ctx.session.instructions.entry.put({
+            sessionID: session,
+            key: "upkeep",
+            value: lines.join(" "),
+          })
+        }
+      } catch (error) {
+        console.error("[upkeep]", error)
+      }
+    })
+  },
+})

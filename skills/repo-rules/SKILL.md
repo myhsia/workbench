@@ -104,7 +104,7 @@ time the working tree is what is about to land.
 - **`MISSING`** → **refuse**, and offer to create the guides from
   `~/.config/opencode/templates/AGENTS.md` and `~/.config/opencode/templates/repo-topic/SKILL.md`.
   Only an explicit, one-off instruction from the user lifts this.
-- **`STALE`** → **warn**: "this change may alter documented behaviour — update the guide, or
+- **`STALE`** → **warn**: "this change may alter documented behavior — update the guide, or
   confirm nothing documented changed".  Do not commit until the user answers.
 - **`OK`** → commit, unless the diff plainly changes something the guide documents but the guide is
   newer for a different reason; the numbers in this skill's tables are the thing to re-read.
@@ -149,12 +149,19 @@ Every repository carries two documents, filled from the code and kept true:
 renamed, or deleted; a command or flag changes; a dependency or environment changes; a convention or
 unit changes; an output schema or filename changes; a CI trigger or job changes; a pitfall is
 discovered; validation results change.  Before reporting, re-read the guide diff — a commit that
-changes behaviour without touching the guide is incomplete.
+changes behavior without touching the guide is incomplete.
 
 ## LaTeX writing style
 
 - Impersonal prose (no first-person "we"); prefer "detailed workflow" over "by hand".
-- Avoid em dashes (`---`) and long itemized lists; prefer prose with paragraph breaks.
+- Avoid em dashes (`---`); prefer prose with paragraph breaks.  A list is for enumerable items
+  (key names, the differences between two implementations), not for narrative, and a long list
+  opens with a sentence that says what it enumerates.
+- Write US English: `color`, `center`, `behavior`, `label`/`labeled`, `model`/`modeling`,
+  `license`, `recognize`, `canceled`.  British spellings (`colour`, `centre`, `behaviour`,
+  `labelled`, `modelling`, `licence`, `recognise`, `cancelled`) are not used.  The rule covers
+  prose in manuals and guides, code comments, the changelog, and commit messages; a licence text
+  quoted verbatim keeps its own spelling.
 - Define each acronym once at first body use (the abstract defines only those it reuses).
 - Macros: `\kbproj0`/`\kbproj1` for same-label outer products and `\ketbra|a><b|` for cross
   products; `\iu` (imaginary), `\upe^{}` (exponential), `\d` (differential; never `\,`/`\!`
@@ -212,7 +219,7 @@ changes behaviour without touching the guide is incomplete.
 - Alignment style: in `align`/`aligned`/`alignat` etc. write `& =` with a space (never `&=`);
   column-align the entries of matrices (`pmatrix`), `dcases`/`cases`, and tables in the source
   (pad each column to its maximum width, single ` & ` separators).
-- Labelled (first-row/first-col) matrices: use `kbordermatrix` (`\kbordermatrix(){...}`);
+- Labeled (first-row/first-col) matrices: use `kbordermatrix` (`\kbordermatrix(){...}`);
   `nicematrix` cannot be used because it is incompatible with RevTeX (`revtex4-2`).  Leave the
   `\kbordermatrix` source layout as is (its label row/column need not be column-aligned); do not
   "tidy" it.
@@ -254,10 +261,10 @@ repeating it.
   not the bare primitive.  A module that patches a LaTeX2e package (a `listings` hook, for
   instance) stays LaTeX2e, and its `\@…`, `\def` and `\newif` are left alone.
 - **Hooks go through `\hook_gput_code:nnn`.**  `\hook_gput_code:nnn { hook } { Package } { code }`,
-  labelled with the package name so the chunk is deterministic; `.` resolves to the module only at
+  labeled with the package name so the chunk is deterministic; `.` resolves to the module only at
   load time, where the current file still is the module.  `\AtBeginDocument` is exactly
   `\hook_gput_code:nnn { begindocument } { … }`; `begindocument` runs after the `aux` is read but
-  still during initialisation, `begindocument/end` at the start of the body.
+  still during initialization, `begindocument/end` at the start of the body.
 - **Alignment.**  One space between arguments.  A multi-line argument list opens with its brace on
   its own line, one entry per line, padded *inside* the group so the closing braces line up:
   `{ CJK         }`, not `{ CJK }        `.  A run of two or more similar lines aligns the column
@@ -317,6 +324,10 @@ repeating it.
   adds `\providecommand*\LuaLaTeX{\hologo{LuaLaTeX}}` and its sibling in the driver.
 - A section does not open with a lone subsection: when a section has a single subdivision, drop
   the subheading and let the section carry the content.
+- The user part is grouped by theme, not by command: a section holds two to five subsections and
+  covers one area of behavior, rather than a section per macro.  A manual has no `subsubsection`;
+  a division that fine belongs in the prose of its subsection.  The implementation part repeats the
+  same top-level grouping, so a reader can move between the description and the code.
 - Narration goes between `\end{macrocode}` and the next `\begin{macrocode}`, never into comments
   inside the code: a comment in the verbatim body is printed as part of the listing.
 - A name that is fixed is written as a brace group, not as a metavariable: `\tn{begin}\{document\}`,
@@ -342,10 +353,13 @@ repeating it.
 - Prose uses one space after a sentence-ending full stop, question mark, or exclamation mark, and
   no trailing space at the end of a line: `\TeX` collapses runs of spaces, and the line-breaking
   algorithm decides where a line ends, so neither serves as a typographic control.  Alignment
-  padding inside code, `syntax` blocks, docstrip tables, and licence boxes is the exception.
+  padding inside code, `syntax` blocks, docstrip tables, and license boxes is the exception.
 - An option name in running text is `\keys{name}`, not `\texttt{name}`, even outside a
   `keyval` environment.  Inside one it appends `=` (docext's item format), so a reference to
   another key in a `keyval` description stays `\texttt`.
+- A control sequence in running text is `\cs{name}`.  `\texttt{\textbackslash name}` typesets the
+  backslash as a character rather than the name of the command, and it breaks the kerning and the
+  index entry that `\cs` provides.
 - An option list is a `keyval` environment, never a `function`: a key is not a control sequence,
   and `function` also files the entry in the index of commands. Write each item as
   `\item[\keys{name}]\val{…}`, and give the metavariable with the docext helper that shows the
@@ -402,6 +416,26 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
 - **The README is generated too.** Keep it in a `%<*readme>` block, extract it with
   `\nopreamble\nopostamble` into `README.md`, and copy it back to the repository root from
   `docinit_hook`: the root copy is what the forge shows, and a second hand-maintained copy drifts.
+  The hook also drops trailing whitespace and closes the file with one newline, because DocStrip
+  copies a `%`-stripped line verbatim, blank line included.
+- **The front matter is part of the manual's style.** A package manual carries an author with a
+  `\mail` helper defined in the driver (`\newcommand \mail[1] {\href{mailto:#1}{\ttfamily #1}}`),
+  the address in the `\thanks` of `\author`, and a `\thanks` on `\title` with the CTAN and the forge
+  URL as `\url`, so both wrap (load `xurl`).  `\hypersetup` sets `pdfauthor`, `pdfstartview`, and
+  `unicode`; `\date` prints `Released \DocFileDate \quad \texttt{\DocFileVersion}`.  The README
+  opens with badges in this order: CTAN version, GitHub release, last commit, Actions status,
+  stargazers.  Neither document states the project's stage ("early development", "first release"):
+  both describe what the package does.
+- **Every installed file is declared three times.** A generated file that the package installs
+  appears in `installfiles` (CI installs from it and `l3build check` copies each entry into the test
+  directory), in `tdslocations` (the TDS zip and `l3build install`), and in the guide's list of
+  generated files.  A file generated but absent from `installfiles` reaches no test, and a
+  `tdslocations` entry without a matching `installfiles` entry is silently left out of the zip.
+- **`build.lua` opens with the metadata block.** Banner comments delimit the sections, and one
+  aligned block holds `module`, `version`, `date`, `maintainer`, `uploader`, `maintainid`, `email`,
+  `repository`, `summary`, `description`; `update_tag` reads `version`, `date`, `maintainid`, and
+  `email` from it, so the `$Id$` line and the CTAN metadata never disagree.  `version` carries the
+  leading `v` (`v0.1.0`) while the changelog heading repeats it (`## v0.1.0 (2026-11-02)`).
 
 ## Tooling and upkeep
 

@@ -15,8 +15,9 @@ metadata:
 
 ## Repository rules
 
-Repo etiquette, Python style, the git/PR workflow, LaTeX style, tooling and upkeep are **machine-global**:
-see the `repo-rules` skill.  This skill carries only the project's science and engineering.
+Repo etiquette, Python style, the git/PR workflow, LaTeX style, `expl3` source style, manuals and
+DocStrip, tooling and upkeep are **machine-global**: see the `repo-rules` skill.  This skill carries
+only the project's science and engineering.
 
 ## Background
 
@@ -27,7 +28,7 @@ see the `repo-rules` skill.  This skill carries only the project's science and e
 ## Current work
 
 <!-- What the code does today: the solver/algorithm, its variants, what each entry point produces,
-     and the state of the art it implements.  Update this whenever behaviour changes. -->
+     and the state of the art it implements.  Update this whenever behavior changes. -->
 
 ## Conventions
 

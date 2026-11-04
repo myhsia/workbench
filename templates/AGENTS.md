@@ -5,13 +5,16 @@
 
 ## Shared rules
 
-Repo etiquette, Python style, the git/PR workflow, LaTeX style, tooling and upkeep are **machine-global**:
-see the `repo-rules` skill at `~/.config/opencode/skills/repo-rules/SKILL.md`.  Do not copy them here;
+Repo etiquette, Python style, the git/PR workflow, LaTeX style, `expl3` source style, manuals and
+DocStrip, tooling and upkeep are **machine-global**: see the `repo-rules` skill at
+`~/.config/opencode/skills/repo-rules/SKILL.md`.  Do not copy them here;
 state only the exceptions this repository makes.
 
 ## Environment
 
-<!-- Conda environment name, the directory all commands run from, the entry points.
+<!-- The toolchain, the directory all commands run from, the entry points.  A Python repository
+     names its conda environment, a TeX repository its TeX Live year and engine, and a mixed one
+     both; say which scripts are bash and whether an interpreter is available.
      Example:
 - Conda env `xyz`; run everything from `source/` (paths such as `./config` are relative to it).
 - Entry points: `python run.py`, `python plot.py`. -->
@@ -19,7 +22,8 @@ state only the exceptions this repository makes.
 ## Project layout
 
 <!-- Every tracked file and package, one line each, saying what lives where and which part is
-     generated or gitignored.  This is the section that saves a new session the most time. -->
+     generated or gitignored.  This is the section that saves a new session the most time.  Where a
+     check script exists, let it compare this table with `git ls-files` rather than trusting it. -->
 
 ## Conventions and pitfalls
 

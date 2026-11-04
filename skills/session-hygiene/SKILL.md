@@ -224,7 +224,7 @@ merge, …), build **thematic sessions** rather than one chronological blob.
    across sessions is fine and preferred (a little overlap keeps each session readable — a bus
    branch line). Never cut mid-session to "relocate" content unless asked.
 3. **Redline — no information loss.** Every `user` and `assistant` *text* is copied byte-for-byte;
-   nothing is paraphrased, summarised or dropped. Only junk is pruned (`reasoning`, tool
+   nothing is paraphrased, summarized or dropped. Only junk is pruned (`reasoning`, tool
    `state.content`/`metadata` payloads, attachments, control markers). This is the difference between
    *categorising* and *pruning*.
 4. **Smooth the seams** (allowed to modify context):
@@ -285,7 +285,7 @@ section) it does not even reliably hide them. Pick the mechanism that matches th
 
 ## `/undo` is an unfixed race — avoid it
 
-`/undo` has a known **race** (upstream #54150, open, labelled `reproduced`; reproducer script in the
+`/undo` has a known **race** (upstream #54150, open, labeled `reproduced`; reproducer script in the
 thread):
 
 - If `/undo` lands **before the reply starts streaming**, the turn is **not reverted** at all: the

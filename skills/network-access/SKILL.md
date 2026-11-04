@@ -24,7 +24,7 @@ times out (some international sites, e.g. Wikipedia) fall back to the HTTP/HTTPS
 
 ## Automatic fallback (do not ask)
 
-Switching to the proxy is a **default behaviour**, not a decision to put to the user:
+Switching to the proxy is a **default behavior**, not a decision to put to the user:
 
 1. Try the direct route with a short timeout (`curl --max-time 30`, or `webfetch`).
 2. On timeout, connection error, HTTP 403/451, or throughput below ~100 kB/s sustained for a few

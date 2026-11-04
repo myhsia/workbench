@@ -251,6 +251,9 @@ changes behaviour without touching the guide is incomplete.
   `\CJKunderdblline{…}`), a command is not split from the text it affects, and font options come
   before the font name (`\setCJKmainfont[Kana = Kai]{Song}`), broken between the two arguments.
 - Aligning the continuation of a `syntax` line uses `\` plus spaces, never `\phantom`.
+- An option name in running text is `\keys{name}`, not `\texttt{name}`, even outside a
+  `keyval` environment.  Inside one it appends `=` (docext's item format), so a reference to
+  another key in a `keyval` description stays `\texttt`.
 
 ## Tooling and upkeep
 

@@ -282,6 +282,12 @@ repeating it.
   documentation build. A large body belongs in a `.lua` module named by
   `\lua_load_module:n { Module }`; a long `\lua_now:e` argument is unreadable and is re-parsed at
   every call.
+- **A drawing is a box with a stroke around the path.** `l3draw` sizes its box by the bounding box
+  of the stroked path, one stroke width wider than the path, and it shifts the drawing so that the
+  bottom of that box sits on the baseline, which lifts a path that goes below the baseline. To tile
+  a pattern with `\leaders`, give the box exactly one period (`\hbox to <period>`) and absorb the
+  excess with `\hss` on both sides, and set the scratch box's height and depth to zero after
+  building it, so that a decoration never changes the leading of the line it sits on.
 
 ## l3doc source style
 
@@ -297,6 +303,18 @@ repeating it.
   Lua identifier (dots and underscores) *needs* `[int]`: without it `l3doc` emits a reference to
   a label it never defines.
 - Keep one blank `%` line between two consecutive entries.
+- Wrap every function and variable in its own `macro` or `variable`, and nest a helper inside the
+  object that calls it: a `\foo` that calls `\@@_foo:` is documented with the inner `macro` inside
+  the outer one, so the printed structure mirrors the call graph. Several names that share one
+  explanation go to one environment as a comma list (`\begin{macro}{\a, \b}`); a Lua function is
+  named by its Lua name (`\begin{macro}{Module.pass}`), while a table or a constant is a
+  `variable`. A missing `\end{macro}` swallows the rest of the run and the build dies far from the
+  cause, so count the openings and the closings when that happens.
+- Name an engine with the `hologo` macros: `\LuaTeX`, `\LuaLaTeX`, `\XeTeX`, `\pdfTeX`. `l3doc`
+  provides `\LuaTeX` and `\XeTeX` but not `\LuaLaTeX` or `\XeLaTeX`, so a manual that needs them
+  adds `\providecommand*\LuaLaTeX{\hologo{LuaLaTeX}}` and its sibling in the driver.
+- A section does not open with a lone subsection: when a section has a single subdivision, drop
+  the subheading and let the section carry the content.
 - Narration goes between `\end{macrocode}` and the next `\begin{macrocode}`, never into comments
   inside the code: a comment in the verbatim body is printed as part of the listing.
 - A name that is fixed is written as a brace group, not as a metavariable: `\tn{begin}\{document\}`,

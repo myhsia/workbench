@@ -242,6 +242,9 @@ changes behaviour without touching the guide is incomplete.
   `\file{luacjk-}\meta{name}\file{.cfg}`, and keep each piece in its own `\file`.
 - In a `quote` environment every line except the last ends with `\\`; without it the lines run
   together into one paragraph.
+- The manual describes the package, not the repository: no test files, CI, build commands, or
+  script names in the documentation part, and the reasoning behind an interface belongs in the
+  implementation section rather than beside the instruction for the user.
 
 ## Tooling and upkeep
 

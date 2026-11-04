@@ -360,6 +360,10 @@ repeating it.
 A `dtx` is both the source and the manual. What only the generated files need stays out of the
 documentation, and what only the manual needs stays out of the derived files.
 
+Prove a documentation-only change inert instead of arguing it: unpack the previous commit in a
+worktree, `cmp` `build/unpacked/*` against the current build, and compare the text of the two PDFs
+(`mutool draw -F txt`).  Both being identical is the evidence that only prose moved.
+
 - **The driver lives in the `dtx`.** A `%<*driver>` block holds the `\documentclass` and
   `\DocInput{\jobname.dtx}`; a separate driver file is one more thing to keep in step. `l3build`
   then typesets the `dtx` itself (`typesetfiles = {"Name.dtx"}`). Prefer
@@ -384,6 +388,15 @@ documentation, and what only the manual needs stays out of the derived files.
 - **The `$Id$` line must be matchable.** `update_tag` rewrites the single `\GetIdInfo` line, so its
   pattern may not assume a guard prefix on that line; a pattern such as `%<[a-z]+>\GetIdInfo`
   silently matches nothing once the metadata shares a block.
+- **A line is copied or dropped, not interpreted.**  DocStrip drops a line that starts with `%`
+  and copies every other line verbatim, a blank one included.  A stray blank line in a guarded
+  region therefore appears in every generated file; when a generated file gains a line nobody
+  wrote, look for a bare newline in the `dtx`.
+- **A non-TeX preamble sets `\MetaPrefix` twice.**  `\declarepreamble` prefixes each line with
+  `\MetaPrefix`, so a Lua or Python preamble needs `\def\MetaPrefix{--}` (or `#`) while the macro
+  is declared.  The reference lines at the top of the generated file are expanded when the file is
+  *opened*, not at declaration, so `\MetaPrefix` has to hold the same value again around the
+  `\generate` that writes it.  Restore the TeX default afterwards.
 - **The README is generated too.** Keep it in a `%<*readme>` block, extract it with
   `\nopreamble\nopostamble` into `README.md`, and copy it back to the repository root from
   `docinit_hook`: the root copy is what the forge shows, and a second hand-maintained copy drifts.
@@ -453,3 +466,9 @@ channels, `requirements.txt`) and runs the same commands as locally.  When a dep
 interpreter pin/channels, a validation suite, or the conda interface changes, update both the
 local setup and the CI workflow in the same change.  `environment.yaml` is the single source of
 truth: the workflow must not hard-code its own interpreter version or channel list.
+
+A TeX Live package list names the **bundle**, not the file: `l3draw.sty` comes from
+`l3experimental`, `expl3.sty` from `l3kernel`.  The name a `\RequirePackage` takes is not the name
+to install.  A dependency pulled in transitively may also have to be listed: `hyperref` no longer
+brings `nameref` and `refcount` with it on every platform, and a test that loads it then dies with
+an empty log.  When a job fails on a missing package, add the bundle that provides it.

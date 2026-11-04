@@ -251,6 +251,10 @@ changes behaviour without touching the guide is incomplete.
   `\CJKunderdblline{…}`), a command is not split from the text it affects, and font options come
   before the font name (`\setCJKmainfont[Kana = Kai]{Song}`), broken between the two arguments.
 - Aligning the continuation of a `syntax` line uses `\` plus spaces, never `\phantom`.
+- Prose uses one space after a sentence-ending full stop, question mark, or exclamation mark, and
+  no trailing space at the end of a line: `\TeX` collapses runs of spaces, and the line-breaking
+  algorithm decides where a line ends, so neither serves as a typographic control.  Alignment
+  padding inside code, `syntax` blocks, docstrip tables, and licence boxes is the exception.
 - An option name in running text is `\keys{name}`, not `\texttt{name}`, even outside a
   `keyval` environment.  Inside one it appends `=` (docext's item format), so a reference to
   another key in a `keyval` description stays `\texttt`.

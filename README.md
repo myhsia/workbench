@@ -15,5 +15,5 @@ Secrets and machine-local state — `proxy`, `service.json`, `cli.json`, `.updat
 untracked.
 
 Project-specific configuration stays in the project: each repository has its own `AGENTS.md` and
-`.opencode/skills/`, and a workspace may add its own `opencode.json` (for example the `oqs`
-workspace's path guards).
+`.opencode/skills/`, and a workspace may add its own `opencode.json` (for example the
+`~/GitHub/Dou_Group` workspace's path guards).

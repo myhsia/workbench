@@ -97,7 +97,9 @@ bash ~/.config/opencode/scripts/guides-due.sh .
 ```
 
 It prints `OK`, `MISSING`, or `STALE` (exit 0 = stale, 1 = ok, 2 = missing),
-counting uncommitted changes and commit order.
+counting uncommitted changes and commit order.  The session-start check runs the same script with
+`--committed`, which judges the history alone; this gate runs the default form, because at commit
+time the working tree is what is about to land.
 
 - **`MISSING`** → **refuse**, and offer to create the guides from
   `~/.config/opencode/templates/AGENTS.md` and `~/.config/opencode/templates/repo-topic/SKILL.md`.
@@ -439,6 +441,14 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   Timing is Asia/Shanghai, at most once per calendar day (due from 17:00 on a day not yet checked,
   or immediately if a whole day was skipped); the last date is in
   `~/.config/opencode/.update-check`.
+- **The model half is automatic; the OpenCode half is not.**  The `upkeep` plugin
+  (`~/.config/opencode/plugins/upkeep/index.ts`) runs at prompt admission once a day: it reads
+  `https://hpc-api.westlake.edu.cn/v1/models` with `WESTLAKE_API_KEY`, inserts chat models that the
+  configuration lacks (skipping embeddings and rerankers, never removing an entry, copying the
+  capability block of an existing model), writes `opencode.json` with the text-preserving insertion
+  that keeps the hand layout, keeps `opencode.json.bak`, and stamps `.models-check`.  It does not
+  stamp `.update-check`: installing an OpenCode version is not something a plugin may do, so that
+  half still goes through the skill, announced as `<context key="upkeep">`.
 - **Session upkeep (`session-hygiene`).**  Keep each session whole and branch into a new session
   rather than compacting; give every session a `type(things): …` title (rename any agent
   auto-title that does not conform).  Load the skill for the export → prune → import procedure

@@ -274,6 +274,14 @@ repeating it.
 - **No compatibility packages.**  A format floor of 2020-10 or later puts `\NewDocumentCommand` and
   its siblings in the kernel (`xparse`), and 2022-06 puts `\ProcessKeyOptions` there (`l3keys2e`);
   load neither.
+- **Lua goes through the public bridge.** `\lua_now:n`/`\lua_now:e` runs a chunk,
+  `\lua_escape:n`/`\lua_escape:e` escapes a value for it, and `\lua_load_module:n` runs
+  `require`. Never reach for `\directlua`, never hand-build a quoted `"…"` around a value that
+  comes from TeX, and never find and load a file with `kpse.findfile` plus `dofile`: the first
+  skips the escaping, and the second ignores `LUAINPUTS`, so it works locally and fails in a
+  documentation build. A large body belongs in a `.lua` module named by
+  `\lua_load_module:n { Module }`; a long `\lua_now:e` argument is unreadable and is re-parsed at
+  every call.
 
 ## l3doc source style
 

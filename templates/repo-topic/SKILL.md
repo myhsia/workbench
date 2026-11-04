@@ -1,6 +1,6 @@
 ---
-name: <repo>-<topic>
-description: Use when working on <what the code does> — <the questions this skill answers>.
+name: repo-topic
+description: Use when working on this repository — what it computes and which questions this skill answers.
 license: MIT
 compatibility: opencode
 metadata:
@@ -8,7 +8,7 @@ metadata:
   scope: project
 ---
 
-# <Topic>
+# Topic
 
 <!-- Two or three sentences: what this repository computes, for whom, and what a session gets from
      this skill that it would otherwise have to reverse-engineer from the code. -->

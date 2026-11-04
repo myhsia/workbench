@@ -8,8 +8,8 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
   `session-hygiene`, `opencode-hpc-update`, `network-access`, `ci-artifacts`.
 - `scripts/update-due.sh` — the daily upkeep check used by `opencode-hpc-update`.
 - `opencode.json` — the global config (providers, compaction, tool output).
-- `templates/` — the skeletons a new repository copies to its own `AGENTS.md` and
-  `.opencode/skills/SKILL.md` (never discovered as skills).
+- `templates/` — the skeletons a new repository copies: `templates/AGENTS.md` to its root
+  `AGENTS.md`, and `templates/repo-topic/SKILL.md` to `.opencode/skills/<name>/SKILL.md`.
 
 Secrets and machine-local state — `proxy`, `service.json`, `cli.json`, `.update-check` — are
 untracked.

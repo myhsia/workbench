@@ -91,7 +91,8 @@ agent's) and any unpushed commit; never "tidy" the index to make it look clean.
 Before `git commit`, check the repository's guides:
 
 - **No `AGENTS.md` or no `.opencode/skills/SKILL.md`** → **refuse**, and offer to create them from
-  `~/.config/opencode/templates/`.  Only an explicit, one-off instruction from the user lifts this.
+  `~/.config/opencode/templates/AGENTS.md` and `~/.config/opencode/templates/repo-topic/SKILL.md`.
+  Only an explicit, one-off instruction from the user lifts this.
 - **Guides present, but the staged diff touches code, config, CI, or output schema while neither
   guide changed** → **warn**: "this change may alter documented behaviour — update the guide, or
   confirm nothing documented changed".  Do not commit until the user answers.

@@ -51,8 +51,9 @@ A repository is not workable until it has **`AGENTS.md`** at its root and **`.op
 - Only offer this in a repository the user owns or is editing; not in a third-party checkout that is
   merely being read.
 - Creating them means starting from `~/.config/opencode/templates/AGENTS.md` and
-  `~/.config/opencode/templates/skill/SKILL.md`, then filling them **from the code** — never inventing
-  content.  The standard sections are listed in the `repo-rules` skill ("Project guide standard").
+  `~/.config/opencode/templates/repo-topic/SKILL.md`, then filling them **from the code** — never
+  inventing content.  The required sections are listed in the `repo-rules` skill ("Project guide
+  standard").
 - **Keep them current.**  Any change to layout, commands, dependencies, conventions, output schema,
   validation, or CI updates the relevant guide **in the same task**, and the guide is committed with
   the change.  Delete stale sections rather than leaving them to rot.

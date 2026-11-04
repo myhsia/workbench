@@ -219,6 +219,23 @@ changes behaviour without touching the guide is incomplete.
   pairings sit on one line.  State the thermal variance and occupation explicitly at their point
   of use.
 
+## l3doc source style
+
+- `\begin{macrocode}` and `\end{macrocode}` are written with `%` and **exactly four spaces**.
+  `l3doc` reads the body between those two lines with a scan quark, so any other indentation
+  leaves the following `\begin{macro}` inside the verbatim region, where it is printed in the
+  manual instead of being executed.
+- Every other documentation line uses `%` and **one space**, with no nesting indentation:
+  `\begin{macro}`, `\begin{variable}`, their `\end{...}`, the description text, and ordinary
+  prose all start in the same column.
+- Mark internal objects with `[int]` (`\begin{macro}[int]{...}`, `\begin{variable}[int]{...}`);
+  `[internal]` is accepted but the short form is the house style.  A `variable` whose name is a
+  Lua identifier (dots and underscores) *needs* `[int]`: without it `l3doc` emits a reference to
+  a label it never defines.
+- Keep one blank `%` line between two consecutive entries.
+- Narration goes between `\end{macrocode}` and the next `\begin{macrocode}`, never into comments
+  inside the code: a comment in the verbatim body is printed as part of the listing.
+
 ## Tooling and upkeep
 
 - **Where to record things.**  General conventions go in the global repository

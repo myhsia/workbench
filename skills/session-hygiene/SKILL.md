@@ -213,6 +213,46 @@ There is no append API: to move turns, rebuild a **new** session from the export
 
 `POST /api/session/{id}/fork { before: <msg_id> }` gives one branch (not a partition).
 
+## Categorising and smoothing sessions
+
+When a project's sessions mix several themes (coding style, manual wording, packaging, implementation,
+merge, …), build **thematic sessions** rather than one chronological blob.
+
+1. **Read the turns, not the titles.** For each session list `(seq, first ~90 chars of text)` of every
+   `user` message; a turn runs from its `seq` to the next user `seq − 1`. Group those turns by theme.
+2. **Copy, don't move.** Extraction is a *copy*: the originals keep every turn, and duplication
+   across sessions is fine and preferred (a little overlap keeps each session readable — a bus
+   branch line). Never cut mid-session to "relocate" content unless asked.
+3. **Redline — no information loss.** Every `user` and `assistant` *text* is copied byte-for-byte;
+   nothing is paraphrased, summarised or dropped. Only junk is pruned (`reasoning`, tool
+   `state.content`/`metadata` payloads, attachments, control markers). This is the difference between
+   *categorising* and *pruning*.
+4. **Smooth the seams** (allowed to modify context):
+   - prepend one `user` message stating the aim, e.g. *“Aim: collect the LuaCJK coding style …”*;
+   - between copied blocks insert a `synthetic` message naming the next topic (*“Next: indentation of
+     `variable`/`macro` environments.”*) — `synthetic` renders as a system note, not as the user
+     speaking;
+   - append one final `assistant` message that reads like a real wrap-up and ends with the exact
+     words **`Finished Build`**.
+5. **Message shapes** (the importer validates them):
+
+   ```jsonc
+   // aim
+   {"id":"msg_…","type":"user","text":"Aim: …","time":{"created":<ms>}}
+   // transition
+   {"id":"msg_…","type":"synthetic","text":"Next: …","time":{"created":<ms>}}
+   // closing — assistant messages REQUIRE model; copy it from the last assistant in the source
+   {"id":"msg_…","type":"assistant","agent":"build","model":{…},"finish":"stop",
+    "time":{"created":<ms>,"completed":<ms>},
+    "content":[{"type":"text","text":"Finished: … Finished Build"}]}
+   ```
+
+   Order by `time`: aim < first block < transitions < closing. New sessions get fresh ids; a
+   session that is only being pruned keeps its id (export → delete → import).
+6. **Verify each result**: `GET /api/session/<id>/context` = 200, the encoder scan is clean, the
+   **first** message is the aim, the **last** is the closing containing `Finished Build`, and the row
+   count matches the copied turns. Then report each id, title and before/after size.
+
 ## Session titles
 
 `type(things): short sentence covering all items (several words)`, `type` ∈

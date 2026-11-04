@@ -326,6 +326,12 @@ repeating it.
 - An option name in running text is `\keys{name}`, not `\texttt{name}`, even outside a
   `keyval` environment.  Inside one it appends `=` (docext's item format), so a reference to
   another key in a `keyval` description stays `\texttt`.
+- An option list is a `keyval` environment, never a `function`: a key is not a control sequence,
+  and `function` also files the entry in the index of commands. Write each item as
+  `\item[\keys{name}]\val{…}`, and give the metavariable with the docext helper that shows the
+  default: `\val{\TTF}` for a switch that starts on, `\val{\TFF}` for one that starts off, and
+  `\val{\TF}` when the initial value is stated in the text instead. A glue, a style name, or a
+  dimension is written plainly (`\val{glue}`). `function` stays for real control sequences.
 - A manual whose `codemo` demos execute is typeset by the engine the package targets, with the
   demos running in the same pass; a demo that only shows code does not need that engine.
 - Never redirect the terminal output of a TeX run to `\jobname.out`: hyperref reads that file as

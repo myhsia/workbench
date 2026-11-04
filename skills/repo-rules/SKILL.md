@@ -331,6 +331,39 @@ repeating it.
 - Never redirect the terminal output of a TeX run to `\jobname.out`: hyperref reads that file as
   its bookmarks, so the build fails on its own log with errors that point nowhere near the cause.
 
+### Manuals and DocStrip
+
+A `dtx` is both the source and the manual. What only the generated files need stays out of the
+documentation, and what only the manual needs stays out of the derived files.
+
+- **The driver lives in the `dtx`.** A `%<*driver>` block holds the `\documentclass` and
+  `\DocInput{\jobname.dtx}`; a separate driver file is one more thing to keep in step. `l3build`
+  then typesets the `dtx` itself (`typesetfiles = {"Name.dtx"}`). Prefer
+  `typesetexe = "latexmk -pdflua"` with `typesetruns = 1` to repeated `lualatex` runs: `latexmk`
+  knows when a rerun or an index run is still needed. Because `l3build` otherwise appends
+  `\input <file>` to the command, and `latexmk` reads that as a file name, this needs a `tex()`
+  override that passes the file and the `l3doc` index style. A package that loads Lua through
+  `\lua_load_module:n` also needs `LUAINPUTS` in that environment, pointing at the unpacked tree;
+  without it `require` sees only the system tree and the doc build fails on a module it just
+  generated.
+- **Metadata stays outside the documentation.** `\GetIdInfo` and the `\Provides…` lines sit in the
+  hidden part of the file, inside an `internal`-guarded `\iffalse`/`\fi` pair, not in a
+  `macrocode` block: everything in `macrocode` is typeset, so the manual would print the metadata
+  and the branch markers with it.
+- **One guard pair per region.** Open `%<*tag>` once at the start of a region and close it once at
+  the end. A pair around every `macro` leaves the marker lines in the manual, because the
+  documentation between them is stripped as guarded material rather than as prose.
+- **Share one metadata block.** Several files derived from one `dtx` take `\NeedsTeXFormat`, the
+  `expl3` requirement, the one `$Id$` line and the `\Provides…` lines from a single `%<*a|b|c>`
+  guard. Do not use the complement of a guard that other outputs also match: `%<*!driver>` is true
+  for every non-driver output, so it leaks into the `.lua` files as well.
+- **The `$Id$` line must be matchable.** `update_tag` rewrites the single `\GetIdInfo` line, so its
+  pattern may not assume a guard prefix on that line; a pattern such as `%<[a-z]+>\GetIdInfo`
+  silently matches nothing once the metadata shares a block.
+- **The README is generated too.** Keep it in a `%<*readme>` block, extract it with
+  `\nopreamble\nopostamble` into `README.md`, and copy it back to the repository root from
+  `docinit_hook`: the root copy is what the forge shows, and a second hand-maintained copy drifts.
+
 ## Tooling and upkeep
 
 - **Where to record things.**  General conventions go in the global repository

@@ -183,9 +183,14 @@ agent's) and any unpushed commit; never "tidy" the index to make it look clean.
   global repository in the same task, then commit and push.  Check every time.
 - **opencode (v2).**  `opencode.json` (global, plus a workspace one where a project needs its
   own guards) is kept in strict v2 form.
-  `permissions` is an ordered array of `{action, resource, effect}` rules (the `edit` guard on
-  restricted paths plus the matching `shell` guard on `rm`); v2 names the shell action `shell`,
-  not `bash`.  `compaction` tunes context handling (`auto`, `keep.tokens`, `buffer`).
+  `permissions` is an ordered array of `{action, resource, effect}` rules; the **last** matching
+  rule wins, and project rules come after global ones.  The machine-wide guards live in the global
+  config — blanket `read`/`edit`/`shell` allows first, then `deny` on `.git/**` and
+  `**/.git/**` (read/edit/`rm`; use git and `gh` instead of touching the store) and on
+  `**/__pycache__/**`.  A project's own `opencode.json` adds only its specific denies (e.g.
+  `bibliography/`, `*_legacy/`) and must **not** repeat a blanket allow after them, which would
+  cancel them.  v2 names the shell action `shell`, not `bash`.  `compaction` tunes context handling
+  (`auto`, `keep.tokens`, `buffer`).
 - The provider lives in the machine-global `~/.config/opencode/opencode.json` (native v2
   `providers` block, `package: "@opencode/ai/providers/openai-compatible"` since 2.2.x,
   `settings.baseURL`).  The CLI

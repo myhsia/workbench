@@ -1,5 +1,21 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "permissions": [
+    { "action": "read",  "resource": "*", "effect": "allow" },
+    { "action": "edit",  "resource": "*", "effect": "allow" },
+    { "action": "shell", "resource": "*", "effect": "allow" },
+
+    { "action": "read",  "resource": ".git/**", "effect": "deny" },
+    { "action": "read",  "resource": "**/.git/**", "effect": "deny" },
+    { "action": "edit",  "resource": ".git/**", "effect": "deny" },
+    { "action": "edit",  "resource": "**/.git/**", "effect": "deny" },
+    { "action": "shell", "resource": "rm .git/**", "effect": "deny" },
+    { "action": "shell", "resource": "rm **/.git/**", "effect": "deny" },
+
+    { "action": "read",  "resource": "**/__pycache__/**", "effect": "deny" },
+    { "action": "edit",  "resource": "**/__pycache__/**", "effect": "deny" },
+    { "action": "shell", "resource": "rm **/__pycache__/**", "effect": "deny" }
+  ],
   "compaction": {
     "auto": false,
     "keep": { "tokens": 60000 },

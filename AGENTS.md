@@ -72,7 +72,8 @@ A repository is not workable until it has **`AGENTS.md`** at its root and **`.op
   standard").
 - **Keep them current.**  Any change to layout, commands, dependencies, conventions, output schema,
   validation, or CI updates the relevant guide **in the same task**, and the guide is committed with
-  the change.  Delete stale sections rather than leaving them to rot.
+  the change.  Delete stale sections rather than leaving them to rot.  When the code changes and the
+  guide does not, the commit says why, in the line the commit gate of `repo-rules` prescribes.
 - Guides describe the code **as it is now**; they are not design notes.
 
 ## Ambient skills: apply, don't ask

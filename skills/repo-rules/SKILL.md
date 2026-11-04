@@ -106,6 +106,11 @@ counting uncommitted changes and commit order.
   confirm nothing documented changed".  Do not commit until the user answers.
 - **`OK`** → commit, unless the diff plainly changes something the guide documents but the guide is
   newer for a different reason; the numbers in this skill's tables are the thing to re-read.
+- **State the review.**  The script reads commit order, not content, so it cannot see a convention
+  that was never written down.  Whenever the staged diff touches code, config, CI, or output while
+  neither guide changes, the commit message and the final report carry one line:
+  `guides reviewed: unchanged, because …`.  `OK` answers "has the guide moved since the code", not
+  "is the guide complete".
 - **Docs-only commits** are never blocked.
 
 ## Project guide standard
@@ -235,11 +240,11 @@ Applies to any `dtx` written in `expl3` under `%<@@=…>`; a project guide point
 repeating it.
 
 - **Private names come from `@@`.**  The `dtx` sets `%<@@=Module>` once, before the first
-  implementation line, and writes `\l_@@_…`, `\g_@@_…`, `\c_@@_…`, `\@@_…`; DocStrip expands
-  the leading `@@` to `__Module`, and `l3doc` prints the same expansion when an object is
+  implementation line, and writes `\l_@@_…`, `\g_@@_…`, `\c_@@_…`, `\@@_…`; DocStrip
+  expands the leading `@@` to `__Module`, and `l3doc` prints the same expansion when an object is
   documented in the same form.  Never write `@@` inside a Lua block or a Lua string: DocStrip
-  rewrites it there too, and the Lua side would no longer match the TeX register it looks up.  A
-  name that Lua must see crosses with `\cs_to_str:N`, not as a literal.
+  rewrites it there too, and the Lua side would no longer match the TeX register it looks up.
+  A name that Lua must see crosses with `\cs_to_str:N`, not as a literal.
 - **Prefer the interface to the primitive.**  `\hbox:n`, `\hbox_to_wd:nn`, `\box_move_up:nn` and
   `\box_move_down:nn`, `\dim_set:Nn \tex_hsize:D`, `\int_use:N \allocationnumber` (not
   `\the\allocationnumber`), and `\c_zero_dim`/`\c_zero_int` for `\z@`.  Where no interface exists,

@@ -251,6 +251,10 @@ changes behaviour without touching the guide is incomplete.
   `\CJKunderdblline{…}`), a command is not split from the text it affects, and font options come
   before the font name (`\setCJKmainfont[Kana = Kai]{Song}`), broken between the two arguments.
 - Aligning the continuation of a `syntax` line uses `\` plus spaces, never `\phantom`.
+- In LaTeX and Markdown prose, start a sentence on a new source line and break a long sentence at
+  a comma, semicolon, or colon rather than mid-phrase.  A paragraph keeps its line count and its
+  width; only the break points move, which makes the diff readable without changing the output.
+  Code, `syntax` and `quote` blocks, tables, and braced variable-name lists keep their layout.
 - Prose uses one space after a sentence-ending full stop, question mark, or exclamation mark, and
   no trailing space at the end of a line: `\TeX` collapses runs of spaces, and the line-breaking
   algorithm decides where a line ends, so neither serves as a typographic control.  Alignment

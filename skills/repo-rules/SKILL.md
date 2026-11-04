@@ -245,6 +245,12 @@ changes behaviour without touching the guide is incomplete.
 - The manual describes the package, not the repository: no test files, CI, build commands, or
   script names in the documentation part, and the reasoning behind an interface belongs in the
   implementation section rather than beside the instruction for the user.
+- A command without arguments needs no `syntax` block, but a command with a visible effect wants a
+  demo; the demos are `codemo` pairs of code and result, one per effect or per option group.
+- In a demo, parallel commands align their arguments in one column (`\CJKunderline   {…}` under
+  `\CJKunderdblline{…}`), a command is not split from the text it affects, and font options come
+  before the font name (`\setCJKmainfont[Kana = Kai]{Song}`), broken between the two arguments.
+- Aligning the continuation of a `syntax` line uses `\` plus spaces, never `\phantom`.
 
 ## Tooling and upkeep
 

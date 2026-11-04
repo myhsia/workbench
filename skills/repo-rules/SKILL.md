@@ -80,11 +80,11 @@ Triage pull requests:
 
 ### Status check
 
-Before reporting, run `git status -sb` in every checkout of the current workspace (the global
-config repository plus each project repository) and state, for each: the branch, whether `HEAD == origin/main`, and whether the tree is
-dirty.  A settled state is `## main...origin/main` with `HEAD == origin/main`.  Call out uncommitted
-changes (and whether they are the user's or the agent's) and any unpushed commit; never "tidy" the
-index to make it look clean.
+Before reporting, run `git status -sb` in the global config repository (`~/.config/opencode`) and
+in every sibling checkout named by the workspace guide.  State, for each, the branch, whether
+`HEAD == origin/main`, and whether the tree is dirty.  A settled state is `## main...origin/main`
+with `HEAD == origin/main`.  Call out uncommitted changes (and whether they are the user's or the
+agent's) and any unpushed commit; never "tidy" the index to make it look clean.
 
 ## LaTeX writing style
 

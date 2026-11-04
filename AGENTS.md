@@ -16,9 +16,11 @@ stay authoritative for their own project.
   them back.  Build on top of them; if they cause a problem (a failing build, an overfull box),
   flag it instead of silently undoing.
 - **Commit only when asked.**  Leave the user's staging alone; stage by pathspec when committing.
-- **Report status.**  Before reporting, run `git status -sb` in every checkout of the current
-  workspace and state, for each: the branch, whether HEAD == `origin/main`, and whether the tree is
-  dirty.  Call out uncommitted changes (and whose they are) and any unpushed commit.
+- **Report status.**  Before reporting, run `git status -sb` in the global config repository
+  (`~/.config/opencode`) and in every checkout of the current workspace (each sibling repository
+  named by the workspace guide), then state for each: the branch, whether HEAD == `origin/main`,
+  and whether the tree is dirty.  Call out uncommitted changes (and whose they are) and any
+  unpushed commit.
 - **Never put secrets or addresses in commits.**  Machine endpoints, proxy addresses, API keys and
   cluster IPs stay in untracked files or environment variables.
 

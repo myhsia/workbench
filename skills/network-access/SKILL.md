@@ -22,6 +22,20 @@ times out (some international sites, e.g. Wikipedia) fall back to the HTTP/HTTPS
 - "Direct first" is about *reachability*.  For **throughput** the direct route is often throttled;
   see below.
 
+## Automatic fallback (do not ask)
+
+Switching to the proxy is a **default behaviour**, not a decision to put to the user:
+
+1. Try the direct route with a short timeout (`curl --max-time 30`, or `webfetch`).
+2. On timeout, connection error, HTTP 403/451, or throughput below ~100 kB/s sustained for a few
+   seconds → **retry through the proxy immediately** and continue on the proxied result.
+3. Mention the switch in at most one clause (or not at all); never stop to ask whether the proxy may
+   be used.
+4. For hosts already known to be throttled or blocked (`*.blob.core.windows.net`,
+   `objects.githubusercontent.com`, `codeload.github.com`, `*.githubusercontent.com`, Wikipedia), skip
+   the direct attempt entirely.
+5. Never report "network unavailable" or give up before the proxied retry has actually failed.
+
 ## Bulk transfers (proxy), even when direct works
 
 Large downloads are **not** a block problem but a bandwidth one.  The direct route to the GitHub
@@ -45,7 +59,7 @@ https_proxy="$PROXY" http_proxy="$PROXY" gh run download <run-id> -n <name> -D /
 Keep the plain direct form for small API calls (metadata, `gh api`, a few-kB JSON), where the proxy
 adds latency without benefit.
 
-## Proxy (on block only)
+## Proxy configuration
 
 The proxy address is **not** stored here; it lives in the service environment at
 `~/.config/opencode/proxy` (mode 600, a single line). Read it at use time:

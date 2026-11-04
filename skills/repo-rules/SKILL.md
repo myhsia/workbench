@@ -86,6 +86,53 @@ in every sibling checkout named by the workspace guide.  State, for each, the br
 with `HEAD == origin/main`.  Call out uncommitted changes (and whether they are the user's or the
 agent's) and any unpushed commit; never "tidy" the index to make it look clean.
 
+### Commit gate (guides)
+
+Before `git commit`, check the repository's guides:
+
+- **No `AGENTS.md` or no `.opencode/skills/SKILL.md`** → **refuse**, and offer to create them from
+  `~/.config/opencode/templates/`.  Only an explicit, one-off instruction from the user lifts this.
+- **Guides present, but the staged diff touches code, config, CI, or output schema while neither
+  guide changed** → **warn**: "this change may alter documented behaviour — update the guide, or
+  confirm nothing documented changed".  Do not commit until the user answers.
+- **Docs-only commits** are never blocked.
+
+## Project guide standard
+
+Every repository carries two documents, filled from the code and kept true:
+
+**`AGENTS.md`** (root) — build and orientation:
+
+| section | content |
+|---|---|
+| title + intro | what it is, what it produces, sibling/shared dependencies |
+| Shared rules | pointer to this skill; only exceptions stated locally |
+| Environment | conda env, working directory for commands, entry points |
+| Project layout | every tracked file/package, one line each, what is generated |
+| Conventions and pitfalls | the non-obvious rules, with the reason |
+| Workflows | copy-pasteable commands in dependency order, with runtimes |
+| Validation | how correctness is checked, the command, the numeric criterion |
+| CI | workflows, triggers, matrix, artifacts, local/CI parity |
+| Git style | pointer here; repository-specific scopes only |
+| Validity (scientific repos, optional) | each parameter and the measurement that justified it |
+
+**`.opencode/skills/SKILL.md`** — the science/architecture the code cannot explain:
+
+| section | content |
+|---|---|
+| frontmatter | `name`, and a `description` that says *when to use it* |
+| Repository rules | pointer to this skill |
+| Background | model/architecture, equations or schemas, approximations |
+| Current work | what the code does today, its variants, outputs |
+| Conventions | units, factors, rescaling, sign/branch conventions, name↔symbol mapping, file naming |
+| Workflows and validation | how to run, how to know it worked |
+
+**Review triggers** — update the guides in the same task when any of these happen: a file is added,
+renamed, or deleted; a command or flag changes; a dependency or environment changes; a convention or
+unit changes; an output schema or filename changes; a CI trigger or job changes; a pitfall is
+discovered; validation results change.  Before reporting, re-read the guide diff — a commit that
+changes behaviour without touching the guide is incomplete.
+
 ## LaTeX writing style
 
 - Impersonal prose (no first-person "we"); prefer "detailed workflow" over "by hand".

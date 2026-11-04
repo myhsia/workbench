@@ -41,6 +41,36 @@ PROXY=$(cat ~/.config/opencode/proxy)
 https_proxy="$PROXY" http_proxy="$PROXY" gh run download <run-id> -n <name> -D /tmp
 ```
 
+## Every repository keeps a guide and a skill
+
+A repository is not workable until it has **`AGENTS.md`** at its root and **`.opencode/skills/SKILL.md`**
+(or `skills/<name>/SKILL.md`).
+
+- **First action in a repository**: check both.  If either is missing, **ask the user once**, offering
+  *create now / later / never for this repo*.  Never create guides silently.
+- Only offer this in a repository the user owns or is editing; not in a third-party checkout that is
+  merely being read.
+- Creating them means starting from `~/.config/opencode/templates/AGENTS.md` and
+  `~/.config/opencode/templates/skill/SKILL.md`, then filling them **from the code** — never inventing
+  content.  The standard sections are listed in the `repo-rules` skill ("Project guide standard").
+- **Keep them current.**  Any change to layout, commands, dependencies, conventions, output schema,
+  validation, or CI updates the relevant guide **in the same task**, and the guide is committed with
+  the change.  Delete stale sections rather than leaving them to rot.
+- Guides describe the code **as it is now**; they are not design notes.
+
+## Ambient skills: apply, don't ask
+
+| situation | skill |
+|---|---|
+| a URL, download, clone, or API call fails, times out, or is slow | `network-access` — switch to the proxy |
+| data generation, long or matrixed CI jobs, artifact retrieval | `ci-artifacts` |
+| a long session, context pressure, or a topic that needs its own session | `session-hygiene` |
+| OpenCode itself, its config, or the Westlake HPC models and endpoints | `opencode-hpc-update` |
+| coding style, git/PR rules, LaTeX writing or source style | `repo-rules` |
+
+Load and apply the matching skill as soon as the trigger appears; do not ask the user whether a skill
+may be used.
+
 ## Keeping these rules current
 
 Whenever a session in **any** repository establishes a convention that is not specific to that

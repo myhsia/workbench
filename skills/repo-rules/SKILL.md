@@ -235,6 +235,13 @@ changes behaviour without touching the guide is incomplete.
 - Keep one blank `%` line between two consecutive entries.
 - Narration goes between `\end{macrocode}` and the next `\begin{macrocode}`, never into comments
   inside the code: a comment in the verbatim body is printed as part of the listing.
+- A name that is fixed is written as a brace group, not as a metavariable: `\tn{begin}\{document\}`,
+  not `\tn{begin}\marg{document}`, which prints `{⟨document⟩}`.  Neither `\marg*` nor `\oarg*`
+  exists in the current `l3doc`, so the star is not a way out.
+- `\file{...}` takes plain text only; a control sequence inside it is typeset literally.  Write
+  `\file{luacjk-}\meta{name}\file{.cfg}`, and keep each piece in its own `\file`.
+- In a `quote` environment every line except the last ends with `\\`; without it the lines run
+  together into one paragraph.
 
 ## Tooling and upkeep
 

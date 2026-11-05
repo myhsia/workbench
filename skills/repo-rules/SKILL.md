@@ -386,6 +386,14 @@ repeating it.
   `\csname`/`\endcsname`.  A token written to a file is read with the catcodes of the reader: the
   generated `ctexopts.cfg` works because `ctex` is under `\ProvidesExplPackage`, which leaves
   `\ExplSyntaxOn` on; the same file read by plain LaTeX would see `\cs` and `:w`.
+- **The catcode of `@` is inherited, not set by `\ExplSyntaxOn`.**  `\ExplSyntaxOn` turns `_`, `:`
+  and the rest of the expl3 régime into letters and leaves `@` exactly as it found it.  A package
+  or class file is input under `\makeatletter`, so `@` is 11 in it and `\f@size`, `\p@` and `\@…`
+  keep working after its `\ProvidesExplPackage` or `\ProvidesExplFile` — the engine files of a
+  backend are of this kind, because the package that inputs them is.  A document body has `@` at
+  12, so the same line is wrong there.  Before rewriting an `@` name as `\csname …\endcsname` or
+  `\use:c { … }`, establish the régime of the file the line lives in; the fact that a probe in a
+  document body reports 12 says nothing about a package file.
 - **Slashes carry spaces.**  `shipout / before`, `cmd / selectfont / after`, `LuaCJK / math`: the
   space is catcode 9 under `\ExplSyntaxOn`, so the stored name is `shipout/before` while the source
   reads as words.  Outside expl3, in a LaTeX2e file or a test, the name is written without spaces.

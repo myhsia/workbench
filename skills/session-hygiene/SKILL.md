@@ -315,3 +315,58 @@ Consequences:
 - **Long -> branch:** continue in a new session with a short handoff line; overlap is fine.
 - **Multi-topic -> split only if the themes are obviously different.**
 - **No compaction by default.**
+
+## Prune levels
+
+"Prune this session" is a *level*, not one recipe.  Measure the composition first (reasoning, tool
+inputs, tool outputs, attachments) and pick the shallowest level that meets the goal:
+
+| level | drop | keep | when |
+| --- | --- | --- | --- |
+| **least clean** | `reasoning` only | every tool output, every input, attachments, all text | the user asks for "the least clean" or the tool outputs are the evidence |
+| **medium** | `reasoning` + tool `state.content`/`metadata` payloads (stub with `[{"type":"text","text":""}]` + `metadata.status`) | tool **inputs** verbatim, attachments, all text | context pressure with the work already recorded in the transcript |
+| **D3** (deep) | the above + attachments + non-user/assistant markers; **inputs reduced to identifier fields** | user/assistant text | a session that must fit a small window; the code lives in `git` |
+
+Defaults that follow from the user's standing preferences: **never paraphrase or drop user/assistant
+text**; keep tool **inputs verbatim** unless the user says otherwise; drop `reasoning` first because
+it is the cheapest and least informative; do not compact; branch instead of splitting.
+
+Quantify before and after, and state the level used and what was kept.
+
+## Finding the message to delete
+
+"Delete the message I sent saying X" is a lookup plus a decision, not a guess:
+
+1. Locate it: `select seq, type, substr(json_extract(data,'$.text'),1,90) from session_message where
+   session_id=? and type='user' and json_extract(data,'$.text') like '%X%' order by seq;`
+2. Look at the rows after it. Three cases:
+   - **suffix** (nothing after it, or only markers): `revert/stage` at its id + `revert/commit` —
+     keeps the session id, `files: false` leaves the tree alone;
+   - **middle**: a rebuild (export -> drop those ids -> import; new id);
+   - **prompt only vs whole turn**: check the reply. An empty / `finish: "error"` / interrupted reply
+     means deleting the prompt and the dead reply loses nothing and leaves a coherent tail; a real
+     reply means removing the prompt alone orphans it, so ask which is wanted.
+3. Back up (export, mode 600), verify afterwards (`/context` 200, encoder scan, the text is gone, the
+   last remaining row is the intended one), then report what was removed and what remains.
+
+## Driving other sessions (orchestration)
+
+A main agent can make the existing sessions answer and act without forking them:
+`opencode run -s <session-id> --agent build --auto "<prompt>"` runs that session to completion and
+prints its final message.  `--agent build` matters: a session whose last mode was Plan will refuse to
+edit.  Read-only audits must say so in the prompt ("read-only: do not edit/create/commit; only git
+status/log/show, grep, cat, ls").
+
+The working pattern that matched the user's own manual workflow:
+
+1. **Gather** — the *same* question to every session, read-only, sequentially (a failure loop with one
+   retry; capture stdout per session).
+2. **Aggregate** — parse each reply into the same labelled parts, cluster the questions, tag each with
+   the sessions that asked it, and surface disagreements; present one numbered decision sheet.
+3. **Execute** — the user's decisions go back to the sessions, still sequentially, with **one owner per
+   repository** and a single owner for the machine-global config; sessions must not share a file.
+4. **Stop before pushing** when the user asked for review: gather commits, diffs and `git status`, and
+   wait for explicit approval.
+
+Cost is one full context replay per run, so sequence, do not fan out, unless the step is read-only and
+the user accepts the throttle risk.

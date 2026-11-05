@@ -591,3 +591,31 @@ A TeX Live package list names the **bundle**, not the file: `l3draw.sty` comes f
 to install.  A dependency pulled in transitively may also have to be listed: `hyperref` no longer
 brings `nameref` and `refcount` with it on every platform, and a test that loads it then dies with
 an empty log.  When a job fails on a missing package, add the bundle that provides it.
+
+## History rewrite and rollback bundles
+
+Rewriting history is a legitimate but destructive operation: it changes every downstream sha, so it
+needs an explicit approval, a rollback, and a review gate.
+
+1. **Back up before touching anything**: `git bundle create /tmp/<repo>-pre-rewrite.bundle --all`
+   (plus the working tree clean).  After the rewrite, take a `-post-rewrite.bundle` as well.
+2. **Prefer the tool that fits**: `git filter-repo` has **no `--tree-filter`** (that was
+   `filter-branch`).  Rewrite file contents with `--file-info-callback FILE`, whose body receives
+   `(filename, mode, blob_id, value)` and can return a new blob id from
+   `value.insert_file_with_contents(...)`; guard on the extension, and never rewrite strings or
+   comments — use a token-aware fixer, not a regex.
+3. **Prove the change is the intended one**: `git diff -w <old-tip> <new-tip>` must show only the
+   commits that legitimately differ; `git diff --name-status old new | grep -v '^M'` must be empty
+   (no files added or deleted).  Record both outputs.
+4. **Restore the remote and force-push**: `filter-repo` drops `origin`; re-add it, `git fetch`, set the
+   upstream, then `git push --force-with-lease`.  Never `--force` bare.
+5. **Rollback procedure**: `git bundle verify FILE`; `git fetch FILE 'refs/heads/main:refs/restore'`;
+   compare `git log` and the tree; `git push --force-with-lease origin refs/restore:main`.
+6. **Record the rollback in the guides, and clean it up in the same task**: a note naming the bundles,
+   the recovery commands and the lifecycle rule ("delete the bundles *and* this note once the user
+   confirms").  Keep the reminder mechanical — a script the upkeep plugin runs — so it disappears when
+   the files are gone.  Deleting the bundles without removing the note leaves stale memory; removing
+   the note without deleting the bundles loses the rollback.
+
+Reporting rule: state old and new `HEAD`, the commit counts, the `-w` and name-status checks, and the
+bundle paths — a rewrite that cannot show those was not verified.

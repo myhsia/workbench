@@ -347,6 +347,24 @@ repeating it.
   run, and the key, the property and the `=` in `\keys_define:nn`.  In a key block the property
   column is shared by the whole block while the keys are aligned per option family; a family whose
   padding would push a line past 79 columns stays unaligned.
+- **What else takes a column.**  A run of two or more lines with the same shape shares one column
+  each: the `=`, `==`, `+` of Lua assignments and table literals (two-line runs count), the opening
+  brace of a run of the same command, the argument column of parallel commands in a demo
+  (`\CJKunderdot {…}` padded to `\CJKunderwave[symbol = …]{…}`), and the closing brace of sibling
+  groups, so `{ NVV  }` lines up with `{ NVNF }` and a one-character-shorter group gains a space
+  before its `}`.  The widening is deliberate: it is the similarity that the reader is meant to see.
+  When a key in a `\keys_define:nn` block is too long, drop the space before the property first
+  (`PunctKinsoku / false.code:n`); only when that still passes 79 columns does the property move to
+  the next line, at the property column.
+- **`\keys{a, b, c}`** lists the keys of one family in a single call; `\keys{a}, \keys{b}` is only
+  for keys that are separated by a gloss or belong to different families.
+- **Literal braces in prose use `"…"`.**  `l3doc` makes `"` a short verb for the body, so
+  `\cs{usepackage}\oarg{options}"{LuaCJK}"` prints the braces; `|…|` stays the default span, and it
+  cannot show braces without escaping them.
+- **`\cs:w`/`\cs_end:` are for expl3.**  In code under `\ExplSyntaxOn` they replace
+  `\csname`/`\endcsname`.  A token written to a file is read with the catcodes of the reader: the
+  generated `ctexopts.cfg` works because `ctex` is under `\ProvidesExplPackage`, which leaves
+  `\ExplSyntaxOn` on; the same file read by plain LaTeX would see `\cs` and `:w`.
 - **Slashes carry spaces.**  `shipout / before`, `cmd / selectfont / after`, `LuaCJK / math`: the
   space is catcode 9 under `\ExplSyntaxOn`, so the stored name is `shipout/before` while the source
   reads as words.  Outside expl3, in a LaTeX2e file or a test, the name is written without spaces.
@@ -557,7 +575,10 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   capability block of an existing model), writes `opencode.json` with the text-preserving insertion
   that keeps the hand layout, keeps `opencode.json.bak`, and stamps `.models-check`.  It does not
   stamp `.update-check`: installing an OpenCode version is not something a plugin may do, so that
-  half still goes through the skill, announced as `<context key="upkeep">`.
+  half still goes through the skill, announced as `<context key="upkeep">`.  The same injection
+  carries, on **every** session and directory switch, the unconditional line that a task which
+  changes a convention, a command, a dependency, or the layout updates `AGENTS.md` and the skill
+  with it, plus the `guides-due.sh --committed` verdict when it is not `OK`.
 - **Session upkeep (`session-hygiene`).**  Keep each session whole and branch into a new session
   rather than compacting; give every session a `type(things): …` title (rename any agent
   auto-title that does not conform).  Load the skill for the export → prune → import procedure

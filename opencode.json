@@ -1,27 +1,78 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "permissions": [
-    { "action": "read",  "resource": "*", "effect": "allow" },
-    { "action": "edit",  "resource": "*", "effect": "allow" },
-    { "action": "shell", "resource": "*", "effect": "allow" },
-
-    { "action": "read",  "resource": ".git/**", "effect": "deny" },
-    { "action": "read",  "resource": "**/.git/**", "effect": "deny" },
-    { "action": "edit",  "resource": ".git/**", "effect": "deny" },
-    { "action": "edit",  "resource": "**/.git/**", "effect": "deny" },
-    { "action": "shell", "resource": "rm .git/**", "effect": "deny" },
-    { "action": "shell", "resource": "rm **/.git/**", "effect": "deny" },
-
-    { "action": "read",  "resource": "**/__pycache__/**", "effect": "deny" },
-    { "action": "edit",  "resource": "**/__pycache__/**", "effect": "deny" },
-    { "action": "shell", "resource": "rm **/__pycache__/**", "effect": "deny" }
+    {
+      "action": "read",
+      "resource": "*",
+      "effect": "allow"
+    },
+    {
+      "action": "edit",
+      "resource": "*",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "*",
+      "effect": "allow"
+    },
+    {
+      "action": "read",
+      "resource": ".git/**",
+      "effect": "deny"
+    },
+    {
+      "action": "read",
+      "resource": "**/.git/**",
+      "effect": "deny"
+    },
+    {
+      "action": "edit",
+      "resource": ".git/**",
+      "effect": "deny"
+    },
+    {
+      "action": "edit",
+      "resource": "**/.git/**",
+      "effect": "deny"
+    },
+    {
+      "action": "shell",
+      "resource": "rm .git/**",
+      "effect": "deny"
+    },
+    {
+      "action": "shell",
+      "resource": "rm **/.git/**",
+      "effect": "deny"
+    },
+    {
+      "action": "read",
+      "resource": "**/__pycache__/**",
+      "effect": "deny"
+    },
+    {
+      "action": "edit",
+      "resource": "**/__pycache__/**",
+      "effect": "deny"
+    },
+    {
+      "action": "shell",
+      "resource": "rm **/__pycache__/**",
+      "effect": "deny"
+    }
   ],
   "compaction": {
     "auto": false,
-    "keep": { "tokens": 60000 },
+    "keep": {
+      "tokens": 60000
+    },
     "buffer": 25000
   },
-  "tool_output": { "max_lines": 500, "max_bytes": 32768 },
+  "tool_output": {
+    "max_lines": 500,
+    "max_bytes": 32768
+  },
   "experimental": {
     "policies": [
       {
@@ -76,23 +127,6 @@
         },
         "Qwen": {
           "name": "Qwen 3.8",
-          "capabilities": {
-            "tools": true,
-            "input": [
-              "text",
-              "image"
-            ],
-            "output": [
-              "text"
-            ]
-          },
-          "limit": {
-            "context": 1048576,
-            "output": 393216
-          }
-        },
-        "Qwen_claude": {
-          "name": "Qwen_claude",
           "capabilities": {
             "tools": true,
             "input": [

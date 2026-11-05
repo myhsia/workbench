@@ -356,6 +356,11 @@ repeating it.
   When a key in a `\keys_define:nn` block is too long, drop the space before the property first
   (`PunctKinsoku / false.code:n`); only when that still passes 79 columns does the property move to
   the next line, at the property column.
+  A value aligns token by token, not only at the `=`: `M.attr_font = M.attr_font or nil` pads after
+  the first token so that `or` shares a column with its neighbours.  A leading double quote occupies
+  one column, so the content inside it lines up with the bare value of the next line
+  (`= \int_use:N …` next to `= "\cs_to_str:N …`), and the closing quote, the trailing comma or
+  semicolon are not columns and are left where they fall.
 - **`\keys{a, b, c}`** lists the keys of one family in a single call; `\keys{a}, \keys{b}` is only
   for keys that are separated by a gloss or belong to different families.
 - **Literal braces in prose use `"…"`.**  `l3doc` makes `"` a short verb for the body, so

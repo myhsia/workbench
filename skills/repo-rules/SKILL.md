@@ -361,6 +361,15 @@ repeating it.
   one column, so the content inside it lines up with the bare value of the next line
   (`= \int_use:N …` next to `= "\cs_to_str:N …`), and the closing quote, the trailing comma or
   semicolon are not columns and are left where they fall.
+- **An empty branch is not written.**  A conditional whose true or false branch is empty uses the
+  shorter variant: `\bool_lazy_or:nnTF … { } { … }` becomes `\bool_lazy_or:nnF … { … }`, and a
+  `\prop_get:NVNTF` with an empty branch becomes `\prop_get:NVNT` or `\prop_get:NVNF`.  The
+  existence of the `TF` form guarantees the `T` and the `F` form, and a `\str_case:nn` family call
+  has no fallback argument at all, so a trailing `{ }` there is dead code.
+- **A long argument breaks after its first token.**  When the content of a braced argument does not
+  fit on the command's line, start it on the next line at the content indent and close the group in
+  that same column, so the braces pair vertically; a leading token such as `\bfseries` stays with
+  the opening brace, and a nested argument follows the same indent.
 - **A brace group is a sibling, not a level.**  In a `\str_case` list the body group of a branch
   starts in the column of its `{ key }`, and only the body's own lines move in.  When the list ends
   with a long closing brace and the fallback is short, the fallback moves up onto that line

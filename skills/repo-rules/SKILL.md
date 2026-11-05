@@ -488,6 +488,31 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   `\lua_load_module:n` also needs `LUAINPUTS` in that environment, pointing at the unpacked tree;
   without it `require` sees only the system tree and the doc build fails on a module it just
   generated.
+- **The changelog is generated from `\changes`.**  Each user-visible change is a
+  `% \changes{v<version>}{<yyyy/mm/dd>}{…}` line next to the object it changes, inside that
+  object's `macro`, `environment`, or `variable`, so `\PrintChanges` files it under the object and
+  prints the page it points at; an entry about the manual, the tests, or the repository goes in a
+  block right after the driver's `% \fi` and is filed as `General`.  The version and the date stay
+  on the first line, only the text wraps.  Commands are `\cs{…}`, keys `\opt{…}`, packages
+  `\pkg{…}`, files `\file{…}`, environments `\env{…}`, other literals `\texttt{…}`, and a
+  bracketed option list is `\cs{cmd}|[key = …]|` so that it stays one code span; a line inside
+  `macrocode` would be copied into the derived file.  `CHANGELOG.md` is then generated from these
+  entries by ctex-kit's `scripts/extract-changes.py`, fetched from its `master` rather than
+  vendored.  That script reads `\cs`/`\tn`, `\pkg`/`\cls`/`\file`/`\env`, `\opt`, `\texttt`,
+  `|…|` and `\textbf` and drops every other command, so `\keys` and `\oarg` come out as stray
+  braces: a key is written `\opt`, and the driver aliases it to `\keys` for the printed history.
+  The gate regenerates the file and fails on any byte difference, as ctex-kit's
+  `check-changelog.yml` does; a package whose script lives in another repository also needs a
+  scheduled job, because a change there triggers no workflow here.
+- **`\PrintChanges` reads a `.gls` that l3build will not build.**  `doc.sty` inputs
+  `\jobname.gls`, which `makeindex -s gglo.ist` produces from `\jobname.glo`; `l3build` runs that
+  step only inside its `for i = 2, typesetruns` loop, so a `latexmk`-driven build with
+  `typesetruns = 1` prints no change history and reports no error.  Register the dependency in the
+  `tex()` override's `-e` payload (`add_cus_dep(q/glo/,q/gls/,0,q/…/)` plus a sub that runs
+  `makeindex -s gglo.ist`), single-quoted on Unix: a double-quoted payload loses its `$_` names to
+  the shell, and `latexmk` silently ignores invalid `-e` code.  The new part enters the table of
+  contents, which shifts every page reference in the manual by one, and the `\cs{}` names in the
+  entries appear in the index at the change-history pages.
 - **Metadata stays outside the documentation.** `\GetIdInfo` and the `\Provides…` lines sit in the
   hidden part of the file, inside an `internal`-guarded `\iffalse`/`\fi` pair, not in a
   `macrocode` block: everything in `macrocode` is typeset, so the manual would print the metadata
@@ -533,7 +558,10 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   aligned block holds `module`, `version`, `date`, `maintainer`, `uploader`, `maintainid`, `email`,
   `repository`, `summary`, `description`; `update_tag` reads `version`, `date`, `maintainid`, and
   `email` from it, so the `$Id$` line and the CTAN metadata never disagree.  `version` carries the
-  leading `v` (`v0.1.0`) while the changelog heading repeats it (`## v0.1.0 (2026-11-02)`).
+  leading `v` (`v0.1.0`), and the changelog is generated (see "Manuals and DocStrip"): its heading
+  is the release link `## [<name>-<version>](<repository>/releases/tag/<name>-<version>)`, with
+  `<name>` from the `dtx` file name, so the git tag created at release time carries the same
+  `<name>-<version>`.
 
 ## Tooling and upkeep
 

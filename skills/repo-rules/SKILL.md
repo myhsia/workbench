@@ -45,6 +45,77 @@ aligning their `=` to one column; one parameter per line in multi-line signature
 align their inline comments to a common column, and a related group of imports aligns the
 `import` keyword.
 
+`scripts/style-lint.py` enforces the **spacing** only: it is token-aware, so strings and comments
+are never touched, it prints `file:line`, and it exits 1 on findings (a directory is scanned
+recursively, skipping `.git/`, `__pycache__/` and `*_legacy/`).  **Alignment is advisory** — no
+tool checks it.  No formatter runs in CI: ruff and black are deliberately absent, because they
+would rewrite the house style.  A review comment, not a failed check, is what asks for alignment.
+
+### Numerical and array conventions
+
+- State the **sign convention** once, in the docstring of the function that defines it: the
+  transform direction (`e^{\pm i H t}`, `e^{\pm i \mathcal L t}`) and the Fourier/Laplace kernel.
+  Two modules that disagree on the sign disagree on every odd moment; never leave it to a call
+  site to guess.
+- Units: the physical parameters are the config values.  An internal rescaling (`scale` and the
+  like) is a **numerical device**, stated as such, with the exact power by which stored quantities
+  are scaled and recovered.
+- State array shapes and axis order on the function (`(n_moments,)`, `(n_orders, d, d)`), and say
+  whether a stored series starts at order 0 or at order 1 with the zeroth order implied.
+- Operator algebra: put the commutator and metric sign next to the definition, not in a comment
+  three call levels away.
+
+### Verification
+
+- Check any identity about moments, coefficients or spectra in **extended precision** (`mpmath`,
+  `dps` raised to about 100) before trusting the double-precision result; the ill-conditioning of
+  a moment sequence only shows up above machine precision.
+- Compare against an **independent route** — a second engine, exact diagonalisation, or a closed
+  form — and report the residual, not just the agreement.
+- Give the tolerance and the quantity it is relative to (`|Δ| / max|ref|`), and state the regime
+  in which the approximation holds.
+- No unobserved results (machine-wide MUST): a measurement that was not run is reported as not run.
+
+### Plotting
+
+- **One owner per figure specification.**  Exactly one script reads the data, fixes ranges,
+  labels and page order; every other consumer includes that PDF instead of redrawing it.
+- Document the **page map** in the driver (page 1 the legend bar, page 2 the body, …), so an
+  include names a page number and nothing else.
+- Pin labels by a fixed baseline coordinate rather than measuring them from ink, and build the
+  legend once and reuse it across the pages of a figure family.
+
+### Data and report outputs
+
+- Strict JSON: `null` for absent or infeasible entries — never `NaN` (not valid JSON) and never a
+  placeholder string.  Write with `json.dump(..., indent = 2)` and a canonical key order.
+- Every row records the window, threshold or order it was computed under, so the report can be
+  re-read without the code that made it.
+- Machine-readable file first; the human-readable summary is generated from it and never edited by
+  hand.
+
+### Tooling pitfalls
+
+- Pin the interpreter in one place (the environment file), and let CI and the local shell use the
+  same pinned version; an unpinned `python3` is the default source of "works here" failures.
+- Use a crash-proof sentinel: write a completion marker, or rename into place atomically, only
+  after the whole step succeeds, so a partial run cannot be mistaken for a finished one.
+- Budget resources explicitly — worker count, per-worker threads, memory — and treat a nested
+  parallelism default as a bug.
+
+### Typing, docstrings, and import order
+
+Recorded only as far as the code already obeys it; do not retrofit.
+
+- Type annotations appear on a minority of signatures: annotate **new public functions**, and do
+  not add annotations to existing ones merely for uniformity.
+- No module uses `from __future__ import annotations`; do not introduce it piecemeal.
+- Every module opens with a docstring (after the optional `# %%` marker) stating its purpose and
+  the output it writes.
+- Imports are grouped standard library, then third-party, then project modules, with sibling
+  standard-library modules combined on one `import a, b, c` line; `from` imports follow the plain
+  ones.  The grouping is followed in practice but not enforced.
+
 ## Git, commits, and pull requests
 
 Commits follow `type(scope): short summary` with `type` among `feat`, `fix`, `tune`, `refactor`,
@@ -113,6 +184,10 @@ time the working tree is what is about to land.
   neither guide changes, the commit message and the final report carry one line:
   `guides reviewed: unchanged, because …`.  `OK` answers "has the guide moved since the code", not
   "is the guide complete".
+- **`Guides-Reviewed:` trailer.**  Put that line in the commit message's trailer block as
+  `Guides-Reviewed: unchanged, because …` (or `Guides-Reviewed: AGENTS.md, .opencode/skills` when
+  the guides were reviewed and updated).  It is what makes the review auditable in history with
+  `git log --format=%B`, instead of surviving only in a chat report.
 - **Docs-only commits** are never blocked.
 
 ## Project guide standard

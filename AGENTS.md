@@ -11,20 +11,40 @@ stay authoritative for their own project.
 
 ## At session start
 
-Two checks, before the task itself. Both are scripts: run them, do not recall them.
+Two checks, before the task itself. Both are scripts: run them, do not recall them. They run on
+the **first prompt of each calendar day** (Asia/Shanghai) and again **whenever the session's
+directory changes** (a workspace or repository switch) — not merely once per session.  The
+`upkeep` plugin enforces that cadence and injects one short line when a check reports something;
+the `at session start` rule below is what makes the answer part of the task.
 
 ```bash
 bash ~/.config/opencode/scripts/update-due.sh              # exit 0 = DUE
 bash ~/.config/opencode/scripts/guides-due.sh --committed .  # exit 0 = STALE
 ```
 
-- `update-due.sh` printing `DUE` means today's upkeep has not run: load
-  `opencode-hpc-update`, refresh the config, and stamp the day with
-  `update-due.sh --mark`. Otherwise say nothing about it.
+- `update-due.sh` printing `DUE` means today's calendar day has no stamp: load
+  `opencode-hpc-update`, refresh the config, and stamp the day with `update-due.sh --mark`.
+  There is **no 17:00 rule** — the day rolls over at 00:00 Asia/Shanghai, and a skipped day is due
+  on the next first message, any hour.  Otherwise say nothing about it.
 - `guides-due.sh` in the current repository printing `STALE` or `MISSING` means the guides are part
   of this task, not a follow-up. Report the answer with the status at the end; see the commit gate
   in `repo-rules`.  The `--committed` form judges the history only: a repository being edited is
-  dirty by design, and the pre-commit gate runs the default form.
+  dirty by design, and the pre-commit gate runs the default form.  When the target is not a git
+  repository (the workspace root, which holds sibling checkouts), it prints one line per child
+  repository and exits 0 if any of them is `STALE` or `MISSING`.
+
+## No unobserved results (MUST)
+
+Never report a measurement you did not run.  Every claimed check, benchmark, error figure or
+"it works" carries the command and its actual output; when something was not run, say so plainly
+instead of implying it was.
+
+- Label every number: **measured** (a run performed in this task), **derived** (computed from
+  recorded data by a stated formula), or **fitted** (a parameter adjusted to match a target).
+- Record rejected variants and dead ends with the reason they failed, instead of deleting them; a
+  silently removed attempt reads as if it never existed.
+- State an approximation with its regime and residual; never let a clean-looking plot stand in for
+  a tolerance.
 
 ## Repository etiquette
 
@@ -33,6 +53,10 @@ bash ~/.config/opencode/scripts/guides-due.sh --committed .  # exit 0 = STALE
   them back.  Build on top of them; if they cause a problem (a failing build, an overfull box),
   flag it instead of silently undoing.
 - **Commit only when asked.**  Leave the user's staging alone; stage by pathspec when committing.
+- **`Guides-Reviewed:` trailer.**  The commit gate in `repo-rules` prescribes one line whenever the
+  staged diff changes code, config, CI or output while neither guide changes.  Put it in the commit
+  message's trailer block, `Guides-Reviewed: unchanged, because …` (or the reviewed paths), so the
+  review lives in history rather than only in the chat report.
 - **Report status.**  Before reporting, run `git status -sb` in the global config repository
   (`~/.config/opencode`) and in every checkout of the current workspace (each sibling repository
   named by the workspace guide), then state for each: the branch, whether HEAD == `origin/main`,

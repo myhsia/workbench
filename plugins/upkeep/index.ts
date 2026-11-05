@@ -232,7 +232,7 @@ export default Plugin.define({
 
         if (await backupsPending()) {
           lines.push(
-            "History-rewrite backups are still present in Dou_Group/admin/backups. If the repositories are fine, ask the user whether to reduce them to the post-rewrite set or delete them; never delete without their agreement.",
+            "The post-rewrite rollback bundles are still present in Dou_Group/admin/backups. Once the repositories are confirmed fine, ask the user whether to delete them; never delete without their agreement.",
           )
         }
 

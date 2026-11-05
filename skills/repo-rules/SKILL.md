@@ -439,8 +439,9 @@ repeating it.
   the subheading and let the section carry the content.
 - The user part is grouped by theme, not by command: a section holds two to five subsections and
   covers one area of behavior, rather than a section per macro.  A manual has no `subsubsection`;
-  a division that fine belongs in the prose of its subsection.  The implementation part repeats the
-  same top-level grouping, so a reader can move between the description and the code.
+  a division that fine belongs in the prose of its subsection.  The implementation part keeps the
+  same terminology and a comparable order, but it is organized by code layer rather than mirroring
+  the user sections one for one.
 - Narration goes between `\end{macrocode}` and the next `\begin{macrocode}`, never into comments
   inside the code: a comment in the verbatim body is printed as part of the listing.
 - A name that is fixed is written as a brace group, not as a metavariable: `\tn{begin}\{document\}`,

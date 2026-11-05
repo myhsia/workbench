@@ -224,6 +224,11 @@ export default Plugin.define({
           )
         }
 
+        // Unconditional: the guides are part of every task, not a follow-up.
+        lines.push(
+          "If this task changes a convention, a command, a dependency, or the layout, update `AGENTS.md` and the skill in the same task; `guides-due.sh` is the gate.",
+        )
+
         if (await guidesDue(dir)) {
           lines.push(
             `Guides STALE/MISSING in ${dir}: update AGENTS.md and the skill as part of this task (guides-due.sh --committed).`,

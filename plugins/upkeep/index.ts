@@ -60,6 +60,30 @@ const guidesDue = async (dir: string) => {
 // repositories; keep asking whether they can go until they are deleted.
 const backupsPending = async () => (await runCheck("backups-pending.sh", [])) === 0
 
+// A repository may declare one check of its own in AGENTS.md:
+//     Session check: `scripts/check-extract-changes.sh`
+// Only that declared path is run, with the repository as the working
+// directory, so a checkout cannot get code executed by merely shipping a
+// file.  Exit 0 is silence and exit 2 means "cannot run here"; anything else
+// is reported, with the first lines of its output.
+const sessionCheck = async (dir: string) => {
+  const guide = await readText(join(dir, "AGENTS.md"))
+  const path = guide?.match(/^Session check: `([^`]+)`/m)?.[1]
+  if (!path || path.startsWith("/") || path.includes("..")) return undefined
+  try {
+    await run("bash", [path], { cwd: dir, timeout: 10_000 })
+    return undefined
+  } catch (error) {
+    const { code, stdout } = error as { code?: unknown; stdout?: unknown }
+    if (code === 2) return undefined
+    const text = typeof stdout === "string" ? stdout.trim() : ""
+    return (
+      text.split("\n").slice(0, 3).join(" ").trim() ||
+      `session check failed (exit ${String(code)})`
+    )
+  }
+}
+
 // The prompt hook carries the session id; the session's directory is not part
 // of the documented payload.  LIMITATION: the fallback is the process working
 // directory, so a session moved elsewhere without a new process (`session_move`)
@@ -232,6 +256,13 @@ export default Plugin.define({
         if (await guidesDue(dir)) {
           lines.push(
             `Guides STALE/MISSING in ${dir}: update AGENTS.md and the skill as part of this task (guides-due.sh --committed).`,
+          )
+        }
+
+        const check = await sessionCheck(dir)
+        if (check) {
+          lines.push(
+            `Repository session check: ${check} (declared in AGENTS.md; run it as part of this task).`,
           )
         }
 

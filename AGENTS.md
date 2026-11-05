@@ -11,7 +11,8 @@ stay authoritative for their own project.
 
 ## At session start
 
-Two checks, before the task itself. Both are scripts: run them, do not recall them. They run on
+Two checks of the configuration, plus at most one check of the repository, before the task
+itself. The global ones are scripts: run them, do not recall them. They run on
 the **first prompt of each calendar day** (Asia/Shanghai) and again **whenever the session's
 directory changes** (a workspace or repository switch) — not merely once per session.  The
 `upkeep` plugin enforces that cadence and injects one short line when a check reports something;
@@ -33,6 +34,11 @@ bash ~/.config/opencode/scripts/guides-due.sh --committed .  # exit 0 = STALE
   repository (the workspace root, which holds sibling checkouts), it prints one line per child
   repository and exits 0 if any of them is `STALE` or `MISSING`.  A path that holds no repositories
   at all (such as `~`) prints a `NOTE` and exits 1 — nothing to check, nothing to report.
+- A repository may declare **one check of its own** in its `AGENTS.md`, as
+  `` Session check: `scripts/…` ``.  The `upkeep` plugin runs that declared path on the same cadence,
+  with the repository as the working directory.  Exit 0 is silence and exit 2 means "cannot run
+  here"; anything else is reported, and its first lines become part of the task.  Only the declared
+  path is run, never an undeclared file, so a checkout opts in through its reviewed guide.
 
 ## No unobserved results (MUST)
 

@@ -497,13 +497,14 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   `\pkg{…}`, files `\file{…}`, environments `\env{…}`, other literals `\texttt{…}`, and a
   bracketed option list is `\cs{cmd}|[key = …]|` so that it stays one code span; a line inside
   `macrocode` would be copied into the derived file.  `CHANGELOG.md` is then generated from these
-  entries by ctex-kit's `scripts/extract-changes.py`, fetched from its `master` rather than
-  vendored.  That script reads `\cs`/`\tn`, `\pkg`/`\cls`/`\file`/`\env`, `\opt`, `\texttt`,
-  `|…|` and `\textbf` and drops every other command, so `\keys` and `\oarg` come out as stray
-  braces: a key is written `\opt`, and the driver aliases it to `\keys` for the printed history.
-  The gate regenerates the file and fails on any byte difference, as ctex-kit's
-  `check-changelog.yml` does; a package whose script lives in another repository also needs a
-  scheduled job, because a change there triggers no workflow here.
+  entries, and the generator decides the markup: ctex-kit's `scripts/extract-changes.py` reads
+  `\cs`/`\tn`, `\pkg`/`\cls`/`\file`/`\env`, `\opt`, `\texttt`, `|…|` and `\textbf` and drops
+  every other command, so with it `\keys` and `\oarg` come out as stray braces (write `\opt`, and
+  alias it in the driver for the printed history); a port may read `\keys`, `\oarg` and `\marg`
+  directly.  The gate regenerates the file and fails on any byte difference, as ctex-kit's
+  `check-changelog.yml` does.  A generator that lives in another repository is either fetched or
+  ported, and then a byte comparison against that repository's own changelogs is the acceptance
+  test; a scheduled job is the only way a change there is noticed.
 - **`\PrintChanges` reads a `.gls` that l3build will not build.**  `doc.sty` inputs
   `\jobname.gls`, which `makeindex -s gglo.ist` produces from `\jobname.glo`; `l3build` runs that
   step only inside its `for i = 2, typesetruns` loop, so a `latexmk`-driven build with
@@ -570,6 +571,15 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   GitHub.  Project-specific rules go in that project's `AGENTS.md` and `.opencode/skills/`.
   Machine secrets and addresses (`proxy`, `service.json`, `cli.json`, the shell rc) stay untracked,
   and nothing tracked may contain them.
+- **A repository may declare one session check.**  A check that depends on what only the
+  repository knows (a sibling checkout, an upstream script that was ported) is neither a CI job nor
+  a global script: ship it as a script in the repository, give it three exit codes — 0 clean,
+  1 something to report, 2 cannot run here — and declare it in `AGENTS.md` as
+  `` Session check: `scripts/…` `` on a line of its own.  The `upkeep` plugin runs the declared path
+  once a day and after a directory change, with the repository as the working directory, and
+  injects the first lines of its output; it runs nothing undeclared, so the repository opts in
+  through a reviewed file.  A check that needs the network, a service, or another repository's
+  current branch is a poor CI job for the same reason and belongs here instead.
 - **Keep the global rules current.**  Whenever a session in any repository establishes a general
   convention — coding style, commit/PR rule, LaTeX style, tool workflow, pitfall — record it in the
   global repository in the same task, then commit and push.  Check every time.

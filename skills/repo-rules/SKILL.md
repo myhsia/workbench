@@ -552,10 +552,12 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   region therefore appears in every generated file; when a generated file gains a line nobody
   wrote, look for a bare newline in the `dtx`.
 - **A non-TeX preamble sets `\MetaPrefix` twice.**  `\declarepreamble` prefixes each line with
-  `\MetaPrefix`, so a Lua or Python preamble needs `\def\MetaPrefix{--}` (or `#`) while the macro
-  is declared.  The reference lines at the top of the generated file are expanded when the file is
-  *opened*, not at declaration, so `\MetaPrefix` has to hold the same value again around the
-  `\generate` that writes it.  Restore the TeX default afterwards.
+  `\MetaPrefix` and bakes it in at declaration, so a Lua or Python preamble needs
+  `\def\MetaPrefix{--}` (or `#`) while the macro is declared, and the block is declared a second
+  time rather than shared with the TeX one.  The reference lines at the top of the generated file
+  are expanded when the file is *opened*, not at declaration, so `\MetaPrefix` has to hold the
+  same value again around the `\generate` that writes it.  Restore the TeX default afterwards, and
+  keep the two copies of a file list in step.
 - **The README is generated too.** Keep it in a `%<*readme>` block, extract it with
   `\nopreamble\nopostamble` into `README.md`, and copy it back to the repository root from
   `docinit_hook`: the root copy is what the forge shows, and a second hand-maintained copy drifts.

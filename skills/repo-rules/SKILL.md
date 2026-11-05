@@ -345,17 +345,18 @@ repeating it.
   `{ CJK         }`, not `{ CJK }        `.  A run of two or more similar lines aligns the column
   that repeats: the function for a `\tl_new:N`/`\tl_set:Nn` pair, the variable for a `\dim_set:Nn`
   run, and the key, the property and the `=` in `\keys_define:nn`.  In a key block the property
-  column is shared by the whole block while the keys are aligned per option family; a family whose
-  padding would push a line past 79 columns stays unaligned.
+  column is shared by the whole block while the keys are aligned per option family.  A key long
+  enough to push its dot one column right of that column gives up the space before the dot
+  (`CJLineBreak / normal.code:n`) while such lines stay below a tenth of the block's dot-bearing
+  lines; from a tenth on, every line keeps its space and the column moves one column right for the
+  whole block.  Length never unaligns a line: a line longer than 80 columns is broken after its
+  `=` instead.
 - **What else takes a column.**  A run of two or more lines with the same shape shares one column
   each: the `=`, `==`, `+` of Lua assignments and table literals (two-line runs count), the opening
   brace of a run of the same command, the argument column of parallel commands in a demo
   (`\CJKunderdot {…}` padded to `\CJKunderwave[symbol = …]{…}`), and the closing brace of sibling
   groups, so `{ NVV  }` lines up with `{ NVNF }` and a one-character-shorter group gains a space
   before its `}`.  The widening is deliberate: it is the similarity that the reader is meant to see.
-  When a key in a `\keys_define:nn` block is too long, drop the space before the property first
-  (`PunctKinsoku / false.code:n`); only when that still passes 79 columns does the property move to
-  the next line, at the property column.
   A value aligns token by token, not only at the `=`: `M.attr_font = M.attr_font or nil` pads after
   the first token so that `or` shares a column with its neighbours.  A leading double quote occupies
   one column, so the content inside it lines up with the bare value of the next line
@@ -388,6 +389,8 @@ repeating it.
 - **Slashes carry spaces.**  `shipout / before`, `cmd / selectfont / after`, `LuaCJK / math`: the
   space is catcode 9 under `\ExplSyntaxOn`, so the stored name is `shipout/before` while the source
   reads as words.  Outside expl3, in a LaTeX2e file or a test, the name is written without spaces.
+  A `\keys_define:nn` block is the one place where the space before the property dot is
+  subordinate to the column (see Alignment).
 - **One `\GetIdInfo`.**  Every file derived from one `dtx` takes its information from a single block
   in a `%<*a|b|c>` guard: `\NeedsTeXFormat`, `\RequirePackage { expl3 }`, the `$Id$` line, then one
   description line per file and its own `\ProvidesExplPackage` or `\ProvidesExplFile`.  A LaTeX2e

@@ -31,7 +31,8 @@ bash ~/.config/opencode/scripts/guides-due.sh --committed .  # exit 0 = STALE
   in `repo-rules`.  The `--committed` form judges the history only: a repository being edited is
   dirty by design, and the pre-commit gate runs the default form.  When the target is not a git
   repository (the workspace root, which holds sibling checkouts), it prints one line per child
-  repository and exits 0 if any of them is `STALE` or `MISSING`.
+  repository and exits 0 if any of them is `STALE` or `MISSING`.  A path that holds no repositories
+  at all (such as `~`) prints a `NOTE` and exits 1 — nothing to check, nothing to report.
 
 ## No unobserved results (MUST)
 

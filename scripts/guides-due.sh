@@ -18,8 +18,8 @@
 # checkout, which holds sibling repositories), every immediate child directory
 # that is a git repository is checked instead: one line per repository, named
 # after the child, with any detail lines below it.  The exit code is then 0 if
-# any child is STALE or MISSING, 1 if they are all OK, and 2 when no child
-# repository could be checked at all.
+# any child is STALE or MISSING, and 1 if they are all OK.  A path that is not a
+# repository and holds no repositories at all prints a NOTE and exits 1.
 set -u
 
 committed=no
@@ -113,8 +113,8 @@ for child in "$repo"/*/; do
 done
 
 if [ "$found" -eq 0 ]; then
-  echo "MISSING: $repo holds no git repositories" >&2
-  exit 2
+  echo "NOTE: $repo is not a repository and holds no repositories to check" >&2
+  exit 1
 fi
 
 exit "$status"

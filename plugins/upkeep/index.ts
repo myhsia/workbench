@@ -35,15 +35,40 @@ const readText = async (path) => {
 const modelsCheckedToday = async () =>
   (await readText(modelMarker))?.trim() === today()
 
-const upkeepDue = async () => {
+// Run one of the check scripts and report its exit code instead of throwing:
+// 0 means DUE (update-due.sh) or STALE (guides-due.sh), and 2 means MISSING.
+const runCheck = async (script: string, args: string[]) => {
   try {
-    await run("bash", [join(configDir, "scripts", "update-due.sh")], {
+    await run("bash", [join(configDir, "scripts", script), ...args], {
       timeout: 10_000,
     })
-    return true
-  } catch {
-    return false
+    return 0
+  } catch (error) {
+    const code = (error as { code?: unknown }).code
+    return typeof code === "number" ? code : 1
   }
+}
+
+const upkeepDue = async () => (await runCheck("update-due.sh", [])) === 0
+
+const guidesDue = async (dir: string) => {
+  const code = await runCheck("guides-due.sh", ["--committed", dir])
+  return code === 0 || code === 2
+}
+
+// The prompt hook carries the session id; the session's directory is not part
+// of the documented payload.  LIMITATION: the fallback is the process working
+// directory, so a session moved elsewhere without a new process (`session_move`)
+// keeps reporting its original directory until the day rolls over.
+const sessionDir = (event: unknown) => {
+  const payload = event as {
+    directory?: unknown
+    session?: { directory?: unknown }
+  }
+  for (const candidate of [payload?.directory, payload?.session?.directory]) {
+    if (typeof candidate === "string" && candidate.length > 0) return candidate
+  }
+  return process.cwd()
 }
 
 // Insert entries into the `"models"` object of the text, leaving every other
@@ -165,13 +190,19 @@ const refreshModels = async () => {
 export default Plugin.define({
   id: "upkeep",
   async setup(ctx) {
-    const seen = new Set()
+    // Re-check on the first prompt of each calendar day and whenever the
+    // session's directory changes (workspace or repository switch); not once
+    // per session.
+    const seen = new Map<string, { day: string; dir: string }>()
 
     await ctx.session.hook("prompt", async (event) => {
       try {
         const session = event.sessionID
-        if (session && seen.has(session)) return
-        if (session) seen.add(session)
+        const dir = sessionDir(event)
+        const day = today()
+        const previous = session ? seen.get(session) : undefined
+        if (session && previous?.day === day && previous.dir === dir) return
+        if (session) seen.set(session, { day, dir })
 
         const lines = []
 
@@ -186,6 +217,12 @@ export default Plugin.define({
         if (await upkeepDue()) {
           lines.push(
             "The daily OpenCode / HPC upkeep is due: load the `opencode-hpc-update` skill, finish the OpenCode half, then stamp the day with `update-due.sh --mark`.",
+          )
+        }
+
+        if (await guidesDue(dir)) {
+          lines.push(
+            `Guides STALE/MISSING in ${dir}: update AGENTS.md and the skill as part of this task (guides-due.sh --committed).`,
           )
         }
 

@@ -56,6 +56,10 @@ const guidesDue = async (dir: string) => {
   return code === 0 || code === 2
 }
 
+// The 2026-11-05 history-rewrite rollback bundles live outside the
+// repositories; keep asking whether they can go until they are deleted.
+const backupsPending = async () => (await runCheck("backups-pending.sh", [])) === 0
+
 // The prompt hook carries the session id; the session's directory is not part
 // of the documented payload.  LIMITATION: the fallback is the process working
 // directory, so a session moved elsewhere without a new process (`session_move`)
@@ -223,6 +227,12 @@ export default Plugin.define({
         if (await guidesDue(dir)) {
           lines.push(
             `Guides STALE/MISSING in ${dir}: update AGENTS.md and the skill as part of this task (guides-due.sh --committed).`,
+          )
+        }
+
+        if (await backupsPending()) {
+          lines.push(
+            "History-rewrite backups are still present in Dou_Group/admin/backups. If the repositories are fine, ask the user whether to reduce them to the post-rewrite set or delete them; never delete without their agreement.",
           )
         }
 

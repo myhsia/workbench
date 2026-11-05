@@ -42,8 +42,9 @@ Westlake HPC (campus — no proxy):
   with `offline:!0` renders as `已下线` (offline) and must not be added.
 - Docs `https://hpc.westlake.edu.cn/document/science/soft/more/ai.html`, plus
   `opencode_campus.json` and `opencode_se.json` (these can lag the live table — trust the SPA).
-- Endpoint: campus `https://hpc-api.westlake.edu.cn/v1`. Currently online: `deepseek-flash`,
-  `glm-flash`, `Qwen`.
+- Endpoint: campus `https://hpc-api.westlake.edu.cn/v1`. Currently online (2026-11-05):
+  `deepseek-flash`, `glm-flash`, `Qwen`, plus the serving-only `Qwen3-Embedding-8B` and
+  `Qwen3-Reranker-8B` (embedding/reranking models — do not add them to `providers` as chat models).
 
 ## Sync the configuration
 

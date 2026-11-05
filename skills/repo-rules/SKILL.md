@@ -361,6 +361,12 @@ repeating it.
   one column, so the content inside it lines up with the bare value of the next line
   (`= \int_use:N …` next to `= "\cs_to_str:N …`), and the closing quote, the trailing comma or
   semicolon are not columns and are left where they fall.
+- **A brace group is a sibling, not a level.**  In a `\str_case` list the body group of a branch
+  starts in the column of its `{ key }`, and only the body's own lines move in.  When the list ends
+  with a long closing brace and the fallback is short, the fallback moves up onto that line
+  (`} { \msg_warning:nnn … }`); a fallback that is itself a multi-line block keeps its own line.
+  A `\str_case:nn` (or `:Vn`, `:en`) takes two arguments and has no fallback, so an empty group
+  after it is dead code: remove it rather than align it.
 - **`\keys{a, b, c}`** lists the keys of one family in a single call; `\keys{a}, \keys{b}` is only
   for keys that are separated by a gloss or belong to different families.
 - **Literal braces in prose use `"…"`.**  `l3doc` makes `"` a short verb for the body, so

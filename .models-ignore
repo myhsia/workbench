@@ -1,0 +1,4 @@
+# Model ids the `upkeep` plugin must never add back to `opencode.json`.
+# The upstream list keeps reporting them, so the plugin only mentions them.
+# One id per line; `#` starts a comment.
+Qwen_claude

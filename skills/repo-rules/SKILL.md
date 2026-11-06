@@ -648,7 +648,10 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   `https://hpc-api.westlake.edu.cn/v1/models` with `WESTLAKE_API_KEY`, inserts chat models that the
   configuration lacks (skipping embeddings and rerankers, never removing an entry, copying the
   capability block of an existing model), writes `opencode.json` with the text-preserving insertion
-  that keeps the hand layout, keeps `opencode.json.bak`, and stamps `.models-check`.  It does not
+  that keeps the hand layout, keeps `opencode.json.bak`, and stamps `.models-check`.  An id listed
+  in the versioned `.models-ignore` is never added back: removing a model from `opencode.json` is a
+  decision, and the upstream list would otherwise undo it at the next refresh; the plugin mentions
+  the id instead.  It does not
   stamp `.update-check`: installing an OpenCode version is not something a plugin may do, so that
   half still goes through the skill, announced as `<context key="upkeep">`.  The same injection
   carries, on **every** session and directory switch, the unconditional line that a task which

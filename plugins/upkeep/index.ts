@@ -15,11 +15,26 @@ const run = promisify(execFile)
 const configDir = join(homedir(), ".config", "opencode")
 const configPath = join(configDir, "opencode.json")
 const modelMarker = join(configDir, ".models-check")
+const ignorePath = join(configDir, ".models-ignore")
 const modelList = "https://hpc-api.westlake.edu.cn/v1/models"
 
 // The endpoint also lists embeddings and rerankers, which are not chat models
 // and would show up in the model picker.
 const notChat = /embed|rerank/i
+
+// Model ids the user has removed from the configuration on purpose.  The
+// upstream list keeps reporting them, so the plugin only mentions them; the
+// file is versioned, which is where that decision lives.
+const ignoredModels = async () => {
+  const text = await readText(ignorePath)
+  if (!text) return new Set()
+  return new Set(
+    text
+      .split("\n")
+      .map((line) => line.replace(/#.*/, "").trim())
+      .filter(Boolean),
+  )
+}
 
 const today = () =>
   new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" })
@@ -172,10 +187,15 @@ const refreshModels = async () => {
   provider.models ??= {}
 
   const template = Object.values(provider.models)[0] ?? {}
+  const ignored = await ignoredModels()
   const notes = []
   const entries = []
   for (const id of online) {
     if (provider.models[id]) continue
+    if (ignored.has(id)) {
+      notes.push(`ignored ${id} (listed in .models-ignore)`)
+      continue
+    }
     if (notChat.test(id)) {
       notes.push(`skipped ${id} (not a chat model)`)
       continue

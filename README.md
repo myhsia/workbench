@@ -12,6 +12,8 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
   what the session-start check needs.
 - `plugins/upkeep/` — refreshes the Westlake model list once a day and announces the OpenCode half
   of the daily upkeep; the markers it writes stay untracked.
+- `.models-ignore` — the model ids the plugin must never add back, one per line, because they were
+  removed from `opencode.json` on purpose.
 - `opencode.json` — the global config (providers, compaction, tool output).
 - `templates/` — the skeletons a new repository copies: `templates/AGENTS.md` to its root
   `AGENTS.md`, and `templates/repo-topic/SKILL.md` to `.opencode/skills/<name>/SKILL.md`.

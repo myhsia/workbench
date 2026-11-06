@@ -82,6 +82,11 @@
       }
     ]
   },
+  "agent": {
+    "title": {
+      "prompt": "{file:./prompts/title.txt}"
+    }
+  },
   "providers": {
     "WestlakeHPC": {
       "name": "Westlake HPC",

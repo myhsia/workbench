@@ -14,7 +14,11 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
   of the daily upkeep; the markers it writes stay untracked.
 - `.models-ignore` — the model ids the plugin must never add back, one per line, because they were
   removed from `opencode.json` on purpose.
-- `opencode.json` — the global config (providers, compaction, tool output).
+- `opencode.json` — the global config (providers, compaction, tool output), plus
+  `agent.title.prompt` pointing at `prompts/title.txt`.
+- `prompts/title.txt` — the system prompt of the hidden `title` agent: the only instruction the
+  auto-titler sees, so it carries the `type(things): subject` format. Edit it there, not in the
+  skills, and confirm with `opencode debug agents`.
 - `templates/` — the skeletons a new repository copies: `templates/AGENTS.md` to its root
   `AGENTS.md`, and `templates/repo-topic/SKILL.md` to `.opencode/skills/<name>/SKILL.md`.
 

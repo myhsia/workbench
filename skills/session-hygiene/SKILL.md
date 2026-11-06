@@ -258,6 +258,16 @@ merge, …), build **thematic sessions** rather than one chronological blob.
 `type(things): short sentence covering all items (several words)`, `type` ∈
 `feat|fix|tune|refactor|docs|chore`. Rename via the session-rename tool; keep the id stable.
 
+The auto-title comes from the hidden `title` agent, and its system prompt is the only instruction it
+ever sees — it does not read `AGENTS.md` or this skill. That prompt is ours: `prompts/title.txt`,
+wired in `opencode.json` as `agent.title.prompt = "{file:./prompts/title.txt}"`, and it asks for
+`type(things): subject`. So a drifting title means the prompt file needs a look, not that the agent
+forgot to rename. Two behaviours, measured on v2.2.5: the title is generated from the first message
+and a later turn did not regenerate it; and a manual rename wins over a generation still in flight
+(the generator aborts when the title changed while it ran). Sessions titled before the prompt
+existed keep their titles — rename them during the hygiene pass. Check `opencode debug agents` for
+the loaded `title` system prompt rather than assuming the config took effect.
+
 ## Compaction (opt-in only)
 
 Default is **no compaction**; keep the session whole and branch instead. Compaction

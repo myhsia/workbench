@@ -40,6 +40,14 @@ bash ~/.config/opencode/scripts/guides-due.sh --committed .  # exit 0 = STALE
   here"; anything else is reported, and its first lines become part of the task.  Only the declared
   path is run, never an undeclared file, so a checkout opts in through its reviewed guide.
 
+## Session titles
+
+Every session title is `type(thing): short subject`, with `type` among `feat`, `fix`, `tune`,
+`refactor`, `docs`, `chore`. The hidden `title` agent writes it, and its system prompt is ours:
+`prompts/title.txt`, wired as `agent.title.prompt`. A drifting title therefore means that file
+needs a look, not that an agent forgot to rename; a session titled before the prompt existed is
+renamed in passing. The detail is in the `session-hygiene` skill.
+
 ## No unobserved results (MUST)
 
 Never report a measurement you did not run.  Every claimed check, benchmark, error figure or

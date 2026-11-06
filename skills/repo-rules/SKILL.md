@@ -658,9 +658,11 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   changes a convention, a command, a dependency, or the layout updates `AGENTS.md` and the skill
   with it, plus the `guides-due.sh --committed` verdict when it is not `OK`.
 - **Session upkeep (`session-hygiene`).**  Keep each session whole and branch into a new session
-  rather than compacting; give every session a `type(things): …` title (rename any agent
-  auto-title that does not conform).  Load the skill for the export → prune → import procedure
-  and its pitfalls.  Never edit the session store by hand.
+  rather than compacting; every session carries a `type(things): …` title.  The auto-title is the
+  hidden `title` agent, whose system prompt is ours (`prompts/title.txt` via `agent.title.prompt`);
+  a drifting title means that file needs a look, and a non-conforming existing title is renamed in
+  passing.  Load the skill for the export → prune → import procedure and its pitfalls.  Never edit
+  the session store by hand.
 - **Never publish a file under another package's name.**  CTAN rejects a duplicate filename, and a
   copy that sits next to the original silently loses to it.  To take over another package's hook
   file, ship the logic under your own name and redirect through that package's own configuration

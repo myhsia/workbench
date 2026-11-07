@@ -521,9 +521,12 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
 - **The changelog is generated from `\changes`.**  Each user-visible change is a
   `% \changes{v<version>}{<yyyy/mm/dd>}{…}` line next to the object it changes, inside that
   object's `macro`, `environment`, or `variable`, so `\PrintChanges` files it under the object and
-  prints the page it points at; an entry about the manual, the tests, or the repository goes in a
-  block right after the driver's `% \fi` and is filed as `General`.  The version and the date stay
-  on the first line, only the text wraps.  Commands are `\cs{…}`, keys `\opt{…}`, packages
+  prints the page it points at; work on the manual, the tests, or the repository gets no entry at
+  all, and the block right after the driver's `% \fi`, filed as `General`, holds a package-level
+  feature that has no single documented object.  An entry in the release that ships a feature
+  states the feature in the present tense, and only a later release says that something now
+  behaves differently; a history that says "now" in the first release is a development log, not a
+  changelog.  The version and the date stay on the first line, only the text wraps.  Commands are `\cs{…}`, keys `\opt{…}`, packages
   `\pkg{…}`, files `\file{…}`, environments `\env{…}`, other literals `\texttt{…}`, and a
   bracketed option list is `\cs{cmd}|[key = …]|` so that it stays one code span; a line inside
   `macrocode` would be copied into the derived file.  `CHANGELOG.md` is then generated from these

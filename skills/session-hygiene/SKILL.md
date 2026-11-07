@@ -213,6 +213,11 @@ There is no append API: to move turns, rebuild a **new** session from the export
 
 `POST /api/session/{id}/fork { before: <msg_id> }` gives one branch (not a partition).
 
+Moving a whole session to another checkout is `session_move` (tool or
+`POST /api/session/{id}/move`); the directory takes effect at the next safe boundary.  Since
+v2.2.6, leaving the current project asks for the `external_directory` permission first, so an
+unattended cross-project move needs that action allowed.
+
 ## Categorising and smoothing sessions
 
 When a project's sessions mix several themes (coding style, manual wording, packaging, implementation,
@@ -366,6 +371,13 @@ A main agent can make the existing sessions answer and act without forking them:
 prints its final message.  `--agent build` matters: a session whose last mode was Plan will refuse to
 edit.  Read-only audits must say so in the prompt ("read-only: do not edit/create/commit; only git
 status/log/show, grep, cat, ls").
+
+Since v2.2.6 that run **waits for the background jobs its prompt started** (shell, subagent, image)
+and returns only after the model has seen their results, with no time limit — a dev server that never
+ends keeps it open.  Wrap scripted runs in `timeout` (or send SIGTERM, which cancels the session and
+its jobs, exit 143) and add `--archived` so CI/scripted sessions stay out of the inbox and `-c`.
+`-w`/`--worktree=<name>` starts the run in a new git worktree and cannot be combined with
+`-s`/`-c`.
 
 The working pattern that matched the user's own manual workflow:
 

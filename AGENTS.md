@@ -48,6 +48,15 @@ Every session title is `type(thing): short subject`, with `type` among `feat`, `
 needs a look, not that an agent forgot to rename; a session titled before the prompt existed is
 renamed in passing. The detail is in the `session-hygiene` skill.
 
+## Plan mode
+
+Plan mode is enforced by the permission rules, not by the prompt that announces it.  The global
+`permissions` block carries deny rules only: a blanket `edit` allow there is merged **after** each
+agent's defaults, cancelling Plan's deny and Explore's read-only guarantee — which is exactly how
+Plan still edited files under v2.  Check `opencode debug agents` when in doubt.  Under Plan an edit is
+refused; say so and ask for a switch to build.  `shell` stays allowed in Plan by design, so keep it
+read-only and do not commit, push, or rewrite files with it.
+
 ## No unobserved results (MUST)
 
 Never report a measurement you did not run.  Every claimed check, benchmark, error figure or

@@ -621,13 +621,18 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
 - **opencode (v2).**  `opencode.json` (global, plus a workspace one where a project needs its
   own guards) is kept in strict v2 form.
   `permissions` is an ordered array of `{action, resource, effect}` rules; the **last** matching
-  rule wins, and project rules come after global ones.  The machine-wide guards live in the global
-  config — blanket `read`/`edit`/`shell` allows first, then `deny` on `.git/**` and
-  `**/.git/**` (read/edit/`rm`; use git and `gh` instead of touching the store) and on
-  `**/__pycache__/**`.  A project's own `opencode.json` adds only its specific denies (e.g.
-  `bibliography/`, `*_legacy/`) and must **not** repeat a blanket allow after them, which would
-  cancel them.  v2 names the shell action `shell`, not `bash`.  `compaction` tunes context handling
-  (`auto`, `keep.tokens`, `buffer`).
+  rule wins, and the order of evaluation is each agent's own defaults, then the global block, then
+  the project's.  An allow in the global block therefore cancels a restriction an agent sets for
+  itself: the blanket `edit` allow that hung the `.git` guards on it let Plan edit files and Explore
+  write, because it was merged after their deny rules.  So the global block carries the
+  **machine-wide denies only** — `.git/**` and `**/.git/**` (read/edit/`rm`; use git and `gh`
+  instead of touching the store) and `**/__pycache__/**` — and never a blanket `read`/`edit`/`shell`
+  allow.  A project's own `opencode.json` adds only its specific denies (e.g. `bibliography/`,
+  `*_legacy/`) and must **not** repeat a blanket allow after them, which would cancel them.  Plan
+  mode is enforced there, not by its prompt: `opencode debug agents` must show Plan's last `edit`
+  rule as `deny *` (with `/Users/myhsia/.opencode/plan/*` allowed) and Explore's `*/*` deny with no
+  later `edit` allow.  v2 names the shell action `shell`, not `bash`.  `compaction` tunes context
+  handling (`auto`, `keep.tokens`, `buffer`).
 - The provider lives in the machine-global `~/.config/opencode/opencode.json` (native v2
   `providers` block, `package: "@opencode/ai/providers/openai-compatible"` since 2.2.x,
   `settings.baseURL`).  The CLI

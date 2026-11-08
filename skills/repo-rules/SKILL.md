@@ -363,7 +363,9 @@ repeating it.
   (`= \int_use:N …` next to `= "\cs_to_str:N …`), and the closing quote, the trailing comma or
   semicolon are not columns and are left where they fall.
 - **`=` takes spaces in a key list.**  `\DocumentMetadata{tagging = on, pdfversion = 1.7}` in the
-  driver and `\texttt{depth = 0.2em}` in prose, not `tagging=on`.
+  driver and `\texttt{depth = 0.2em}` in prose, not `tagging=on`.  The same holds in both
+  languages of a bilingual manual, in the code of a `codemo`, and in a warning written from Lua:
+  it is what the reader is meant to copy.
 - **A repeated identical call collapses into one comma list.**  `\RequirePackage { a, b, c }` rather
   than one call per line, and `\clist_map_inline:nn { a, b, c }` on one line while it fits; a list
   too long for one line splits into aligned columns rather than one item per line.
@@ -464,6 +466,18 @@ repeating it.
 - Name an engine with the `hologo` macros: `\LuaTeX`, `\LuaLaTeX`, `\XeTeX`, `\pdfTeX`. `l3doc`
   provides `\LuaTeX` and `\XeTeX` but not `\LuaLaTeX` or `\XeLaTeX`, so a manual that needs them
   adds `\providecommand*\LuaLaTeX{\hologo{LuaLaTeX}}` and its sibling in the driver.
+- **A space after a control word is `\ `, not `{}`.**  `\LaTeX\ tagged-PDF`, `\LaTeXe\ allocates`;
+  the empty group means *no* space, and is right only where the next character must attach
+  (`\TeX{}book`).
+- **`\pkg{}` is for a package.**  A format is the logo, `\LaTeX` or `\LaTeXe`: `\pkg` is `\textsf`
+  in `l3doc` and files its argument in the index of packages, so `\pkg{LaTeX}` is both the wrong
+  face and the wrong index entry.
+- **`\tn{}` prints a leading backslash.**  `\tn{name}` is `\name`, and an empty argument leaves a
+  lone `\`; a literal pair of backslashes is a code span, `|\\|`, because `\tn{\\}` runs the break
+  inside the typewriter group instead of printing it.
+- **A stated kernel limit is read out of the kernel.**  Before repeating a number in the prose,
+  check it in the kernel source: `\e@mathgroup@top` is 16 in `latex.ltx` only for an engine
+  without `\Umathcode`, and 256 under LuaTeX.
 - A section does not open with a lone subsection: when a section has a single subdivision, drop
   the subheading and let the section carry the content.
 - The user part is grouped by theme, not by command: a section holds two to five subsections and

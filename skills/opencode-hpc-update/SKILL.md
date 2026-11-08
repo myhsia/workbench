@@ -59,8 +59,11 @@ Westlake HPC (campus — no proxy):
 - Config edits hot-reload, but `{env:...}` is resolved from the **background service's process
   environment**, so any environment change needs `opencode service restart`. **Never restart the
   service yourself** — the running session lives on it; ask the user to restart.
-- Verify: `opencode api get /api/config`, `opencode api get /api/provider/WestlakeHPC` (shows the
-  resolved key), and `opencode models`.
+- Verify with `opencode models` and `opencode api get /api/provider` (the list). In 2.2.6 the
+  single-provider route `GET /api/provider/<id>` is gone and answers `ProviderNotFoundError`, so
+  read the list instead: it carries `activation: "enabled"`, the `package` and `settings`, and the
+  **resolved key in plaintext**, which `/api/config` also returns. Both therefore write the secret
+  into whatever records the output, so check them by name or count, never by dumping the JSON.
 
 ## Pitfalls
 

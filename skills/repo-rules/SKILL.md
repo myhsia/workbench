@@ -362,6 +362,22 @@ repeating it.
   one column, so the content inside it lines up with the bare value of the next line
   (`= \int_use:N …` next to `= "\cs_to_str:N …`), and the closing quote, the trailing comma or
   semicolon are not columns and are left where they fall.
+- **`=` takes spaces in a key list.**  `\DocumentMetadata{tagging = on, pdfversion = 1.7}` in the
+  driver and `\texttt{depth = 0.2em}` in prose, not `tagging=on`.
+- **A repeated identical call collapses into one comma list.**  `\RequirePackage { a, b, c }` rather
+  than one call per line, and `\clist_map_inline:nn { a, b, c }` on one line while it fits; a list
+  too long for one line splits into aligned columns rather than one item per line.
+- **Two short branches share one line.**  A conditional that is not empty on either side and fits in
+  79 columns stays on one line (`{ \phantom {#1} } { #1 }`); only a branch that is itself a block
+  keeps its own line.  An empty argument beside a filled sibling is padded to the sibling's width,
+  `{  }` under `{ #4 }`, so the pair still reads as a pair.
+- **A message separates its words with `~` and a space on either side**, as in
+  `Unknown ~ option ~ #1 ~ is ~ being ~ ignored.`: `~` is the space, and the padding keeps the words
+  apart in the source.  Two messages of the same shape align those `~` in columns; unrelated
+  messages are spaced but never forced onto a common grid.
+- **A Lua argument list keeps the comma with the token before it** when the call fits on one line
+  (`f ( x, 0 )`), and leaves the comma at the end of the line with a space before it when the list
+  breaks (`( \int_use:N \l_x_int ,`).
 - **An empty branch is not written.**  A conditional whose true or false branch is empty uses the
   shorter variant: `\bool_lazy_or:nnTF … { } { … }` becomes `\bool_lazy_or:nnF … { … }`, and a
   `\prop_get:NVNTF` with an empty branch becomes `\prop_get:NVNT` or `\prop_get:NVNF`.  The
@@ -428,9 +444,11 @@ repeating it.
   `l3doc` reads the body between those two lines with a scan quark, so any other indentation
   leaves the following `\begin{macro}` inside the verbatim region, where it is printed in the
   manual instead of being executed.
-- Every other documentation line uses `%` and **one space**, with no nesting indentation:
-  `\begin{macro}`, `\begin{variable}`, their `\end{...}`, the description text, and ordinary
-  prose all start in the same column.
+- Every other documentation line uses `%` and **one space**, with no nesting indentation of its
+  own: `\begin{macro}`, `\begin{variable}`, their `\end{...}`, the description text, and ordinary
+  prose all start in the same column, however deeply the object is nested.  The single exception is
+  a **multi-line argument list**, which is a brace group and keeps the group's indent: `%   {` two
+  spaces in, one entry per line at `%     `, `%   }` to close, then the description back at `% `.
 - Mark internal objects with `[int]` (`\begin{macro}[int]{...}`, `\begin{variable}[int]{...}`);
   `[internal]` is accepted but the short form is the house style.  A `variable` whose name is a
   Lua identifier (dots and underscores) *needs* `[int]`: without it `l3doc` emits a reference to

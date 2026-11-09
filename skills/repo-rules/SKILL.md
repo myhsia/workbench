@@ -137,6 +137,9 @@ would rewrite the house style.  A review comment, not a failed check, is what as
   placeholder string.  Write with `json.dump(..., indent = 2)` and a canonical key order.
 - Every row records the window, threshold or order it was computed under, so the report can be
   re-read without the code that made it.
+- A relative error names its window, its norm (per-curve L2, global Frobenius) and its denominator,
+  so two numbers are comparable only when all three agree.  A best value that is non-monotone in a
+  convergence knob is reported as best achieved, not certified.
 - Machine-readable file first; the human-readable summary is generated from it and never edited by
   hand.
 

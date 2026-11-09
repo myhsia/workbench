@@ -45,6 +45,28 @@ aligning their `=` to one column; one parameter per line in multi-line signature
 align their inline comments to a common column, and a related group of imports aligns the
 `import` keyword.
 
+- **Explicit over abstraction.**  A definition the reader needs to see stays where it is used:
+  the observable sets (`A`, `Brho0`), model and coupling coefficients, and one-line constants
+  are written out in the driver, built from the shared primitives (`Pauli`, `basis`,
+  `ohmic_J`).  A helper has to earn its keep through non-obvious logic or repeated use with
+  different arguments; a one-line wrapper that only renames a formula
+  (`alpha = pi*lambd/wC`) hides it from the reader and is not added.  The primitive still
+  lives in the library; the composition stays visible at the call site.
+- **One canonical implementation.**  A primitive has exactly one implementation.  Two backends
+  of the same formula (numpy and mpmath, say) are kept only when a caller genuinely needs the
+  different numeric type.  If a second backend is unavoidable, state what it buys and how far
+  the results differ; otherwise delete the duplicate and report the shift (for example "the
+  moment kernels move by at most 2e-16").
+- **No optional-dependency shims.**  A package declared in `requirements.txt` or
+  `environment.yaml` is a hard dependency: import it directly.  No
+  `try: from numba import njit` / `except ImportError` fallback that silently changes speed or
+  accuracy.  A shim is legitimate only where the code truly treats the package as optional,
+  and then the degraded path is documented and tested.
+- **A refactor is verified, not asserted.**  A pure move, rename, or consolidation is shown
+  numerically neutral before it is reported: the regression suite, or an equivalence check
+  against the old expression.  State any deviation with its size, and report an unrun check as
+  unrun.
+
 `scripts/style-lint.py` enforces the **spacing** only: it is token-aware, so strings and comments
 are never touched, it prints `file:line`, and it exits 1 on findings (a directory is scanned
 recursively, skipping `.git/`, `__pycache__/` and `*_legacy/`).  **Alignment is advisory** — no

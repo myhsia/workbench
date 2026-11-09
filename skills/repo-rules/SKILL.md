@@ -189,6 +189,14 @@ time the working tree is what is about to land.
   the guides were reviewed and updated).  It is what makes the review auditable in history with
   `git log --format=%B`, instead of surviving only in a chat report.
 - **Docs-only commits** are never blocked.
+- **A prose tree is not code.**  The gate excludes `context/` — the house name for the manuscript
+  tree — from the "code" set, in both the working-tree and the history branches, and only when the
+  directory exists.  A manuscript edit cannot change a command, a flag, a dependency, a schema or a
+  CI trigger, so commit order says nothing about whether the guides owe an update; counting it made
+  every `docs(context):` commit report `STALE` for ever.  The judgement stays with the author, via
+  the `Guides-Reviewed:` trailer.  Add another prose tree to the `prose` list in the script rather
+  than working around the gate, and keep that list short: a directory that holds code must never
+  appear in it.
 
 ## Project guide standard
 

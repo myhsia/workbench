@@ -53,7 +53,21 @@ check_repo() {
   fi
 
   local guides=(AGENTS.md "$skilldir")
-  local code_excl=(':(exclude)AGENTS.md' ":(exclude)$skilldir")
+
+  # Prose trees are not code for this gate.  A manuscript (`context/`) cannot
+  # change a command, a flag, a dependency, a schema or a CI trigger, so commit
+  # order says nothing about whether the guides owe an update; that judgement
+  # stays with the author (the `Guides-Reviewed:` trailer).  Counting it would
+  # make every `docs(context):` commit report STALE for ever.
+  local prose_excl=()
+  local p
+  for p in context; do
+    [ -d "$repo/$p" ] && prose_excl+=(":(exclude)$p")
+  done
+
+  # `set -u` plus bash 3.2 (the macOS default) cannot expand an empty array, so
+  # the optional exclusions use the "expand only if set" idiom.
+  local code_excl=(':(exclude)AGENTS.md' ":(exclude)$skilldir" ${prose_excl[@]+"${prose_excl[@]}"})
 
   # Uncommitted work outside the guides: the answer is stale whatever the
   # history says.  `--committed` skips this, because an edited repository is

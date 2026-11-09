@@ -59,6 +59,11 @@ https_proxy="$PROXY" http_proxy="$PROXY" gh run download <run-id> -n <name> -D /
 Keep the plain direct form for small API calls (metadata, `gh api`, a few-kB JSON), where the proxy
 adds latency without benefit.
 
+Export the proxy **for the download command, not for the session**.  `gh` honours
+`https_proxy`/`http_proxy`, so a session-wide `export` makes the API calls behind `gh run view`,
+`gh run list` and `gh run watch` go through the proxy and fail; prefix the one command instead
+(`https_proxy="$PROXY" gh run download …`), or `unset` the variables before the metadata calls.
+
 ## Proxy configuration
 
 The proxy address is **not** stored here; it lives in the service environment at

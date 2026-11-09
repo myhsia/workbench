@@ -686,8 +686,37 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   `<name>` from the `dtx` file name, so the git tag created at release time carries the same
   `<name>-<version>`.
 
+## Data and figures
+
+- **One global norm, never a mean of per-element errors.**  A matrix compared with its reference is
+  scored by the relative Frobenius norm over the whole matrix,
+  `||C - C'||_F / ||C'||_F`.  A mean of per-element relative errors is rejected: a near-zero
+  element (an antisymmetric block, a small imaginary part) makes its own ratio explode and dominates
+  the mean, so the score stops describing the matrix.
+- **Say which case the reference is for.**  A reference archive states the physical case it
+  represents (here the quantum-harmonic `qhm` matrix), and every consumer compares against that
+  case, not against a case-by-case reference it does not have.  When a repository has no such case,
+  the overlays and the scores are drawn without it rather than against a substitute.
+- **The grouped archive is canonical, the per-case one is the fallback.**  One producer writes one
+  grouped archive (one matrix per case, `save_group`/`load_group`); per-case files are accepted only
+  as the fallback that CI fragments and segmented runs leave behind, and the single reader resolves
+  grouped first.  Store the generating object and contract it to the observables at analysis time,
+  so a derived quantity is never the thing on disk.
+- **Figures are made locally; CI runs tests and data.**  A figure that needs a TeX toolchain or an
+  eye on the result is produced in a local run.  A data job expected to take hours belongs on a
+  workstation or a compute node; CI gets the smoke test and the data that fit a runner.
+
 ## Tooling and upkeep
 
+- **A public repository gets synced copies, never a link.**  A symlink or a submodule into a private
+  sibling cannot survive a standalone clone, so a shared script or library is committed twice and
+  kept in step by `tools/sync_from_<source>.sh`.  That script copies the **working tree**: run it
+  only on a clean source tree (or copy the committed blob with `git show HEAD:<path>`), never while
+  another session holds uncommitted changes — otherwise that work in progress lands in the public
+  history.
+- **Share a script, not a path.**  A script used by several repositories takes a data root with a
+  working default plus an override flag.  A sibling-relative path baked into the code reads nothing
+  when the sibling checkout is absent, and it fails silently.
 - **Where to record things.**  General conventions go in the global repository
   (`~/.config/opencode`: `AGENTS.md`, `skills/`, `scripts/`, `opencode.json`), which syncs to
   GitHub.  Project-specific rules go in that project's `AGENTS.md` and `.opencode/skills/`.

@@ -38,7 +38,13 @@ gh run view <run-id> --json status,conclusion,jobs
 ```
 
 `workflow_dispatch` only works once the workflow exists on the **default branch** (dispatch another
-branch with `--ref`). Prefer `gh run watch … --exit-status` over manual polling.
+branch with `--ref`). Prefer `gh run watch … --exit-status` over manual polling, but a
+**multi-hour** run drops the watch connection; poll it instead and keep the conclusion explicit:
+
+```bash
+until [ "$(gh run view <run-id> --json status --jq .status)" = completed ]; do sleep 60; done
+gh run view <run-id> --json status,conclusion --jq .conclusion
+```
 
 ## 3. Download and place
 

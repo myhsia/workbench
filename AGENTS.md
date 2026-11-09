@@ -57,17 +57,28 @@ renamed in passing. The detail is in the `session-hygiene` skill.
 ## Plan mode
 
 Plan mode is enforced by the permission rules, not by the prompt that announces it.  The rule is
-narrow: **commands are allowed; writes are not, except in the temporary tree.**  `agent.plan` and
-`agent.explore` allow `edit` only under `$TMPDIR/opencode` and (for plan) `~/.opencode/plan`, deny
-it everywhere else, and limit `subagent` to the read-only `explore`.  The config names those roots
-as `{env:TMPDIR}opencode/**` and `{env:HOME}/.opencode/plan/**`, so no machine id is committed;
-macOS spells the same temp tree both `/var/folders/…` and `/private/var/folders/…`, and both are
-listed because the matcher compares strings.  So a Plan session probes by
-copying into `$TMPDIR/opencode` and working there, never by writing in place.  Shell is path-blind
-— its permission resource is the command text, not the working directory — so
-`plugins/shell-guard` rejects a command that would write into a project: `>`, `tee`, `sed -i`,
-`rm`/`mv`/`cp`, `git add|commit|push|reset|…`, `l3build`, a Python write.  Check
-`opencode debug agents` when in doubt.  Since the shell remains available, re-run a check rather
+narrow: **Plan cannot write in the working repository or in the config repository**
+(`~/.config/opencode`); everywhere else is allowed.  `agent.plan` and `agent.explore` implement it
+by allowing `edit` only under `$TMPDIR/opencode` and (for plan) `~/.opencode/plan` and denying it
+elsewhere, and by limiting `subagent` to the read-only `explore`.  The config names those roots as
+`{env:TMPDIR}opencode/**` and `{env:HOME}/.opencode/plan/**`, so no machine id is committed; macOS
+spells the same temp tree both `/var/folders/…` and `/private/var/folders/…`, and both are listed
+because the matcher compares strings.  So a Plan session probes by copying into `$TMPDIR/opencode`
+and working there, never by writing in place.  Shell is path-blind — its permission resource is the
+command text, not the working directory — so `plugins/shell-guard` rejects a command that would
+write outside the allowed roots: `>`, `tee`, `sed -i`, `perl -i`, `rm`, `mv`, `cp`, `rsync`,
+`install`, `mkdir`, `touch`, `chmod`, `ln`, `truncate`, `dd of=…`, `find … -delete`,
+`tar -x`/`unzip`, `curl -o`/`wget -O`, git history or worktree commands (`add|commit|push|reset|
+checkout|switch|apply|mv|rm|stash|clean|restore|am|worktree|submodule|gc|notes|lfs|…`), the build
+writes (`l3build`, `tlmgr`, `latexmk`, `bibtex`, `makeindex`), and Python writes (`open(…,'w')`,
+`.write(`, `os.remove|unlink|rename|replace|makedirs|mkdir|rmdir`, `shutil.rmtree|move|copy*`,
+`Path.unlink|mkdir|rmdir|touch`, `np.save*`, `.tofile(`, `.to_csv(`).  It is a heuristic on purpose:
+the word rules fire only in **command position** (start, after `;`/`&`/`|`/`(`, or after
+`sudo`/`env`/`nohup`/`time`/`command`/`exec`/`xargs`), so `grep -rn install .` and
+`grep -n 'perl -i' notes.txt` stay allowed, while a read-only command that *contains* such a call in
+its own text — `node -e "…os.remove(…)"` — is still refused, and an unrecognised wrapper
+(`foo rm x`) is not seen.  Check `opencode debug agents` when in doubt, and `node test.mjs` in the
+plugin directory for the rule set itself.  Since the shell remains available, re-run a check rather
 than quoting a result from before the switch.  A denied `read` says `Permission denied: read`; a
 guard rejection names the reason and the directory.
 

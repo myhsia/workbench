@@ -63,11 +63,13 @@ check_repo() {
   # change a command, a flag, a dependency, a schema or a CI trigger, so commit
   # order says nothing about whether the guides owe an update; that judgement
   # stays with the author (the `Guides-Reviewed:` trailer).  Counting it would
-  # make every `docs(context):` commit report STALE for ever.
+  # make every `docs(context):` commit report STALE for ever.  A listed path may
+  # be a file as well as a directory: `README.md` is prose for the same reason,
+  # and a README-only commit would otherwise report STALE for ever too.
   local prose_excl=()
   local p
-  for p in context; do
-    [ -d "$repo/$p" ] && prose_excl+=(":(exclude)$p")
+  for p in context README.md; do
+    { [ -d "$repo/$p" ] || [ -f "$repo/$p" ]; } && prose_excl+=(":(exclude)$p")
   done
 
   # `set -u` plus bash 3.2 (the macOS default) cannot expand an empty array, so

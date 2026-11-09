@@ -244,12 +244,14 @@ time the working tree is what is about to land.
 - **Docs-only commits** are never blocked.
 - **A prose tree is not code.**  The gate excludes `context/` — the house name for the manuscript
   tree — from the "code" set, in both the working-tree and the history branches, and only when the
-  directory exists.  A manuscript edit cannot change a command, a flag, a dependency, a schema or a
+  path exists.  A manuscript edit cannot change a command, a flag, a dependency, a schema or a
   CI trigger, so commit order says nothing about whether the guides owe an update; counting it made
   every `docs(context):` commit report `STALE` for ever.  The judgement stays with the author, via
-  the `Guides-Reviewed:` trailer.  Add another prose tree to the `prose` list in the script rather
-  than working around the gate, and keep that list short: a directory that holds code must never
-  appear in it.
+  the `Guides-Reviewed:` trailer.  A listed path may be a file as well as a directory: `README.md`
+  is excluded for the same reason, because a README-only commit made the gate report `STALE` for
+  ever (measured 2026-11-09).  Add another prose path to the `prose` list in the script rather than
+  working around the gate, and keep that list short: a path that holds code must never appear in
+  it.
 
 ## Project guide standard
 

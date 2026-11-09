@@ -811,6 +811,16 @@ interpreter pin/channels, a validation suite, or the conda interface changes, up
 local setup and the CI workflow in the same change.  `environment.yaml` is the single source of
 truth: the workflow must not hard-code its own interpreter version or channel list.
 
+**The bot proposes, CI decides.**  A dependency bot (Dependabot and the like) can only bump a
+declarator in `environment.yaml` or `requirements.txt`; it does not solve the environment, so it
+cannot establish that a bump is compatible with the pinned packages.  Pin the interpreter at the
+minor level, ignore the lowest-value update class (patches of the interpreter, which carry no
+functional change and are the most likely to break compiled extensions), and let the environment
+build plus the suite be the gate: an update is "the latest compatible version" exactly when that
+gate is green.  State the policy in `dependabot.yml` with its reason, rather than closing
+individual PRs, which records nothing and must be repeated release by release.  A repository's
+guide points here and adds only what is specific to it.
+
 A TeX Live package list names the **bundle**, not the file: `l3draw.sty` comes from
 `l3experimental`, `expl3.sty` from `l3kernel`.  The name a `\RequirePackage` takes is not the name
 to install.  A dependency pulled in transitively may also have to be listed: `hyperref` no longer

@@ -121,6 +121,12 @@ would rewrite the house style.  A review comment, not a failed check, is what as
 - Give the tolerance and the quantity it is relative to (`|Δ| / max|ref|`), and state the regime
   in which the approximation holds.
 - No unobserved results (machine-wide MUST): a measurement that was not run is reported as not run.
+- **A refactor asserted to be output-identical must be shown to be.**  Snapshot the outputs before the
+  edit, regenerate, and compare artefact by artefact: rasterise each page (`mutool draw`) and compare
+  arrays, or compare the extracted text (`mutool draw -F txt`), because a PDF's timestamp and ID differ
+  even when its content does not.  For code that produces no rendered artefact, compare the produced
+  data over the same inputs (array equality, or a stated tolerance).  "The code path is unchanged" is
+  an argument, not a measurement; this applies to code, not only to documentation prose.
 
 ### Plotting
 
@@ -741,6 +747,14 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
 - **Figures are made locally; CI runs tests and data.**  A figure that needs a TeX toolchain or an
   eye on the result is produced in a local run.  A data job expected to take hours belongs on a
   workstation or a compute node; CI gets the smoke test and the data that fit a runner.
+- **A rotated axis label is placed by its baseline, never by its ink or by another label's box.**
+  Under `text.usetex` a text bounding box carries fictitious ascent and descent, so measuring ink, or
+  copying the offset of a neighbouring label's bbox, moves the label by a glyph-dependent amount, and
+  a descender (a subscript `y`) shifts a box-centred label again, while `fig.align_ylabels`
+  repositions labels after they are placed.  Pin the label with `rotation_mode="anchor"`,
+  `va="baseline"` and `set_label_coords`.  `labelpad` is measured from the *tick-label* box, not
+  from the spine, so an x-label takes the tick-label box as its reference rather than the axis: the
+  tick numbers already occupy the space next to the spine.
 
 ## Tooling and upkeep
 

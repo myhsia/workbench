@@ -66,6 +66,21 @@ align their inline comments to a common column, and a related group of imports a
   numerically neutral before it is reported: the regression suite, or an equivalence check
   against the old expression.  State any deviation with its size, and report an unrun check as
   unrun.
+- **The source tree stays free of bytecode.**  A run script sets
+  `sys.pycache_prefix = os.path.abspath("./output/pycache")` after the third-party imports and
+  before the first project import; a syntax/`compileall` job sets `PYTHONPYCACHEPREFIX` (the
+  runner temp in CI) so the checkout is never written to.  A `__pycache__` beside a source file
+  means the redirect is missing, not that the directory should be ignored.
+- **A name means one thing in a function.**  Never rebind a module-level object with a loop
+  variable or a parameter: `A = P_list[i]` inside `main` replaced the module-level `A` dict with an
+  array, so the later `A["cohe"]` failed.  Rename the loop variable (`proj`) instead of working
+  around the shadow.
+- **A binary mode switch is a boolean.**  When a helper chooses between two behaviours, take a
+  flag (`compress: bool = False`) and branch on it.  A string-valued mode (`fmt = "npz"`) invites
+  unhandled values and silent fallbacks; reserve strings for a set that is genuinely open.
+- **No diagnostic `print` in library or driver code.**  Progress and shape dumps are removed before
+  the change is committed: they bypass the logging a caller controls and differ from the sibling
+  drivers.  A validation script prints by design; a library module does not.
 
 `scripts/style-lint.py` enforces the **spacing** only: it is token-aware, so strings and comments
 are never touched, it prints `file:line`, and it exits 1 on findings (a directory is scanned
@@ -717,6 +732,8 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
 
 ## Tooling and upkeep
 
+- **Lua on this Mac is `texlua`.**  There is no `lua` on `PATH`, so run `texlua build.lua …` and
+  syntax-check with `texlua -e 'assert(loadfile("build.lua"))'`.
 - **A public repository gets synced copies, never a link.**  A symlink or a submodule into a private
   sibling cannot survive a standalone clone, so a shared script or library is committed twice and
   kept in step by `tools/sync_from_<source>.sh`.  That script copies the **working tree**: run it

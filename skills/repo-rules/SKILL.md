@@ -748,6 +748,15 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   as the fallback that CI fragments and segmented runs leave behind, and the single reader resolves
   grouped first.  Store the generating object and contract it to the observables at analysis time,
   so a derived quantity is never the thing on disk.
+- **The schema is per case, not per file.**  Write one archive per (engine, quantity), keyed by
+  case, and give every entry its **own** time axis `t_<key>`: a shared `t` silently misreads a case
+  that ran on a different grid.  Observable metadata lives in reserved small arrays (`identifier`,
+  `component`, `branch`) beside the series, and a key need not be an identifier — an order or a
+  parameter pair is stored as `"m/n"`.  Parallel workers return their arrays and the parent writes
+  the archive once, so no two processes open the same file.  Moving or merging archives is a repack
+  that asserts `np.array_equal` against the old arrays, never a recomputation; for a refactor the
+  rendered figures are the oracle.  A `--clean` target must not delete a reference that cannot be
+  regenerated.
 - **Figures are made locally; CI runs tests and data.**  A figure that needs a TeX toolchain or an
   eye on the result is produced in a local run.  A data job expected to take hours belongs on a
   workstation or a compute node; CI gets the smoke test and the data that fit a runner.

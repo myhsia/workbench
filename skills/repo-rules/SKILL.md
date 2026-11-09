@@ -148,6 +148,9 @@ would rewrite the house style.  A review comment, not a failed check, is what as
   after the whole step succeeds, so a partial run cannot be mistaken for a finished one.
 - Budget resources explicitly — worker count, per-worker threads, memory — and treat a nested
   parallelism default as a bug.
+- A plugin hook payload may not carry the session directory; a `process.cwd()` fallback silently
+  pins the first directory, so state the limitation where the hook is written, not only in a
+  review note.
 
 ### Typing, docstrings, and import order
 
@@ -795,9 +798,9 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   quietly consult `~/.config/opencode/scripts/update-due.sh`.  If it prints `DUE`, load the
   skill, refresh the config, and stamp the day with
   `~/.config/opencode/scripts/update-due.sh --mark`; otherwise carry on without mentioning it.
-  Timing is Asia/Shanghai, at most once per calendar day (due from 17:00 on a day not yet checked,
-  or immediately if a whole day was skipped); the last date is in
-  `~/.config/opencode/.update-check`.
+  Timing is Asia/Shanghai: the check is due whenever today's calendar day has no stamp — no
+  time-of-day threshold, and a skipped day is due at the next first message, any hour.  The last
+  date is in `~/.config/opencode/.update-check`.
 - **The model half is automatic; the OpenCode half is not.**  The `upkeep` plugin
   (`~/.config/opencode/plugins/upkeep/index.ts`) runs at prompt admission once a day: it reads
   `https://hpc-api.westlake.edu.cn/v1/models` with `WESTLAKE_API_KEY`, inserts chat models that the

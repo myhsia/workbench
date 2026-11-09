@@ -34,6 +34,10 @@ This file lives in the global repository (`myhsia/workbench`, checked out at
   whether the guides are older than the code; what changed in them is still a judgement.
 - **Commit by pathspec.** When another session may have staged files, commit with
   `git commit -- <paths>` so unrelated staged work is not swept into the commit.
+- **A checkout can move under you.** Re-read `git status` and `git log -1` immediately before
+  staging; another session can commit or amend the tree you are editing and absorb your
+  uncommitted files into its commit. Stage by pathspec and check `git diff --cached` before
+  committing.
 
 ## Python coding style
 
@@ -755,6 +759,10 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   `va="baseline"` and `set_label_coords`.  `labelpad` is measured from the *tick-label* box, not
   from the spine, so an x-label takes the tick-label box as its reference rather than the axis: the
   tick numbers already occupy the space next to the spine.
+- **Layout, not content.**  A plotting helper owns geometry (grids, axes, page size, label
+  anchoring) and nothing else: the caller passes the series, their colours, line styles, labels and
+  annotations as explicit values, so one renderer serves every figure and a figure's content is
+  visible where it is specified.
 
 ## Tooling and upkeep
 

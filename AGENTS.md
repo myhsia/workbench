@@ -59,7 +59,10 @@ renamed in passing. The detail is in the `session-hygiene` skill.
 Plan mode is enforced by the permission rules, not by the prompt that announces it.  The rule is
 narrow: **commands are allowed; writes are not, except in the temporary tree.**  `agent.plan` and
 `agent.explore` allow `edit` only under `$TMPDIR/opencode` and (for plan) `~/.opencode/plan`, deny
-it everywhere else, and limit `subagent` to the read-only `explore`.  So a Plan session probes by
+it everywhere else, and limit `subagent` to the read-only `explore`.  The config names those roots
+as `{env:TMPDIR}opencode/**` and `{env:HOME}/.opencode/plan/**`, so no machine id is committed;
+macOS spells the same temp tree both `/var/folders/…` and `/private/var/folders/…`, and both are
+listed because the matcher compares strings.  So a Plan session probes by
 copying into `$TMPDIR/opencode` and working there, never by writing in place.  Shell is path-blind
 — its permission resource is the command text, not the working directory — so
 `plugins/shell-guard` rejects a command that would write into a project: `>`, `tee`, `sed -i`,

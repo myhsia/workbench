@@ -14,7 +14,15 @@ const expand = (p) => {
 }
 
 export function roots(tmpdirRoot) {
-  return [tmpdirRoot, tmpdir(), "/tmp", "/private/tmp", "/var/folders"]
+  return [
+    tmpdirRoot,
+    tmpdir(),
+    "/tmp",
+    "/private/tmp",
+    "/var/folders",
+    "/private/var/folders",
+    join(homedir(), ".opencode", "plan"),
+  ]
     .filter(Boolean)
     .map((p) => resolve(p))
 }

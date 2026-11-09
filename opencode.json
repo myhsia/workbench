@@ -85,8 +85,9 @@
       "permission": {
         "edit": {
           "*": "deny",
-          "/Users/myhsia/.opencode/plan/**": "allow",
-          "/private/var/folders/x6/j5n4d2x16kvfbpw_fg2d6wn00000gn/T/opencode/**": "allow"
+          "{env:HOME}/.opencode/plan/**": "allow",
+          "{env:TMPDIR}opencode/**": "allow",
+          "/private{env:TMPDIR}opencode/**": "allow"
         },
         "bash": "allow",
         "task": {
@@ -99,7 +100,8 @@
       "permission": {
         "edit": {
           "*": "deny",
-          "/private/var/folders/x6/j5n4d2x16kvfbpw_fg2d6wn00000gn/T/opencode/**": "allow"
+          "{env:TMPDIR}opencode/**": "allow",
+          "/private{env:TMPDIR}opencode/**": "allow"
         },
         "bash": "allow",
         "task": "deny"

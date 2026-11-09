@@ -366,6 +366,19 @@ repeating it.
   driver and `\texttt{depth = 0.2em}` in prose, not `tagging=on`.  The same holds in both
   languages of a bilingual manual, in the code of a `codemo`, and in a warning written from Lua:
   it is what the reader is meant to copy.
+- **A repeated statement becomes one map.**  When two or more consecutive statements differ only in a
+  name, write the name list once and the statement once: a `\clist_map_inline:nn` around
+  `\exp_args:Nc \newattribute { g_@@_#1_attr }`, or the same shape with `:c` variants
+  (`\tl_clear:c`, `\dim_new:c`, `\exp_args:Nc \bool_set_false:N`).  To read a variable whose name
+  was built as a string, `\exp_args:Nv <fn> { <name> }` is the value of that variable, while
+  `\exp_args:Nc` would pass the name itself.  A statement left over that applies to a subset of the
+  list follows the list's order, so the reader can see which names are missing.
+  Inside a macro body the map's parameter is `##1`, not `#1`: `#1` silently becomes the enclosing
+  macro's argument, which compiles and does the wrong thing, and only the manual build notices the
+  variant without parameters at all.
+  Two cases are not a map: a **declaration block** whose order groups related variables by purpose
+  (mapping it by type fragments that grouping), and a **data table** (`CJK_RANGES`, a punctuation
+  map), where the repetition *is* the data.
 - **A repeated identical call collapses into one comma list.**  `\RequirePackage { a, b, c }` rather
   than one call per line, and `\clist_map_inline:nn { a, b, c }` on one line while it fits; a list
   too long for one line splits into aligned columns rather than one item per line.

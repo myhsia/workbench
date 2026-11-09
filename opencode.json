@@ -80,6 +80,23 @@
   "agent": {
     "title": {
       "prompt": "{file:./prompts/title.txt}"
+    },
+    "plan": {
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "/Users/myhsia/.opencode/plan/**": "allow"
+        },
+        "bash": "deny",
+        "task": "deny"
+      }
+    },
+    "explore": {
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "task": "deny"
+      }
     }
   },
   "providers": {

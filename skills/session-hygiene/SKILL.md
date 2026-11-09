@@ -49,6 +49,13 @@ rewrote `session_message.data` dropped the required `model` field and made every
 recovery meant re-adding `model` from `session_v2.model` and `VACUUM`. All changes go through the API
 (export / import / delete / rename / move / revert).
 
+One recorded exception, 2026-11-09: 102 `plan`-authored messages that had edited a repository (a
+completed `write`/`edit` call, or a shell write into a repository) were relabelled to `build` —
+the `agent` field only — inside one `BEGIN IMMEDIATE`, after a whole-database `.backup`.  Verified:
+`json_valid` on every row, `model` present, every other key byte-identical, row counts unchanged,
+encoder scan clean, `/context` 200, and a real send.  Relabelling a message does not change what
+already happened; it stays an exception.
+
 ## Rebuilding a session (export -> prune -> import)
 
 ```sh

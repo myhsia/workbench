@@ -51,11 +51,13 @@ renamed in passing. The detail is in the `session-hygiene` skill.
 ## Plan mode
 
 Plan mode is enforced by the permission rules, not by the prompt that announces it.  The global
-`permissions` block carries deny rules only: a blanket `edit` allow there is merged **after** each
-agent's defaults, cancelling Plan's deny and Explore's read-only guarantee — which is exactly how
-Plan still edited files under v2.  Check `opencode debug agents` when in doubt.  Under Plan an edit is
-refused; say so and ask for a switch to build.  `shell` stays allowed in Plan by design, so keep it
-read-only and do not commit, push, or rewrite files with it.
+`permissions` block carries deny rules only — a blanket allow there is merged after each agent's
+own rules and cancels them — and `agent.plan` / `agent.explore` add their own: `edit` denied except
+`/Users/myhsia/.opencode/plan/**`, `bash` (the `shell` action) denied, `task` (the `subagent`
+action) denied.  Check `opencode debug agents` when in doubt.  Under Plan an edit or a command is
+refused: say so and ask for a switch to build.  Verified 2026-11-09: a Plan `write` returns
+"Cannot use write to modify files outside the Plan directory"; Plan and Explore create no file and
+offer no shell; Build writes and runs.
 
 ## No unobserved results (MUST)
 

@@ -281,6 +281,11 @@ changes behavior without touching the guide is incomplete.
 - Put a float's label **after** its `\caption`, not inside the caption.  Floats and cross-referenced
   sections use `\zlabel` (their references are `\zref`); `\label` is reserved for `\ref`/`\eqref`
   targets (equations and the remaining sections).  There is no auto-label hook.
+- Caption justification: with `caption` under a `revtex4` class, `justification = justified` is an
+  empty no-op and a figure's `\centering` leaks into its caption, so the captions render centered;
+  load `ragged2e` **before** `caption` and use `justification = Justified` (ragged2e's
+  `\justifying` resets `\rightskip`).  `caption` then warns "Unknown document class"; that notice
+  is expected for RevTeX.
 - Label an equation only when it is actually `\eqref`-referenced; otherwise use an untagged display
   (`equation` environment to `\[…\]`, `align`/`multline` environment to `align*`/`multline*`), and
   downgrade any `\label` whose reference is later removed.

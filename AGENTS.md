@@ -39,12 +39,12 @@ bash ~/.config/opencode/scripts/guides-due.sh --committed .  # exit 0 = STALE
   with the repository as the working directory.  Exit 0 is silence and exit 2 means "cannot run
   here"; anything else is reported, and its first lines become part of the task.  Only the declared
   path is run, never an undeclared file, so a checkout opts in through its reviewed guide.
-- **Plan mode cannot run these** (see *Plan mode* below): the `shell` action is denied there, as
-  are `edit` and `subagent`.  The `upkeep` plugin runs the checks itself, independently of the
-  agent's permissions, so its injected line is the evidence to quote; never claim to have run a
-  check that the mode forbade.  Report a `STALE`/`MISSING` guide as pending rather than fixing it,
-  and run both scripts at the first prompt after switching to a build agent.  A check that could
-  not run is deferred, never reported as passed.
+- **Plan mode can run the checks, but cannot fix what they report**: shell stays available, and
+  `plugins/shell-guard` rejects only commands that would write (`>`, `tee`, `sed -i`, `rm`, `mv`,
+  `cp`, `git add|commit|push`, `latexmk`, Python writes).  Run both scripts; never claim a check
+  that the mode forbade.  Report a `STALE`/`MISSING` guide as pending rather than fixing it, and
+  apply the fix at the first prompt after switching to a build agent.  A check that could not run
+  is deferred, never reported as passed.
 
 ## Session titles
 

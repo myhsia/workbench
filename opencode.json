@@ -85,16 +85,23 @@
       "permission": {
         "edit": {
           "*": "deny",
-          "/Users/myhsia/.opencode/plan/**": "allow"
+          "/Users/myhsia/.opencode/plan/**": "allow",
+          "/private/var/folders/x6/j5n4d2x16kvfbpw_fg2d6wn00000gn/T/opencode/**": "allow"
         },
-        "bash": "deny",
-        "task": "deny"
+        "bash": "allow",
+        "task": {
+          "*": "deny",
+          "explore": "allow"
+        }
       }
     },
     "explore": {
       "permission": {
-        "edit": "deny",
-        "bash": "deny",
+        "edit": {
+          "*": "deny",
+          "/private/var/folders/x6/j5n4d2x16kvfbpw_fg2d6wn00000gn/T/opencode/**": "allow"
+        },
+        "bash": "allow",
         "task": "deny"
       }
     }

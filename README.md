@@ -12,6 +12,10 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
   what the session-start check needs.
 - `plugins/upkeep/` — refreshes the Westlake model list once a day and announces the OpenCode half
   of the daily upkeep; the markers it writes stay untracked.
+- `plugins/shell-guard/` — rejects a shell command from a Plan or Explore session that would write
+  into a project (`>`, `tee`, `sed -i`, `rm`/`mv`/`cp`, `git add|commit|push|…`, `l3build`, a
+  Python write); the temp tree stays writable. `guard.js` is pure logic with `test.mjs` beside it
+  (`node test.mjs`); the plugin only reads the session's agent and directory.
 - `.models-ignore` — the model ids the plugin must never add back, one per line, because they were
   removed from `opencode.json` on purpose.
 - `opencode.json` — the global config (providers, compaction, tool output), plus

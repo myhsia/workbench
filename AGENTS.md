@@ -56,18 +56,17 @@ renamed in passing. The detail is in the `session-hygiene` skill.
 
 ## Plan mode
 
-Plan mode is enforced by the permission rules, not by the prompt that announces it.  The global
-`permissions` block carries deny rules only — a blanket allow there is merged after each agent's
-own rules and cancels them — and `agent.plan` / `agent.explore` add their own: `edit` denied except
-`/Users/myhsia/.opencode/plan/**`, `bash` (the `shell` action) denied, `task` (the `subagent`
-action) denied.  Check `opencode debug agents` when in doubt.  Under Plan an edit or a command is
-refused: say so and ask for a switch to build.  Verified 2026-11-09: a Plan `write` returns
-"Cannot use write to modify files outside the Plan directory"; Plan and Explore create no file and
-offer no shell; Build writes and runs.  A denied tool leaves the effective list, so a call to it
-fails with `No tool named "<name>" is currently available` — not a permission error, and not a
-broken configuration: four Plan sessions hit exactly that for `shell` on 2026-11-09 (the 15:31 one
-recovered with `grep`/`read`), while a denied `read` says `Permission denied: read`.  Use
-`read`/`grep`/`glob` instead, or ask for build.
+Plan mode is enforced by the permission rules, not by the prompt that announces it.  The rule is
+narrow: **commands are allowed; writes are not, except in the temporary tree.**  `agent.plan` and
+`agent.explore` allow `edit` only under `$TMPDIR/opencode` and (for plan) `~/.opencode/plan`, deny
+it everywhere else, and limit `subagent` to the read-only `explore`.  So a Plan session probes by
+copying into `$TMPDIR/opencode` and working there, never by writing in place.  Shell is path-blind
+— its permission resource is the command text, not the working directory — so
+`plugins/shell-guard` rejects a command that would write into a project: `>`, `tee`, `sed -i`,
+`rm`/`mv`/`cp`, `git add|commit|push|reset|…`, `l3build`, a Python write.  Check
+`opencode debug agents` when in doubt.  Since the shell remains available, re-run a check rather
+than quoting a result from before the switch.  A denied `read` says `Permission denied: read`; a
+guard rejection names the reason and the directory.
 
 ## No unobserved results (MUST)
 

@@ -87,3 +87,9 @@ project's `output/`.
 - Heavy jobs bill runner minutes: keep triggers manual, cache the environment, and set
   `timeout-minutes` on the job. A private repo has a monthly free-minutes budget, and a matrix of many
   long jobs can exhaust it.
+- A run whose jobs never start, annotated "The job was not started because recent account payments
+  have failed or your spending limit needs to be increased", is a **billing stop, not a code
+  failure**.  Private repositories draw on paid minutes while public ones run free, so a private repo
+  can fail alone with the same commit; re-running does not help until the account's spending limit is
+  raised, and the local equivalents (the CI command run by hand) are the only evidence in the
+  meantime.

@@ -86,6 +86,15 @@ would rewrite the house style.  A review comment, not a failed check, is what as
   whether a stored series starts at order 0 or at order 1 with the zeroth order implied.
 - Operator algebra: put the commutator and metric sign next to the definition, not in a comment
   three call levels away.
+- **Convert `mpmath` at the boundary.**  Hand values to numpy, scipy and format strings as
+  `float()`/`complex()`.  An `mpf` inside a `complex128` array silently makes it `dtype=object`, and
+  NumPy 2 then raises `_UFuncOutputCastingError` on the next in-place add, while an f-string raises
+  `TypeError: unsupported format string passed to mpf.__format__`.  Extended precision belongs to
+  the check (`### Verification`), not to values that flow into the solver.
+- **One array per time or grid axis.**  Build the grid once and pass it; never let two
+  `np.arange(0, tf + dt, dt)` calls define a paired x/y.  Built in different units (rescaled and
+  not) they can differ by one sample, and the mismatch then surfaces at plot time as
+  `x and y must have same first dimension`, far from the cause.
 
 ### Verification
 
@@ -729,7 +738,10 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   `` Session check: `scripts/…` `` on a line of its own.  The `upkeep` plugin runs the declared path
   once a day and after a directory change, with the repository as the working directory, and
   injects the first lines of its output; it runs nothing undeclared, so the repository opts in
-  through a reviewed file.  A check that needs the network, a service, or another repository's
+  through a reviewed file.  The path is executed with `bash`, so it must be a shell script —
+  declare a wrapper, not a `.py` — and the plugin kills it after about ten seconds: read array
+  headers rather than whole archives, and skip ignored cache trees, or the check fails on the
+  budget instead of on the data.  A check that needs the network, a service, or another repository's
   current branch is a poor CI job for the same reason and belongs here instead.
 - **Keep the global rules current.**  Whenever a session in any repository establishes a general
   convention — coding style, commit/PR rule, LaTeX style, tool workflow, pitfall — record it in the

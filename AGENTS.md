@@ -63,7 +63,13 @@ own rules and cancels them — and `agent.plan` / `agent.explore` add their own:
 action) denied.  Check `opencode debug agents` when in doubt.  Under Plan an edit or a command is
 refused: say so and ask for a switch to build.  Verified 2026-11-09: a Plan `write` returns
 "Cannot use write to modify files outside the Plan directory"; Plan and Explore create no file and
-offer no shell; Build writes and runs.
+offer no shell; Build writes and runs.  A denied tool leaves the effective list, so a call to it
+fails with `No tool named "<name>" is currently available` — not a permission error, and not a
+broken configuration: several Plan sessions show exactly that for `shell` (measured 2026-11-09,
+four sessions).  Use `read`/`grep`/`glob` instead, or ask for build.  A denied `shell` call reports *No tool named "shell" is
+currently available* (a denied `read` says `Permission denied: read`): that is the guard working,
+not a missing tool or a broken configuration — the plan agent from 2026-11-09 15:31 is the recorded
+case, and it recovered with `grep`/`read`.
 
 ## No unobserved results (MUST)
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Guide due-check: has code moved on since AGENTS.md / the skill last changed?
 #
-#   guides-due.sh [--committed] [repo]
+#   guides-due.sh [--committed|--staged] [repo]
 #                          -> print STALE / OK / MISSING
 #                             exit 0 (stale: review the guides), 1 (ok), 2 (missing)
 #
@@ -14,6 +14,9 @@
 # start uses it: a repository being edited is dirty by design, and only the
 # commits say whether the guides fell behind.
 #
+# `--staged` judges only the index, which is what the commit-msg hook needs: a
+# code/config/CI change staged without a guide is STALE, docs-only is OK.
+#
 # When the target is not a git repository (a workspace root such as the oqs
 # checkout, which holds sibling repositories), every immediate child directory
 # that is a git repository is checked instead: one line per repository, named
@@ -23,10 +26,12 @@
 set -u
 
 committed=no
+staged=no
 repo="."
 for arg in "$@"; do
   case "$arg" in
     --committed) committed=yes ;;
+    --staged)    staged=yes ;;
     *)           repo="$arg" ;;
   esac
 done
@@ -68,6 +73,21 @@ check_repo() {
   # `set -u` plus bash 3.2 (the macOS default) cannot expand an empty array, so
   # the optional exclusions use the "expand only if set" idiom.
   local code_excl=(':(exclude)AGENTS.md' ":(exclude)$skilldir" ${prose_excl[@]+"${prose_excl[@]}"})
+
+  # Index-only mode for the commit-msg hook.
+  if [ "$staged" = yes ]; then
+    local staged_files code_files
+    staged_files="$(git -C "$repo" diff --cached --name-only -- . "${code_excl[@]}")"
+    code_files="$(printf '%s\n' "$staged_files" \
+      | grep -vE '\.(tex|md|bib|pdf|png|jpe?g|svg|eps|gif)$' | sed '/^$/d')"
+    if [ -n "$code_files" ]; then
+      echo "STALE: staged changes outside the guides"
+      printf '%s\n' "$code_files" | sed 's/^/  /' | head -10
+      return 0
+    fi
+    echo "OK: staged changes are guides or prose"
+    return 1
+  fi
 
   # Uncommitted work outside the guides: the answer is stale whatever the
   # history says.  `--committed` skips this, because an edited repository is

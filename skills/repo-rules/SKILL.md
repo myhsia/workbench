@@ -210,6 +210,13 @@ time the working tree is what is about to land.
   `Guides-Reviewed: unchanged, because …` (or `Guides-Reviewed: AGENTS.md, .opencode/skills` when
   the guides were reviewed and updated).  It is what makes the review auditable in history with
   `git log --format=%B`, instead of surviving only in a chat report.
+- **Both scopes, every run, and the hook enforces it.**  After a build run that changes code,
+  config, CI or output, check the working repository's guides **and** the machine-global ones in
+  `~/.config/opencode` (`AGENTS.md`, `skills/`, `opencode.json`); a convention that is not specific
+  to the project belongs in the global scope.  A `commit-msg` hook installed machine-wide
+  (`core.hooksPath=~/.config/opencode/hooks`) runs `guides-due.sh --staged` and refuses the commit
+  when neither guide is staged and the message lacks the trailer; it skips merge/revert commits,
+  docs-only diffs, and repositories without a guide.  `--no-verify` is the deliberate bypass.
 - **Docs-only commits** are never blocked.
 - **A prose tree is not code.**  The gate excludes `context/` — the house name for the manuscript
   tree — from the "code" set, in both the working-tree and the history branches, and only when the

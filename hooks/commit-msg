@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# commit-msg (machine-wide, via core.hooksPath=~/.config/opencode/hooks):
+# a commit that changes code, configuration, CI or output must either carry a
+# guide change in the same commit or say why none was needed.
+#
+#   Guides-Reviewed: unchanged, because ...
+#
+# Docs-only commits pass.  A repository without AGENTS.md and a skill is not
+# checked.  --no-verify is the deliberate bypass.
+set -u
+
+msg_file="${1:-}"
+[ -n "$msg_file" ] || exit 0
+
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+cd "$root" || exit 0
+
+# Repositories with their own commit-msg hook keep it: core.hooksPath shadows
+# .git/hooks, so chain explicitly.
+local_hook="$(git rev-parse --absolute-git-dir 2>/dev/null)/hooks/commit-msg"
+if [ -x "$local_hook" ] && [ "$local_hook" != "$0" ]; then
+  "$local_hook" "$msg_file" || exit 1
+fi
+
+# Merge and revert commits are not authored changes.
+git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1 && exit 0
+head -1 "$msg_file" | grep -qE '^(Merge|Revert) ' && exit 0
+
+# Opt-in: only repositories that keep a guide and a skill are checked.
+[ -f AGENTS.md ] || exit 0
+skilldir=""
+for d in .opencode/skills skills; do
+  if [ -f "$d/SKILL.md" ] || ls -d "$d"/*/SKILL.md >/dev/null 2>&1; then
+    skilldir="$d"
+    break
+  fi
+done
+[ -n "$skilldir" ] || exit 0
+
+# The author reviewed the guides and recorded why they did not change.
+grep -qi '^Guides-Reviewed:' "$msg_file" && exit 0
+
+# A guide is part of the commit: nothing else to check.
+if git diff --cached --name-only -- AGENTS.md "$skilldir" | grep -q .; then
+  exit 0
+fi
+
+gate="$HOME/.config/opencode/scripts/guides-due.sh"
+[ -x "$gate" ] || exit 0
+out="$("$gate" --staged "$root" 2>&1)"
+rc=$?
+[ "$rc" -ne 0 ] && exit 0
+
+cat >&2 <<EOF
+commit-msg: the guides were not updated.
+
+$out
+
+This commit changes code, configuration, CI or output, but neither AGENTS.md
+nor $skilldir/ is staged, and the message carries no trailer.  Either
+
+  * update the guides in this commit, or
+  * add a trailer saying why they need no change:
+
+      Guides-Reviewed: unchanged, because ...
+
+The machine-global guides (~/.config/opencode: AGENTS.md, skills/,
+opencode.json) follow the same rule; a convention that is not specific to this
+repository belongs there.  --no-verify bypasses this check deliberately.
+EOF
+exit 1

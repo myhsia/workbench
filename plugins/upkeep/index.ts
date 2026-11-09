@@ -269,13 +269,20 @@ export default Plugin.define({
         }
 
         // Unconditional: the guides are part of every task, not a follow-up.
+        // Both scopes: this repository and the machine-global config.
         lines.push(
-          "If this task changes a convention, a command, a dependency, or the layout, update `AGENTS.md` and the skill in the same task; `guides-due.sh` is the gate.",
+          "If this task changes a convention, a command, a dependency, or the layout, update the guides in **both** scopes in the same task — this repository's `AGENTS.md` and skill, and the machine-global ones in `~/.config/opencode` (`AGENTS.md`, `skills/`, `opencode.json`). The commit-msg hook blocks a code commit that brings neither a guide change nor a `Guides-Reviewed:` trailer.",
         )
 
         if (await guidesDue(dir)) {
           lines.push(
             `Guides STALE/MISSING in ${dir}: update AGENTS.md and the skill as part of this task (guides-due.sh --committed).`,
+          )
+        }
+
+        if (dir !== configDir && (await guidesDue(configDir))) {
+          lines.push(
+            "Guides STALE/MISSING in the machine-global config (~/.config/opencode): update its AGENTS.md/skills as part of this task when the change is a general convention (guides-due.sh --committed).",
           )
         }
 

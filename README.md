@@ -9,7 +9,10 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
 - `scripts/update-due.sh` — the daily upkeep check used by `opencode-hpc-update`.
 - `scripts/guides-due.sh` — the guide freshness check used by the commit gate in `repo-rules`
   (exit 0 = `STALE`, 1 = `OK`, 2 = `MISSING`); `--committed` judges the history only, which is
-  what the session-start check needs.
+  what the session-start check needs, and `--staged` judges the index, which is what the hook runs.
+- `hooks/commit-msg` — installed machine-wide by `git config --global core.hooksPath
+  ~/.config/opencode/hooks`; refuses a code/config/CI commit with neither a guide change nor a
+  `Guides-Reviewed:` trailer, and skips docs-only, merge/revert, and repos without a guide.
 - `plugins/upkeep/` — refreshes the Westlake model list once a day and announces the OpenCode half
   of the daily upkeep; the markers it writes stay untracked.
 - `plugins/shell-guard/` — rejects a shell command from a Plan or Explore session that would write

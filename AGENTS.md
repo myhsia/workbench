@@ -82,6 +82,21 @@ plugin directory for the rule set itself.  Since the shell remains available, re
 than quoting a result from before the switch.  A denied `read` says `Permission denied: read`; a
 guard rejection names the reason and the directory.
 
+## Guide check after every build run (mandatory)
+
+A run that changes code, configuration, CI or output ends by checking **both** scopes, not only the
+one being edited:
+
+1. the working repository — `AGENTS.md`, `.opencode/skills/`, `opencode.json`;
+2. the machine-global configuration — `~/.config/opencode/AGENTS.md`, `skills/`, `opencode.json`.
+
+Update whichever is stale in the same commit; when neither needs a change, record it in the commit
+as `Guides-Reviewed: unchanged, because …`.  A convention that is not specific to the project
+belongs in the global scope — forgetting that half is the failure this rule exists for.  A
+machine-wide `commit-msg` hook (`core.hooksPath=~/.config/opencode/hooks`) refuses a code/config/CI
+commit that carries neither a guide change nor the trailer; docs-only commits and repositories
+without a guide pass, and `--no-verify` is the deliberate bypass.
+
 ## No unobserved results (MUST)
 
 Never report a measurement you did not run.  Every claimed check, benchmark, error figure or

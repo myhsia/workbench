@@ -325,6 +325,10 @@ changes behavior without touching the guide is incomplete.
   load `ragged2e` **before** `caption` and use `justification = Justified` (ragged2e's
   `\justifying` resets `\rightskip`).  `caption` then warns "Unknown document class"; that notice
   is expected for RevTeX.
+- Caption content: state the physics and the encoding, and do not narrate a legend the reader can
+  read off the figure (name the groups or the methods, not "the top panel is the legend").  Quote
+  the parameter values once, at first use; later captions say that the parameters are those of the
+  reference scenario and `\zref` the figure that lists them, instead of repeating the numbers.
 - Label an equation only when it is actually `\eqref`-referenced; otherwise use an untagged display
   (`equation` environment to `\[…\]`, `align`/`multline` environment to `align*`/`multline*`), and
   downgrade any `\label` whose reference is later removed.

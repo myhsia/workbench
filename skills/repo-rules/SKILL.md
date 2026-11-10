@@ -131,6 +131,13 @@ would rewrite the house style.  A review comment, not a failed check, is what as
   even when its content does not.  For code that produces no rendered artefact, compare the produced
   data over the same inputs (array equality, or a stated tolerance).  "The code path is unchanged" is
   an argument, not a measurement; this applies to code, not only to documentation prose.
+- **A test added for a guard must be shown to be able to fail.**  Disable the guard, run the case,
+  and watch it go red before restoring the guard and recording both runs in the change.  A case that
+  passes either way pins the behaviour that was there before, not the one the change introduces, and
+  an input the code never reaches proves nothing about the branch that names it — a character the
+  format already discards, a glyph the test font does not have, a list that is empty before the guard
+  runs.  Read the failing output, not only its presence: the reported value must be the wrong one for
+  the reason the guard exists.
 
 ### Plotting
 
@@ -690,7 +697,11 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   feature that has no single documented object.  An entry in the release that ships a feature
   states the feature in the present tense, and only a later release says that something now
   behaves differently; a history that says "now" in the first release is a development log, not a
-  changelog.  The version and the date stay on the first line, only the text wraps.  Commands are `\cs{…}`, keys `\opt{…}`, packages
+  changelog.  **The unit is the shipped feature, not the commit**: a feature built over several
+  commits carries one entry that describes what it does when it ships, and a later commit that
+  extends it edits that entry rather than adding a second, so a release reads one line per feature
+  and the order in which it was built stays in `git log`.  The version and the date stay on the
+  first line, only the text wraps.  Commands are `\cs{…}`, keys `\opt{…}`, packages
   `\pkg{…}`, files `\file{…}`, environments `\env{…}`, other literals `\texttt{…}`, and a
   bracketed option list is `\cs{cmd}|[key = …]|` so that it stays one code span; a line inside
   `macrocode` would be copied into the derived file.  `CHANGELOG.md` is then generated from these

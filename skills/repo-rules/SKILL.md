@@ -131,6 +131,13 @@ would rewrite the house style.  A review comment, not a failed check, is what as
   even when its content does not.  For code that produces no rendered artefact, compare the produced
   data over the same inputs (array equality, or a stated tolerance).  "The code path is unchanged" is
   an argument, not a measurement; this applies to code, not only to documentation prose.
+- **A claim about position needs a route that can see position.**  Extracted text (`mutool draw -F
+  txt`) is identical through a 2.7 pt shift, and a rasterised page shows a difference without saying
+  which entry moved, so read the coordinates: `mutool draw -F stext` writes a `bbox` per line and a
+  `quad` per glyph, and splitting that output on `<page ` and comparing page by page turns the claim
+  into "these entries moved by this amount and no later page reflowed".  Measure the changed entry
+  against its unchanged counterpart, quote both coordinates, and name the range of identical pages;
+  for a spacing or alignment fix this is the only evidence that the text itself did not move.
 - **A test added for a guard must be shown to be able to fail.**  Disable the guard, run the case,
   and watch it go red before restoring the guard and recording both runs in the change.  A case that
   passes either way pins the behaviour that was there before, not the one the change introduces, and

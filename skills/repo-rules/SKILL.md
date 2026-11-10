@@ -533,9 +533,11 @@ repeating it.
   `\cs{usepackage}\oarg{options}"{LuaCJK}"` prints the braces; `|…|` stays the default span, and it
   cannot show braces without escaping them.
 - **`\cs:w`/`\cs_end:` are for expl3.**  In code under `\ExplSyntaxOn` they replace
-  `\csname`/`\endcsname`.  A token written to a file is read with the catcodes of the reader: the
-  generated `ctexopts.cfg` works because `ctex` is under `\ProvidesExplPackage`, which leaves
-  `\ExplSyntaxOn` on; the same file read by plain LaTeX would see `\cs` and `:w`.
+  `\csname`/`\endcsname`.  A token written to a file is read with the catcodes of the reader:
+  `\keys_set:nn { ctex / option } { engine = luacjk }` appended to `ctexopts.cfg` works because
+  `ctex` inputs that file itself, with `\ctex_file_input:n { ctexopts.cfg }` in its own
+  `\ProvidesExplPackage` régime, so `\ExplSyntaxOn` is on when the line is read; a plain LaTeX
+  document reading the same line would take `\cs` as an undefined command and `_` as a subscript.
 - **The catcode of `@` is inherited, not set by `\ExplSyntaxOn`.**  `\ExplSyntaxOn` turns `_`, `:`
   and the rest of the expl3 régime into letters and leaves `@` exactly as it found it.  A package
   or class file is input under `\makeatletter`, so `@` is 11 in it and `\f@size`, `\p@` and `\@…`

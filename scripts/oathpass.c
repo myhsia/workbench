@@ -86,6 +86,7 @@
 #define MIN_REMAINING 4.0        /* answer only this far into a window */
 #define MAX_AUTH_ATTEMPTS 3      /* lockout budget, global across ports */
 #define TAIL_MAX 8192
+#define CONTROL_PATH_MAX 4096
 
 /* Any HTTPS host returns a Date header; override with "time_url" in the config. */
 static char g_time_url[256] = "https://1.1.1.1";
@@ -1235,8 +1236,10 @@ static int report_no_network(const Config *cfg, int forced_index, int forced_por
  */
 
 static void mkdir_p(const char *path) {
-    char tmp[4096];
-    snprintf(tmp, sizeof tmp, "%s", path);
+    char tmp[CONTROL_PATH_MAX];
+    size_t len = strlen(path);
+    if (len >= sizeof tmp) die("path too long");
+    memcpy(tmp, path, len + 1);
     for (char *p = tmp + 1; *p; p++) {
         if (*p != '/') continue;
         *p = '\0';
@@ -1246,22 +1249,25 @@ static void mkdir_p(const char *path) {
     mkdir(tmp, 0700);
 }
 
-static void control_path(int port, char *out, size_t outsz) {
+static void control_path(int port, char out[CONTROL_PATH_MAX]) {
     const char *cache = getenv("XDG_CACHE_HOME");
-    char base[4096];
-    if (!cache || !*cache) {
-        const char *home = getenv("HOME");
-        if (!home) die("HOME is not set");
-        snprintf(base, sizeof base, "%s/.cache", home);
-        mkdir_p(base);
+    const char *home = getenv("HOME");
+    int written;
+    if (cache && *cache) {
+        written = snprintf(out, CONTROL_PATH_MAX, "%s/oathpass/control-%d", cache, port);
     } else {
-        snprintf(base, sizeof base, "%s", cache);
-        mkdir_p(base);
+        if (!home) die("HOME is not set");
+        written = snprintf(out, CONTROL_PATH_MAX, "%s/.cache/oathpass/control-%d", home, port);
     }
-    snprintf(out, outsz, "%s/oathpass", base);
-    mkdir_p(out);
-    chmod(out, 0700);
-    snprintf(out, outsz, "%s/oathpass/control-%d", base, port);
+    if (written < 0 || (size_t)written >= CONTROL_PATH_MAX) die("the control socket path is too long");
+
+    char dir[CONTROL_PATH_MAX];
+    size_t len = strlen(out);
+    memcpy(dir, out, len + 1);
+    char *slash = strrchr(dir, '/');
+    if (slash) *slash = '\0';
+    mkdir_p(dir);
+    chmod(dir, 0700);
 }
 
 static void set_askpass_env(void) {
@@ -1311,15 +1317,15 @@ static int master_exit(const char *sock, int port, const Config *cfg) {
 
 /* Open the master if it is not already up.  This is the only place an OTP is
    spent.  Returns 0 on success; `sock` and `port` come back filled in. */
-static int ensure_master(const Config *cfg, int forced_index, int forced_port, char *sock,
-                         size_t socksz, int *port_out) {
+static int ensure_master(const Config *cfg, int forced_index, int forced_port,
+                         char sock[CONTROL_PATH_MAX], int *port_out) {
     Node nodes[16];
     int count = select_nodes(cfg, forced_index, forced_port, nodes, 16, NULL, NULL);
     if (count == -2) die("--node %d is out of range (1..%zu)", forced_index, cfg->nports);
     if (count < 0) return report_no_network(cfg, forced_index, forced_port);
 
     int port = nodes[0].port;
-    control_path(port, sock, socksz);
+    control_path(port, sock);
     if (port_out) *port_out = port;
     if (master_alive(sock, port, cfg)) return 0;
 
@@ -1447,9 +1453,9 @@ static int cmd_run(const Config *cfg, int forced_index, int forced_port, int arg
                     die("refusing %s: find may not run or write anything", argv[i]);
     }
 
-    char sock[4096];
+    char sock[CONTROL_PATH_MAX];
     int port = 0;
-    int rc = ensure_master(cfg, forced_index, forced_port, sock, sizeof sock, &port);
+    int rc = ensure_master(cfg, forced_index, forced_port, sock, &port);
     if (rc) return rc;
 
     size_t size = 64;
@@ -1486,9 +1492,9 @@ static int cmd_run(const Config *cfg, int forced_index, int forced_port, int arg
 }
 
 static int cmd_sftp(const Config *cfg, int forced_index, int forced_port, int argc, char **argv) {
-    char sock[4096];
+    char sock[CONTROL_PATH_MAX];
     int port = 0;
-    int rc = ensure_master(cfg, forced_index, forced_port, sock, sizeof sock, &port);
+    int rc = ensure_master(cfg, forced_index, forced_port, sock, &port);
     if (rc) return rc;
 
     char portbuf[16], target[600], control[4200];
@@ -1513,9 +1519,9 @@ static int cmd_sftp(const Config *cfg, int forced_index, int forced_port, int ar
 }
 
 static int cmd_scp(const Config *cfg, int forced_index, int forced_port, int argc, char **argv) {
-    char sock[4096];
+    char sock[CONTROL_PATH_MAX];
     int port = 0;
-    int rc = ensure_master(cfg, forced_index, forced_port, sock, sizeof sock, &port);
+    int rc = ensure_master(cfg, forced_index, forced_port, sock, &port);
     if (rc) return rc;
 
     char portbuf[16], control[4200];
@@ -1560,8 +1566,8 @@ static int cmd_status(const Config *cfg, int forced_index, int forced_port) {
     if (count < 0) return report_no_network(cfg, forced_index, forced_port);
 
     int port = nodes[0].port;
-    char sock[4096];
-    control_path(port, sock, sizeof sock);
+    char sock[CONTROL_PATH_MAX];
+    control_path(port, sock);
     printf("node     %d of %zu, port %d\n", nodes[0].index + 1, cfg->nports, port);
     printf("master   %s\n", master_alive(sock, port, cfg) ? "connected" : "not connected (the next command opens it)");
     printf("socket   %s\n", sock);
@@ -1569,9 +1575,9 @@ static int cmd_status(const Config *cfg, int forced_index, int forced_port) {
 }
 
 static int cmd_sockpath(const Config *cfg, int forced_index, int forced_port) {
-    char sock[4096];
+    char sock[CONTROL_PATH_MAX];
     int port = 0;
-    int rc = ensure_master(cfg, forced_index, forced_port, sock, sizeof sock, &port);
+    int rc = ensure_master(cfg, forced_index, forced_port, sock, &port);
     if (rc) return rc;
     printf("%s\n", sock);
     return 0;
@@ -1581,8 +1587,8 @@ static int cmd_close(const Config *cfg, int forced_port) {
     int closed = 0;
     for (size_t i = 0; i < cfg->nports; i++) {
         int port = forced_port ? forced_port : cfg->ports[i];
-        char sock[4096];
-        control_path(port, sock, sizeof sock);
+        char sock[CONTROL_PATH_MAX];
+        control_path(port, sock);
         if (!master_alive(sock, port, cfg)) continue;
         if (master_exit(sock, port, cfg)) {
             printf("closed port %d\n", port);
@@ -1595,9 +1601,9 @@ static int cmd_close(const Config *cfg, int forced_port) {
 }
 
 static int cmd_login(const Config *cfg, char **userargs, int forced_index, int forced_port) {
-    char sock[4096];
+    char sock[CONTROL_PATH_MAX];
     int port = 0;
-    int rc = ensure_master(cfg, forced_index, forced_port, sock, sizeof sock, &port);
+    int rc = ensure_master(cfg, forced_index, forced_port, sock, &port);
     if (rc) return rc;
 
     char portbuf[16], target[600];
@@ -1662,8 +1668,8 @@ static int cmd_check(const Config *cfg, int forced_index, int forced_port) {
     if (count < 0) return report_no_network(cfg, forced_index, forced_port);
 
     int port = nodes[0].port;
-    char sock[4096];
-    control_path(port, sock, sizeof sock);
+    char sock[CONTROL_PATH_MAX];
+    control_path(port, sock);
 
     double now = monotime();
     char code[16];

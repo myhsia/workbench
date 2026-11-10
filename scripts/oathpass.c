@@ -9,10 +9,7 @@
  * typing of the host or port, and no second terminal.  The code is an RFC 6238
  * TOTP (SHA-1/256/512, 6-10 digits, configurable period) computed in plain C.
  *
- * Configuration is a JSON object read from, in order:
- *   $OATHPASS_CONFIG
- *   ~/.config/oathpass/config.json
- *   ~/.config/opencode/service.json      (this machine: the OpenCode config)
+ * Configuration is a JSON object in ~/.config/oathpass/config.json (mode 600).
  *
  *   "oathpass": {
  *     "host": "<IP address or name>",
@@ -76,7 +73,6 @@
 #endif
 
 #define CONFIG_RELATIVE "/.config/oathpass/config.json"
-#define FALLBACK_RELATIVE "/.config/opencode/service.json"
 #define PROBE_MS 1500            /* whole preflight budget */
 #define MIN_REMAINING 4.0        /* answer only this far into a window */
 #define MAX_AUTH_ATTEMPTS 3      /* lockout budget, global across ports */
@@ -762,33 +758,11 @@ static int is_placeholder(const char *s) {
     return n >= 2 && s[0] == '<' && s[n - 1] == '>';
 }
 
-static char *expand_home(const char *path) {
-    static char out[4096];
-    if (path[0] == '~' && (path[1] == '/' || path[1] == '\0')) {
-        const char *home = getenv("HOME");
-        if (!home) die("HOME is not set");
-        snprintf(out, sizeof out, "%s%s", home, path + 1);
-        return out;
-    }
-    snprintf(out, sizeof out, "%s", path);
-    return out;
-}
-
-/* Resolution order: $OATHPASS_CONFIG, then ~/.config/oathpass/config.json,
-   then ~/.config/opencode/service.json.  The chosen path is stable for the
-   life of the process, so `check` and `doctor` can report it. */
 static const char *config_path(void) {
     static char chosen[4096];
-    const char *env = getenv("OATHPASS_CONFIG");
     const char *home = getenv("HOME");
-    if (env && *env) {
-        snprintf(chosen, sizeof chosen, "%s", expand_home(env));
-        return chosen;
-    }
     if (!home) die("HOME is not set");
     snprintf(chosen, sizeof chosen, "%s%s", home, CONFIG_RELATIVE);
-    if (access(chosen, R_OK) == 0) return chosen;
-    snprintf(chosen, sizeof chosen, "%s%s", home, FALLBACK_RELATIVE);
     return chosen;
 }
 
@@ -1408,7 +1382,7 @@ static int cmd_check(const Config *cfg, int forced_index, int forced_port) {
 
 static int cmd_wrap(const Config *cfg, int argc, char **argv) {
     (void)cfg;
-    if (argc < 1) die("wrap needs a command, e.g. hpc wrap rsync -av ./d/ -- target");
+    if (argc < 1) die("wrap needs a command, e.g. oathpass wrap rsync -av ./d/ -- target");
     setenv("OATHPASS_ASKPASS", "1", 1);
     setenv("SSH_ASKPASS", self_path(), 1);
     setenv("SSH_ASKPASS_REQUIRE", "force", 1);
@@ -1514,7 +1488,7 @@ static int cmd_doctor(const Config *cfg) {
         }
     }
     report_clock();
-    printf("\nif no code here matches the phone, the seed in service.json is wrong;"
+    printf("\nif no code here matches the phone, the seed in the config is wrong;"
            "\nif the right one matches but the login fails, the clock is the problem.\n");
     return 0;
 }
@@ -1564,13 +1538,14 @@ static int cmd_selftest(void) {
 }
 
 static int usage(void) {
-    printf("usage: hpc [--node N | --port PORT] [ssh args...]\n"
-           "       hpc check            dry run: target, node, code, no ssh\n"
-           "       hpc otp [--at EPOCH]  print the current code\n"
-           "       hpc port             print the login port that would be used\n"
-           "       hpc target           print user@host\n"
-           "       hpc wrap <command...> run a command with the askpass exported\n"
-           "       hpc doctor           why a code does not match the phone\n"
+    printf("usage: oathpass [--node N | --port PORT] [ssh args...]\n"
+           "       oathpass check              dry run: target, node, code, no ssh\n"
+           "       oathpass otp [--at EPOCH]   print the current code\n"
+           "       oathpass port               print the login port that would be used\n"
+           "       oathpass target             print user@host\n"
+           "       oathpass wrap <command...>  run a command with the askpass exported\n"
+           "       oathpass doctor             why a code does not match the phone\n"
+           "       oathpass --selftest         replay the RFC 6238 vectors\n"
            "\n"
            "The cluster asks one question -- One-time password (OATH) -- and this\n"
            "answers it from the seed in %s.\n",

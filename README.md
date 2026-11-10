@@ -12,7 +12,7 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
   what the session-start check needs, and `--staged` judges the index, which is what the hook runs.
 - `scripts/oathpass.c` + `Makefile` — `oathpass`, a small C tool that answers an SSH OATH/TOTP
   prompt from a local seed, so a cluster login needs no phone and no typing of host or port. It
-  resolves host, user and login port from the `oathpass` block in `service.json`, and speaks the
+  resolves host, user and login port from `~/.config/oathpass/config.json` (mode 600), and speaks the
   `One-time password (OATH)` prompt itself (RFC 6238; SHA-1/256/512). `make install` builds and
   copies it into `$(PREFIX)/bin` (default `~/.local/bin`) — the build output *is* the command, so
   there is no interpreter, no symlink and no bytecode cache. `make test` replays the RFC 6238
@@ -37,9 +37,9 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
 - `templates/` — the skeletons a new repository copies: `templates/AGENTS.md` to its root
   `AGENTS.md`, and `templates/repo-topic/SKILL.md` to `.opencode/skills/<name>/SKILL.md`.
 
-Secrets and machine-local state — `proxy`, `service.json` (service password, `env`, and the
-cluster block `oathpass` with its OTP seed), `cli.json`, `.update-check`,
-`.models-check`, `opencode.json.bak` — are untracked.
+Secrets and machine-local state — `proxy`, `service.json` (service password and `env`), `cli.json`,
+`.update-check`, `.models-check`, `opencode.json.bak` — are untracked. `oathpass` keeps its own
+config, and its seed, in `~/.config/oathpass/config.json` (mode 600, outside this repository).
 
 Project-specific configuration stays in the project: each repository has its own `AGENTS.md` and
 `.opencode/skills/`, and a workspace may add its own `opencode.json` (for example the

@@ -71,10 +71,6 @@ const guidesDue = async (dir: string) => {
   return code === 0 || code === 2
 }
 
-// The 2026-11-05 history-rewrite rollback bundles live outside the
-// repositories; keep asking whether they can go until they are deleted.
-const backupsPending = async () => (await runCheck("backups-pending.sh", [])) === 0
-
 // A repository may declare one check of its own in AGENTS.md:
 //     Session check: `scripts/check-extract-changes.sh`
 // Only that declared path is run, with the repository as the working
@@ -290,12 +286,6 @@ export default Plugin.define({
         if (check) {
           lines.push(
             `Repository session check: ${check} (declared in AGENTS.md; run it as part of this task).`,
-          )
-        }
-
-        if (await backupsPending()) {
-          lines.push(
-            "The post-rewrite rollback bundles are still present in Dou_Group/admin/backups. Once the repositories are confirmed fine, ask the user whether to delete them; never delete without their agreement.",
           )
         }
 

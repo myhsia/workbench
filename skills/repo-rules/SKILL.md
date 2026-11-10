@@ -790,6 +790,10 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   directory), in `tdslocations` (the TDS zip and `l3build install`), and in the guide's list of
   generated files.  A file generated but absent from `installfiles` reaches no test, and a
   `tdslocations` entry without a matching `installfiles` entry is silently left out of the zip.
+  `module` and the TDS directory need not agree in case — a CTAN name may be mixed case while the
+  tree is lowercase — and `l3build` builds its default directory from `module`, so a file that is
+  installed but absent from `tdslocations` lands in a second, differently-cased directory rather
+  than disappearing; write the directory once in a local variable and concatenate.
 - **A dependency list separates hard from soft.**  `DEPENDS.txt` holds one `hard <bundle>` or
   `soft <bundle>` per line.  `hard` is needed for every use of the package; `soft` is needed for an
   optional feature only — an optional output such as a companion package, or an optional key that

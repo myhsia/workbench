@@ -182,6 +182,18 @@ A repository is not workable until it has **`AGENTS.md`** at its root and **`.op
 Load and apply the matching skill as soon as the trigger appears; do not ask the user whether a skill
 may be used.
 
+## Cluster use requires approval
+
+The HPC cluster is for work that genuinely exceeds this Mac: long DMRG/moments/FSSH sweeps, large
+parameter scans, or anything needing far more than the local eight cores.  A session **states the
+estimate** (cores, expected wall time, why local is not enough), **asks**, and waits for a yes.  A
+"no" ends that subject for the task -- do not re-ask, and do not work around it.
+
+Approved work is batched: one script per approval, not a stream of small commands, because the
+permission rule below prompts the user on every shell command that names `oathpass`.  Finish with
+`oathpass close`.  The `hpc-cluster` skill carries the workflow, the guarded `run` door, and the
+honest note that the guard is a tripwire rather than a jail.
+
 ## Keeping these rules current
 
 Whenever a session in **any** repository establishes a convention that is not specific to that

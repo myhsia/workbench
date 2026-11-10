@@ -55,6 +55,11 @@
       "action": "shell",
       "resource": "rm **/__pycache__/**",
       "effect": "deny"
+    },
+    {
+      "action": "shell",
+      "resource": "*oathpass*",
+      "effect": "ask"
     }
   ],
   "compaction": {

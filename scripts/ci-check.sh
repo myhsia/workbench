@@ -35,6 +35,18 @@ cat >"$TMP/badseed.json" <<'EOF'
   "otp": {"secret": "not!base32!"}}}
 EOF
 
+cat >"$TMP/batch-bad-late.txt" <<'EOF'
+put ./local.txt ./remote.txt
+get /etc/passwd
+EOF
+
+cat >"$TMP/batch-ok.txt" <<'EOF'
+put ./local.txt ./remote.txt
+get remote.txt /tmp/local-copy.txt
+ls
+bye
+EOF
+
 pass=0
 fail=0
 
@@ -89,6 +101,23 @@ expect 1 "run refuses ~"               "$TMP/valid.json" run ls "~"
 expect 1 "run refuses shell syntax"    "$TMP/valid.json" run cat "x; id"
 expect 1 "run refuses an unlisted cmd" "$TMP/valid.json" run rm -rf .
 expect 1 "run refuses find -exec"      "$TMP/valid.json" run find . -name x -exec ls {} +
+expect 1 "scp refuses .."              "$TMP/valid.json" scp x :../y
+expect 1 "scp refuses an absolute path" "$TMP/valid.json" scp x host:/etc/passwd
+expect 1 "sftp refuses interactive"    "$TMP/valid.json" sftp
+expect 3 "sftp accepts a valid batch"  "$TMP/valid.json" sftp -b "$TMP/batch-ok.txt"
+# A bad *second* line must be caught. If only the first line were validated
+# (newlines clobbered in the buffer), this would reach the network and exit 3.
+expect 1 "sftp validates every line"   "$TMP/valid.json" sftp -b "$TMP/batch-bad-late.txt"
+
+# sftp batch lines are validated before any connection, so bad ones fail offline.
+use_config "$TMP/valid.json"
+for probe in 'get /etc/passwd' 'ls ..' 'cd /tmp' '!id' 'put /etc/x ./y'; do
+    if printf '%s\nbye\n' "$probe" | "$BIN" sftp -b - >/dev/null 2>&1; then
+        bad "sftp refuses: $probe" "accepted"
+    else
+        ok "sftp refuses: $probe"
+    fi
+done
 
 # The help text must name the tool and advertise the selftest.
 use_config missing

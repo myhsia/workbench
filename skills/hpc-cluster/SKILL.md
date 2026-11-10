@@ -14,6 +14,20 @@ The cluster asks one question, `One-time password (OATH)`, and nothing else.
 `oathpass` answers it from a seed in `~/.config/oathpass/config.json`, so no
 phone and no interactive shell are involved.
 
+## Approval first
+
+**Never touch the cluster without an explicit yes from the user.** Before anything else:
+
+1. State the estimate: how many cores and how long, and why the local eight-core Mac is not the
+   right place for it (long DMRG/moments/FSSH sweeps, large scans, much more memory).
+2. Ask, and stop. A "no" ends the subject for that task; do not re-ask or route around it.
+3. Once approved, batch the work into as few commands as possible -- one driver script beats
+   twenty calls -- because `opencode.json` makes every shell command naming `oathpass` prompt the
+   user. Finish with `oathpass close`.
+
+The permission rule covers the agents whose rules do not re-allow shell last; the Plan agent has a
+built-in trailing `shell * allow`, so in Plan sessions this rule is instruction only, not a gate.
+
 ## The single-use rule shapes everything
 
 **The code is single-use.** A second login inside the same 30 s window is
@@ -36,7 +50,7 @@ oathpass status                 # node, master state, socket path
 oathpass run ls -la             # read-only command, inside your home
 oathpass run grep -rn TITLE .   # no shell syntax, no globbing -- see below
 oathpass run find . -name '*.py'
-oathpass sftp -b -              # batch sftp over the master
+oathpass sftp -b -              # batch sftp; interactive sftp is refused
 oathpass scp local.txt :dest/   # ':path' means <user>@<host>:path
 oathpass scp :dest/file.txt .   # fetch
 oathpass sockpath               # the socket, for rsync -e
@@ -62,9 +76,15 @@ Anything outside that list is refused before a connection is opened.
 
 ## Transfers
 
-`sftp` needs `-b -` (or a batch file) for non-interactive use; the master
-already solves the authentication problem that normally breaks batch mode. Use
-relative paths. `scp` accepts `:path` so the host never has to be typed.
+Both transfers enforce the same boundary as `run`: remote paths must stay
+inside your home. `../`, absolute paths and `~` are refused **before** a
+connection opens.
+
+- `sftp` is **batch-only**: `-b FILE` or `-b -` (stdin); there is no interactive
+  mode, because its commands could not be validated. `!` shell escapes are
+  refused. To browse, use `oathpass run ls`.
+- `scp` accepts `:path` so the host never has to be typed, and checks every
+  operand's remote half.
 
 ## Isolation: what this does *not* give you
 

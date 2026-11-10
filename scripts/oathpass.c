@@ -1491,34 +1491,151 @@ static int cmd_run(const Config *cfg, int forced_index, int forced_port, int arg
     return run_command(slots, self_path(), &tail);
 }
 
+/* A remote path must stay inside the login directory: no "..", no absolute
+   path, no "~".  Empty means "the default", which is the home directory. */
+static int remote_path_safe(const char *path) {
+    if (!path || !*path) return 1;
+    if (strstr(path, "..")) return 0;
+    if (path[0] == '/' || path[0] == '~') return 0;
+    return 1;
+}
+
+/* "local", "host:path" and the ":path" shorthand -- only the path is checked. */
+static int scp_arg_safe(const char *arg) {
+    if (arg[0] == '-') return 1; /* option, not an operand */
+    if (arg[0] == ':') return remote_path_safe(arg + 1);
+    const char *colon = strchr(arg, ':');
+    if (colon) return remote_path_safe(colon + 1);
+    return 1;
+}
+
+/* Validate one sftp batch line.  Options (leading '-') are skipped; for `put`
+   the first word is local and for `get` the last one is, so those are exempt. */
+static void sftp_check_line(const char *line, int number) {
+    const char *p = line;
+    while (*p == ' ' || *p == '\t') p++;
+    if (!*p || *p == '#') return;
+    if (*p == '!') die("sftp line %d: shell escapes are not allowed", number);
+
+    char copy[2048];
+    const char *words[16];
+    size_t count = 0;
+    snprintf(copy, sizeof copy, "%s", p);
+    for (char *t = strtok(copy, " \t\r\n"); t && count < 16; t = strtok(NULL, " \t\r\n"))
+        words[count++] = t;
+    if (!count) return;
+
+    int skip_first = !strcmp(words[0], "put");
+    int skip_last = !strcmp(words[0], "get");
+    for (size_t i = 1; i < count; i++) {
+        if (words[i][0] == '-') continue;
+        if (skip_first && i == 1) continue;
+        if (skip_last && i + 1 == count && count > 2) continue;
+        if (!remote_path_safe(words[i]))
+            die("sftp line %d: '%s' is outside your home", number, words[i]);
+    }
+}
+
+static char *read_all(FILE *stream) {
+    size_t cap = 8192, len = 0;
+    char *buf = malloc(cap);
+    if (!buf) die("out of memory");
+    for (;;) {
+        if (len + 4097 > cap) {
+            cap *= 2;
+            buf = realloc(buf, cap);
+            if (!buf) die("out of memory");
+        }
+        size_t got = fread(buf + len, 1, 4096, stream);
+        len += got;
+        if (got < 4096) break;
+    }
+    buf[len] = '\0';
+    return buf;
+}
+
 static int cmd_sftp(const Config *cfg, int forced_index, int forced_port, int argc, char **argv) {
+    if (argc < 2 || strcmp(argv[0], "-b"))
+        die("sftp is batch-only: use `-b FILE`, or `-b -` for stdin; "
+            "to browse, use `oathpass run ls`");
+
+    const char *source = argv[1];
+    FILE *stream = stdin;
+    if (strcmp(source, "-") != 0) {
+        stream = fopen(source, "r");
+        if (!stream) die("cannot read %s: %s", source, strerror(errno));
+    }
+    char *text = read_all(stream);
+    if (stream != stdin) fclose(stream);
+
+    /* Everything is validated before a connection is opened. */
+    int number = 0;
+    for (char *line = text; *line;) {
+        char *nl = strchr(line, '\n');
+        char saved = 0;
+        if (nl) {
+            saved = *nl;
+            *nl = '\0';
+        }
+        sftp_check_line(line, ++number);
+        if (!nl) break;
+        *nl = saved; /* the buffer is written out below, so restore the line end */
+        line = nl + 1;
+    }
+
+    char template_path[] = "/tmp/oathpass-sftp-XXXXXX";
+    int fd = mkstemp(template_path);
+    if (fd < 0) die("cannot create a batch file: %s", strerror(errno));
+    size_t length = strlen(text);
+    if (length && write(fd, text, length) != (ssize_t)length) die("cannot write the batch file");
+    close(fd);
+
     char sock[CONTROL_PATH_MAX];
     int port = 0;
     int rc = ensure_master(cfg, forced_index, forced_port, sock, &port);
-    if (rc) return rc;
+    if (rc) {
+        unlink(template_path);
+        return rc;
+    }
 
-    char portbuf[16], target[600], control[4200];
+    char portbuf[16], target[600], control[CONTROL_PATH_MAX + 16];
     snprintf(portbuf, sizeof portbuf, "%d", port);
     snprintf(target, sizeof target, "%s@%s", cfg->user, cfg->host);
     snprintf(control, sizeof control, "ControlPath=%s", sock);
 
-    char *slots[64];
+    char *slots[16];
     memset(slots, 0, sizeof slots);
-    size_t i = 0;
-    slots[i++] = "sftp";
-    slots[i++] = "-o";
-    slots[i++] = control;
-    slots[i++] = "-P";
-    slots[i++] = portbuf;
-    for (int k = 0; k < argc && i < 60; k++) slots[i++] = argv[k];
-    slots[i++] = target;
-    slots[i] = NULL;
-    execvp(slots[0], slots);
-    die("cannot run sftp: %s", strerror(errno));
-    return 1;
+    slots[0] = "sftp";
+    slots[1] = "-o";
+    slots[2] = control;
+    slots[3] = "-P";
+    slots[4] = portbuf;
+    slots[5] = "-b";
+    slots[6] = template_path;
+    slots[7] = target;
+    slots[8] = NULL;
+
+    pid_t pid = fork();
+    if (pid < 0) die("fork: %s", strerror(errno));
+    if (pid == 0) {
+        execvp(slots[0], slots);
+        _exit(127);
+    }
+    int status = 0;
+    while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {
+    }
+    unlink(template_path);
+    return WIFEXITED(status) ? WEXITSTATUS(status) : 255;
 }
 
 static int cmd_scp(const Config *cfg, int forced_index, int forced_port, int argc, char **argv) {
+    for (int k = 0; k < argc; k++)
+        if (!scp_arg_safe(argv[k]))
+            die("refusing '%s': remote paths must stay inside your home "
+                "(no absolute path, no ~, no ..)",
+                argv[k]);
+    if (argc < 2) die("scp needs operands, e.g. oathpass scp local.txt :dest/");
+
     char sock[CONTROL_PATH_MAX];
     int port = 0;
     int rc = ensure_master(cfg, forced_index, forced_port, sock, &port);
@@ -1852,7 +1969,7 @@ static int cmd_selftest(void) {
 static int usage(void) {
     printf("usage: oathpass [--node N | --port PORT] [ssh args...]\n"
            "       oathpass run <cmd> [args...]  read-only command inside your home\n"
-           "       oathpass sftp [-b file]       sftp over the shared connection\n"
+           "       oathpass sftp -b FILE|-       batch sftp; paths stay inside your home\n"
            "       oathpass scp <args...>        scp; ':path' means <user>@<host>:path\n"
            "       oathpass status               node, master state, socket\n"
            "       oathpass sockpath             print the socket, for rsync -e\n"

@@ -27,7 +27,7 @@ generation, batch or matrix sweeps), then bring the results home as artifacts.
     storage.
   - An `l3build` job uploads `build/**/*.diff`, `build/**/*.fc` and `build/**/*.log`: the
     comparison it could not satisfy is written to `<test>.<engine>.fc`, so without it the artifact
-    arrives with “no difference files” and no evidence of which line moved.
+    arrives with "no difference files" and no evidence of which line moved.
   - A `windows-latest` job writes its logs with CRLF, so a log and the committed baseline can
     differ in the line ending alone. Read the `.fc` first and treat a CRLF-only difference as the
     platform's, not the test's.

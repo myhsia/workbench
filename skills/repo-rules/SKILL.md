@@ -405,6 +405,14 @@ changes behavior without touching the guide is incomplete.
   (`\contraction` above, `\bcontraction` below), giving explicit rises and pre-args so that all
   pairings sit on one line.  State the thermal variance and occupation explicitly at their point
   of use.
+- **A CJK character occupies its em box, not its ink.**  When `ascent + descent = units_per_em` the
+  box is a one-em square, which is also what a PDF reader selects, so a rule or a highlight that is
+  meant to cover a character is `height = 1em` with `depth = descent`, not the height and depth of
+  the ink; a symbol placed under the character measures its gap from the bottom of that box, so
+  `0pt` leaves the same white below as the side bearings leave beside.  Read `descent` and
+  `units_per_em` from the font file once and cache per file name, since the value is what follows
+  the font and the size, not a constant; quote the vertical and the horizontal bearings separately,
+  because they differ.  A font without OpenType metrics takes a documented fallback of its own.
 
 ## expl3 source style
 
@@ -534,12 +542,24 @@ repeating it.
   documentation build. A large body belongs in a `.lua` module named by
   `\lua_load_module:n { Module }`; a long `\lua_now:e` argument is unreadable and is re-parsed at
   every call.
+- **A value comes back only by printing.**  `\lua_now:n`/`e` runs a chunk and discards whatever it
+  returns, so a function that is meant to feed TeX ends in `tex.print(...)` and the caller writes
+  `\lua_now:e { tex.print(f(...)) }`, never `\lua_now:e { return f(...) }`; the second form expands
+  to nothing and the mistake shows up as a zero value or an empty argument, far from its cause.
+  A number that goes *into* Lua crosses as a TeX token list in parentheses, which keeps it a
+  number and needs no parsing: `( \the \tex_attribute:D \c_@@_…_int )`.
 - **A drawing is a box with a stroke around the path.** `l3draw` sizes its box by the bounding box
   of the stroked path, one stroke width wider than the path, and it shifts the drawing so that the
   bottom of that box sits on the baseline, which lifts a path that goes below the baseline. To tile
   a pattern with `\leaders`, give the box exactly one period (`\hbox to <period>`) and absorb the
   excess with `\hss` on both sides, and set the scratch box's height and depth to zero after
   building it, so that a decoration never changes the leading of the line it sits on.
+- **`\leaders` repeats its box and drops the remainder.**  Only whole copies fit, so the last
+  fraction of the span stays empty: at 10.9095pt a one-point leader leaves 0.91pt blank at the end
+  of a highlight whose left edge is exact.  A leader that is a bare rule stretches and fills the
+  span instead, so a span covered by one solid rule is emitted as a single rule node of the segment
+  width, with the height and depth shifted by the leader box's own translation; only a leader that
+  carries a pattern keeps the leaders.
 
 ## l3doc source style
 
@@ -910,7 +930,10 @@ needs an explicit approval, a rollback, and a review gate.
    `filter-branch`).  Rewrite file contents with `--file-info-callback FILE`, whose body receives
    `(filename, mode, blob_id, value)` and can return a new blob id from
    `value.insert_file_with_contents(...)`; guard on the extension, and never rewrite strings or
-   comments — use a token-aware fixer, not a regex.
+   comments — use a token-aware fixer, not a regex.  A subject-only rewrite is a different job and
+   must not touch a blob: use `git filter-branch --msg-filter SCRIPT -- <branch>` (or
+   `filter-repo --message-callback`), and prove that by comparing `<old>^{tree}` with `<new>^{tree}`
+   for **every** pair of commits, not only the two tips — an unchanged tip hides a changed middle.
 3. **Prove the change is the intended one**: `git diff -w <old-tip> <new-tip>` must show only the
    commits that legitimately differ; `git diff --name-status old new | grep -v '^M'` must be empty
    (no files added or deleted).  Record both outputs.

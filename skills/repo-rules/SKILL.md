@@ -729,6 +729,15 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   the shell, and `latexmk` silently ignores invalid `-e` code.  The new part enters the table of
   contents, which shifts every page reference in the manual by one, and the `\cs{}` names in the
   entries appear in the index at the change-history pages.
+- **`latexmk` counts a LuaTeX destination warning as a broken reference.**  With `tagging=on`,
+  `latex-lab-testphase-l3doc` gives every function name table a `HD.<n>` destination that nothing
+  links to, so LuaTeX warns `warning (pdf backend): unreferenced destination with name 'HD.n'`, and
+  `latexmk` matches that line in its own log parser and ends with
+  `Latex failed to resolve 4 reference(s)` — on one platform only, and after a different number of
+  passes.  A CI doc step therefore judges `build/doc/<name>.log` — a non-empty PDF, and no `^!`, no
+  `Reference … undefined`, no `Missing character`, no `multiply defined`, no `duplicate destination`
+  — and downgrades a nonzero `l3build doc` to a warning instead of failing on the exit code, since
+  the log is the standard the manual is held to.
 - **Metadata stays outside the documentation.** `\GetIdInfo` and the `\Provides…` lines sit in the
   hidden part of the file, inside an `internal`-guarded `\iffalse`/`\fi` pair, not in a
   `macrocode` block: everything in `macrocode` is typeset, so the manual would print the metadata
@@ -956,6 +965,24 @@ an empty log.  When a job fails on a missing package, add the bundle that provid
 and in the repository's guide why it cannot pass, who re-enables it, and when — the release,
 version or dependency that makes it pass again.  An `if: false` with no owner and no condition to
 restore is a deleted gate that still looks present.
+
+**An unreleased dependency is bridged, not waited out.**  When the repository needs a change that
+its dependency has not released, a CI step clones the branch that carries it and runs
+`l3build install` in that module's directory: `l3build` unpacks by itself and writes into
+`TEXMFHOME`, which kpathsea searches before `texmf-dist`, so the checkout shadows the released copy
+with no `sudo` and no `texhash`, and one command works on all three CI systems.  Track the branch at
+its head, install the same branch on the local machine so local and CI run the same tree, and give
+the step its removal trigger in the guide: **the upstream pull request being merged and released**,
+not a date and not a later review.  That is the constructive half of the rule above — the gate keeps
+running instead of being switched off.
+
+**A `ctex` document names its `fontset`.**  `ctex` detects the platform (`windows`, `mac`/`macnew`,
+else `fandol`), and a `windows` runner carries none of SimSun, SimHei, KaiTi and FangSong, so the
+build dies in `Package fontspec Error: The font "SimHei" cannot be found`, forty times in a row,
+after which `latexmk` gives up.  Pass `fontset = fandol`, which every TeX Live carries, and set the
+document's real families afterwards: the option is inert once all of them are set explicitly — prove
+it by building with and without it and comparing `mutool draw -F txt` — and it takes the platform's
+own Chinese fonts out of the build, which is the only thing the fontset can still influence.
 
 ## History rewrite and rollback bundles
 

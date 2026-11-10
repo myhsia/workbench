@@ -312,6 +312,13 @@ unit changes; an output schema or filename changes; a CI trigger or job changes;
 discovered; validation results change.  Before reporting, re-read the guide diff — a commit that
 changes behavior without touching the guide is incomplete.
 
+**When the guides are absent, ask once.**  The first action in a repository the user owns or is
+editing is to check for both documents and, when either is missing, to ask once whether to create
+them now, later, or never; a guide is never created silently.  A dependency checkout that is edited
+for a two-line hotfix is outside that ritual: the hotfix is not the moment to open a guide on it,
+and the edit, with the reason it was needed, is recorded in the dependent repository's guide, which
+is where the reader of that dependency meets it.
+
 ## LaTeX writing style
 
 - Impersonal prose (no first-person "we"); prefer "detailed workflow" over "by hand".

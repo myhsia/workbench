@@ -590,6 +590,11 @@ repeating it.
 - **A space after a control word is `\ `, not `{}`.**  `\LaTeX\ tagged-PDF`, `\LaTeXe\ allocates`;
   the empty group means *no* space, and is right only where the next character must attach
   (`\TeX{}book`).
+- **“LuaLaTeX” names the format, not the engine.**  It is the LuaTeX engine plus the LaTeX2e
+  format, and the two are checked separately: `\NeedsTeXFormat` speaks about the format, while
+  `\sys_if_engine_luatex:F` guards the engine and raises “requires LuaTeX”.  A package's stated
+  requirement therefore says “requires the LuaTeX engine” when the engine is what the code tests,
+  and the format's name stays in the instruction that shows how a user runs the file.
 - **`\pkg{}` is for a package.**  A format is the logo, `\LaTeX` or `\LaTeXe`: `\pkg` is `\textsf`
   in `l3doc` and files its argument in the index of packages, so `\pkg{LaTeX}` is both the wrong
   face and the wrong index entry.

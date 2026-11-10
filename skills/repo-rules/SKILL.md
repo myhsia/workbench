@@ -458,6 +458,8 @@ repeating it.
   one column, so the content inside it lines up with the bare value of the next line
   (`= \int_use:N …` next to `= "\cs_to_str:N …`), and the closing quote, the trailing comma or
   semicolon are not columns and are left where they fall.
+  A script that parses the source has to accept the padding these rules allow: match `, *0x` and
+  an optional space before a property dot, never the exact column that a line happens to have.
 - **`=` takes spaces in a key list.**  `\DocumentMetadata{tagging = on, pdfversion = 1.7}` in the
   driver and `\texttt{depth = 0.2em}` in prose, not `tagging=on`.  The same holds in both
   languages of a bilingual manual, in the code of a `codemo`, and in a warning written from Lua:
@@ -665,6 +667,10 @@ documentation, and what only the manual needs stays out of the derived files.
 Prove a documentation-only change inert instead of arguing it: unpack the previous commit in a
 worktree, `cmp` `build/unpacked/*` against the current build, and compare the text of the two PDFs
 (`mutool draw -F txt`).  Both being identical is the evidence that only prose moved.
+
+- **A script that reads a source normalises the line ending.**  `.gitattributes` is `* text=auto`, so
+  a Windows checkout holds `\r\n`; a comparison that flattens or splits on `\n` must strip `\r`
+  first, or a sentence in a CRLF file never matches and the check fails on formatting alone.
 
 - **The driver lives in the `dtx`.** A `%<*driver>` block holds the `\documentclass` and
   `\DocInput{\jobname.dtx}`; a separate driver file is one more thing to keep in step. `l3build`

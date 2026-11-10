@@ -17,12 +17,17 @@ reconcile the local OpenCode configuration with upstream.
 
 - `~/.config/opencode/opencode.json` — global provider + models (native V2 shape).
 - `~/.config/opencode/cli.json` — terminal-client settings.
-- `~/.config/opencode/service.json` — background-service password and `env`, which holds
-  `WESTLAKE_API_KEY` (mode 600).
+- `~/.config/opencode/service.json` — background-service password, `env` (which holds
+  `WESTLAKE_API_KEY`), and the cluster block `oathpass` (host, login ports, user, OTP seed),
+  read by the `oathpass` tool (`scripts/oathpass.c`, mode 600).  The cluster authenticates with the OATH code alone —
+  there is no password prompt — so the seed *is* the account credential.
 - `<project>/opencode.json` — per-project permissions and `compaction`.
 
 The provider key is **only** referenced as `"apiKey": "{env:WESTLAKE_API_KEY}"`; never write the
-secret inline. It lives only in `service.json`'s `env` and travels with the OpenCode backup.
+secret inline. It lives only in `service.json`'s `env` and travels with the OpenCode backup.  The
+`oathpass` block is the one place a credential for an outside service is kept there: it holds
+the cluster's only factor by design, so it never leaves this machine and is never copied into
+`opencode.json` or a tracked guide.
 
 ## Check upstream
 

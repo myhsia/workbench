@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unix:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (-Werror)
+        run: make CFLAGS="-O2 -Wall -Wextra -Werror"
+
+      - name: RFC 6238 selftest
+        run: make test
+
+      - name: CLI checks
+        run: sh scripts/ci-check.sh ./oathpass
+
+      - name: Install to a prefix
+        run: |
+          make install PREFIX="$RUNNER_TEMP/prefix"
+          "$RUNNER_TEMP/prefix/bin/oathpass" --selftest
+
+  windows:
+    name: windows-latest (msys2)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          update: false
+          install: gcc make
+
+      - name: Build (-Werror)
+        shell: msys2 {0}
+        run: make CFLAGS="-O2 -Wall -Wextra -Werror"
+
+      - name: RFC 6238 selftest
+        shell: msys2 {0}
+        run: make test
+
+      - name: CLI checks
+        shell: msys2 {0}
+        run: sh scripts/ci-check.sh ./oathpass

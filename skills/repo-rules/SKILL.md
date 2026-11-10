@@ -799,7 +799,14 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   leading `v` (`v0.1.0`), and the changelog is generated (see "Manuals and DocStrip"): its heading
   is the release link `## [<name>-<version>](<repository>/releases/tag/<name>-<version>)`, with
   `<name>` from the `dtx` file name, so the git tag created at release time carries the same
-  `<name>-<version>`.
+  `<name>-<version>`.  A repository whose changelog is not generated has no such link and may tag
+  the release with its `date` (`2026-11-08`) instead; either way the tag names the release, so a
+  second release on one day moves the date forward rather than reusing the tag.
+- **A release is a push, not a local upload.**  `l3build upload` runs in CI only, from the workflow
+  that a push starts; the same job runs `l3build tag` and `l3build ctan` and creates the tag and
+  the release.  A local upload leaves the tag behind, so the repository records a version CTAN has
+  and the forge does not, and nothing reproduces it.  Run the upload job by pushing the commit that
+  the workflow watches, and install locally afterwards with `l3build install`.
 
 ## Data and figures
 
@@ -967,6 +974,11 @@ A TeX Live package list names the **bundle**, not the file: `l3draw.sty` comes f
 to install.  A dependency pulled in transitively may also have to be listed: `hyperref` no longer
 brings `nameref` and `refcount` with it on every platform, and a test that loads it then dies with
 an empty log.  When a job fails on a missing package, add the bundle that provides it.
+
+A bundle leaves the list for the same reason it joins it.  A dependency the code no longer loads,
+or one TeX Live now pulls in transitively, is **dropped** rather than left behind: a stale entry
+names a package nothing uses, and the next reader treats it as a real requirement.  Removing an
+entry is a change to CI, so it carries the guide review that adding one carries.
 
 **No gate is switched off silently.**  When a job or a step is temporarily off, record beside it
 and in the repository's guide why it cannot pass, who re-enables it, and when — the release,

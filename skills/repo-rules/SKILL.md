@@ -754,6 +754,10 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   directory), in `tdslocations` (the TDS zip and `l3build install`), and in the guide's list of
   generated files.  A file generated but absent from `installfiles` reaches no test, and a
   `tdslocations` entry without a matching `installfiles` entry is silently left out of the zip.
+- **A dependency list separates hard from soft.**  `DEPENDS.txt` holds one `hard <bundle>` or
+  `soft <bundle>` per line.  `hard` is needed for every use of the package; `soft` is needed for an
+  optional feature only — an optional output such as a companion package, or an optional key that
+  loads a package on demand — and CI installs it all the same, so a test may exercise that feature.
 - **`build.lua` opens with the metadata block.** Banner comments delimit the sections, and one
   aligned block holds `module`, `version`, `date`, `maintainer`, `uploader`, `maintainid`, `email`,
   `repository`, `summary`, `description`; `update_tag` reads `version`, `date`, `maintainid`, and

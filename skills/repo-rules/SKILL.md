@@ -934,6 +934,11 @@ to install.  A dependency pulled in transitively may also have to be listed: `hy
 brings `nameref` and `refcount` with it on every platform, and a test that loads it then dies with
 an empty log.  When a job fails on a missing package, add the bundle that provides it.
 
+**No gate is switched off silently.**  When a job or a step is temporarily off, record beside it
+and in the repository's guide why it cannot pass, who re-enables it, and when — the release,
+version or dependency that makes it pass again.  An `if: false` with no owner and no condition to
+restore is a deleted gate that still looks present.
+
 ## History rewrite and rollback bundles
 
 Rewriting history is a legitimate but destructive operation: it changes every downstream sha, so it

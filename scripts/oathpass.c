@@ -1090,12 +1090,13 @@ typedef struct {
     size_t len;
 } Tail;
 
-static void tail_add(Tail *tail, const char *chunk, size_t n) {
+/* `n` is clamped to the source buffer, which keeps the copy provably in
+   bounds and makes the contract explicit. */
+static void tail_add(Tail *tail, const char *chunk, size_t chunk_len, size_t n) {
+    if (n > chunk_len) n = chunk_len;
     if (n >= TAIL_MAX) {
-        memcpy(tail->text, chunk + n - (TAIL_MAX - 1), TAIL_MAX - 1);
-        tail->text[TAIL_MAX - 1] = '\0';
-        tail->len = TAIL_MAX - 1;
-        return;
+        chunk += n - (TAIL_MAX - 1);
+        n = TAIL_MAX - 1;
     }
     if (tail->len + n >= TAIL_MAX - 1) {
         size_t drop = tail->len + n - (TAIL_MAX - 1);
@@ -1135,7 +1136,7 @@ static int run_command(char *const argv[], const char *askpass_path, Tail *tail)
         if (got > 0) {
             fwrite(chunk, 1, (size_t)got, stderr);
             fflush(stderr);
-            tail_add(tail, chunk, (size_t)got);
+            tail_add(tail, chunk, sizeof chunk, (size_t)got);
             continue;
         }
         if (got < 0 && errno == EINTR) continue;
@@ -1416,6 +1417,35 @@ static int cmd_wrap(const Config *cfg, int argc, char **argv) {
     return 1;
 }
 
+/* Days from 1970-01-01 to a civil date (Howard Hinnant's algorithm).  Written
+   out instead of strptime/timegm, which exist on neither all three platforms
+   nor in every C library. */
+static long long days_from_civil(long long y, unsigned m, unsigned d) {
+    y -= (m <= 2);
+    long long era = (y >= 0 ? y : y - 399) / 400;
+    unsigned yoe = (unsigned)(y - era * 400);
+    unsigned doy = (153 * (m + (m > 2 ? -3u : 9u)) + 2) / 5 + d - 1;
+    unsigned doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    return era * 146097 + (long long)doe - 719468;
+}
+
+/* "Sun, 06 Nov 1994 08:49:37 GMT" -> seconds since the epoch, or -1. */
+static long long parse_http_date(const char *text) {
+    static const char *months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    char weekday[8], month[8];
+    int day, year, hour, minute, second;
+    if (sscanf(text, "%7[A-Za-z], %d %7[A-Za-z] %d %d:%d:%d", weekday, &day, month, &year,
+               &hour, &minute, &second) != 7)
+        return -1;
+    int mon = -1;
+    for (int i = 0; i < 12; i++)
+        if (!strncasecmp(month, months[i], 3)) mon = i;
+    if (mon < 0 || day < 1 || day > 31 || hour > 23 || minute > 59 || second > 60) return -1;
+    long long days = days_from_civil(year, (unsigned)mon + 1, (unsigned)day);
+    return days * 86400 + hour * 3600 + minute * 60 + second;
+}
+
 static void report_clock(void) {
     printf("\nclock\n");
     time_t now = time(NULL);
@@ -1435,13 +1465,11 @@ static void report_clock(void) {
         char line[512];
         while (fgets(line, sizeof line, f)) {
             if (strncasecmp(line, "date:", 5) != 0) continue;
-            struct tm server;
-            memset(&server, 0, sizeof server);
             char *value = line + 5;
             while (*value == ' ') value++;
-            if (strptime(value, "%a, %d %b %Y %H:%M:%S", &server)) {
-                time_t server_time = timegm(&server);
-                double offset = difftime(server_time, time(NULL));
+            long long server_time = parse_http_date(value);
+            if (server_time >= 0) {
+                double offset = difftime((time_t)server_time, time(NULL));
                 printf("  remote clock    %+0.0f s vs this Mac", offset);
                 if (offset > 3 || offset < -3) printf("   <-- drift, codes will fail");
                 printf("\n");

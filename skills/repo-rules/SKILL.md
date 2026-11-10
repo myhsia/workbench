@@ -793,7 +793,10 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   `module` and the TDS directory need not agree in case — a CTAN name may be mixed case while the
   tree is lowercase — and `l3build` builds its default directory from `module`, so a file that is
   installed but absent from `tdslocations` lands in a second, differently-cased directory rather
-  than disappearing; write the directory once in a local variable and concatenate.
+  than disappearing; write the directory once in a local variable and concatenate.  Derive it
+  instead of repeating the literal — `local tdsname = string.lower(module)` — and do not call the
+  local after an `l3build` variable of its own (`tdsdir` is the staging tree), because a later
+  target in the same file would silently see the string.
 - **A dependency list separates hard from soft.**  `DEPENDS.txt` holds one `hard <bundle>` or
   `soft <bundle>` per line.  `hard` is needed for every use of the package; `soft` is needed for an
   optional feature only — an optional output such as a companion package, or an optional key that

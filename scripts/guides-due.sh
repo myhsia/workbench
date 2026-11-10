@@ -105,14 +105,18 @@ check_repo() {
   fi
 
   local guide_sha code_sha ahead
+  # A commit that says why the guides need no change is a reviewed commit, not
+  # an unreviewed code change: the trailer is the gate's escape hatch, so the
+  # history check ignores those commits.
+  local trailer_excl=('--invert-grep' '--grep=^Guides-Reviewed:')
   guide_sha="$(git -C "$repo" log -1 --format=%H -- "${guides[@]}")"
-  code_sha="$(git -C "$repo" log -1 --format=%H -- . "${code_excl[@]}")"
+  code_sha="$(git -C "$repo" log -1 "${trailer_excl[@]}" --format=%H -- . "${code_excl[@]}")"
 
   [ -z "$code_sha" ] && { echo "OK: no code commits yet"; return 1; }
   [ -z "$guide_sha" ] && { echo "STALE: the guides have never changed"; return 0; }
 
   # Order, not timestamps: several commits can share one second.
-  ahead="$(git -C "$repo" rev-list --count "$guide_sha..HEAD" -- . "${code_excl[@]}")"
+  ahead="$(git -C "$repo" rev-list --count "${trailer_excl[@]}" "$guide_sha..HEAD" -- . "${code_excl[@]}")"
   if [ "${ahead:-0}" -gt 0 ]; then
     echo "STALE: $ahead code commit(s) after the last guide change"
     echo "  code:  $(git -C "$repo" log -1 --format='%h %cs %s' -- . "${code_excl[@]}")"

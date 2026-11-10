@@ -808,6 +808,36 @@ worktree, `cmp` `build/unpacked/*` against the current build, and compare the te
   and the forge does not, and nothing reproduces it.  Run the upload job by pushing the commit that
   the workflow watches, and install locally afterwards with `l3build install`.
 
+## Tagged PDF
+
+Tagging is a property of the document, not of the package: the document turns it on, and anything
+that changes how text is typeset has to keep working with it on and off.
+
+- **The package adapts; it never enables tagging.**  The document declares
+  `\DocumentMetadata{tagging = on, pdfversion = 1.7, lang = …}` before `\documentclass`, and the
+  package never loads `tagpdf`; it tests for `\tag_…` and `\tagpdfpara…` with `\cs_if_exist:NT`, so
+  an untagged document takes the same path as before.  A manual under `l3doc` also loads
+  `latex-lab-testphase-l3doc` and is built tagged by default, so `l3build doc` is the tagging test;
+  `\tagpdfsetup{text / lang = …}` switches the language of the structure elements when a bilingual
+  manual changes language.
+- **A paragraph may not contain a text block.**  `P --> P` is invalid, so an environment that can
+  appear inline branches on mode: in vertical mode it opens a `text-block`, in horizontal mode its
+  marked content joins the surrounding paragraph.  A vbox built inline turns the automatic
+  paragraph hooks off (`\tagpdfparaOff`) and on again afterwards, or tagpdf reports that the number
+  of automatic begins and ends differs.
+- **A list under tagging does not compute enumitem's widest label.**  The `latex-lab` emulation
+  leaves `labelwidth` at its default, so the labels sit at the text margin and a key list loses its
+  `=` column.  Pin `labelwidth` and `labelindent` to one length — the length the labels already
+  scale against, `\marginparwidth` in an `l3doc` manual — and keep the two equal.
+- **Ink that is not text is marked as such.**  A decoration symbol is wrapped in
+  `/Span <</ActualText <FEFF200B>>> … EMC`, so a reader neither copies nor selects it; a key
+  restores the plain text.  Do not clone the font instead: a cloned font used in a `\leaders` box
+  aborts LuaTeX at shipout.  Rules and drawings need no wrapper, because the tagging code marks
+  them as artifacts.
+- **A transcript can differ per engine for a reason that is not tagging.**  upTeX loads `cmex10`
+  where the other engines do not, so a tagged test whose log names the font needs its own baseline,
+  `name.uptex.tlg`; `l3build` selects that file automatically.
+
 ## Data and figures
 
 - **One global norm, never a mean of per-element errors.**  A matrix compared with its reference is

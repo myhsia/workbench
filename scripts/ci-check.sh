@@ -77,6 +77,18 @@ expect 1 "missing config file"         missing check
 expect 1 "--node out of range"         "$TMP/valid.json" --node 4 check
 expect 1 "--node with --port"          "$TMP/valid.json" --node 1 --port 22 check
 expect 3 "nothing listening -> exit 3" "$TMP/valid.json" check
+expect 3 "run with no network"         "$TMP/valid.json" run ls
+expect 3 "status with no network"      "$TMP/valid.json" status
+expect 0 "close with nothing open"     "$TMP/valid.json" close
+
+# The guard must refuse before any connection is attempted, so these are safe
+# to test offline and must not reach the network.
+expect 1 "run refuses .."              "$TMP/valid.json" run cat ../../etc/passwd
+expect 1 "run refuses an absolute path" "$TMP/valid.json" run cat /etc/passwd
+expect 1 "run refuses ~"               "$TMP/valid.json" run ls "~"
+expect 1 "run refuses shell syntax"    "$TMP/valid.json" run cat "x; id"
+expect 1 "run refuses an unlisted cmd" "$TMP/valid.json" run rm -rf .
+expect 1 "run refuses find -exec"      "$TMP/valid.json" run find . -name x -exec ls {} +
 
 # The help text must name the tool and advertise the selftest.
 use_config missing

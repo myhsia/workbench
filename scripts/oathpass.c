@@ -38,6 +38,9 @@
  *   oathpass port            print the login port that would be used
  *   oathpass target          print user@host, for rsync/scp
  *   oathpass wrap <cmd...>   run any command with the askpass exported
+ *   oathpass run <cmd...>    read-only command inside your HOME, guarded
+ *   oathpass sftp/scp        transfers over the master connection
+ *   oathpass status|close    master state, and dropping it
  *   oathpass doctor          diagnose a code that does not match the phone
  *   oathpass --selftest      replay the RFC 6238 vectors, no config needed
  *
@@ -45,6 +48,12 @@
  * and a dead one falls through to the next.  Authentication is different -- a
  * rejected code never moves to another node, because every node shares the
  * same account backend and a retry only spends a lockout budget.
+ *
+ * The code is single-use: a second login inside the same 30 s window is
+ * rejected.  So the first command opens one multiplexed master connection
+ * (~/.cache/oathpass/control-<port>) and everything after it -- commands,
+ * sftp, scp -- rides that socket with no further code.  `oathpass close`
+ * drops it; ControlPersist keeps it alive otherwise.
  *
  * License: MIT (see LICENSE at the repository root).
  */
@@ -76,7 +85,6 @@
 #define PROBE_MS 1500            /* whole preflight budget */
 #define MIN_REMAINING 4.0        /* answer only this far into a window */
 #define MAX_AUTH_ATTEMPTS 3      /* lockout budget, global across ports */
-#define MAX_SSH_RUNS 6           /* hard ceiling on invocations */
 #define TAIL_MAX 8192
 
 /* Any HTTPS host returns a Date header; override with "time_url" in the config. */
@@ -1137,35 +1145,6 @@ static const char *self_path(void) {
     return buf;
 }
 
-static char *const *build_ssh(char **storage, const Config *cfg, int port, char **userargs) {
-    size_t i = 0;
-    storage[i++] = "ssh";
-    storage[i++] = "-o";
-    storage[i++] = "PreferredAuthentications=keyboard-interactive";
-    storage[i++] = "-o";
-    storage[i++] = "PubkeyAuthentication=no";
-    storage[i++] = "-o";
-    storage[i++] = "StrictHostKeyChecking=accept-new";
-    storage[i++] = "-o";
-    storage[i++] = "ConnectTimeout=10";
-    storage[i++] = "-o";
-    storage[i++] = "ServerAliveInterval=60";
-    storage[i++] = "-o";
-    storage[i++] = "NumberOfPasswordPrompts=1";
-    storage[i++] = isatty(STDIN_FILENO) ? "-t" : "-T";
-    char *portbuf = malloc(16);
-    char *target = malloc(600);
-    if (!portbuf || !target) die("out of memory");
-    snprintf(portbuf, 16, "%d", port);
-    snprintf(target, 600, "%s@%s", cfg->user, cfg->host);
-    storage[i++] = "-p";
-    storage[i++] = portbuf;
-    storage[i++] = target;
-    for (char **extra = userargs; extra && *extra; extra++) storage[i++] = *extra;
-    storage[i] = NULL;
-    return storage;
-}
-
 /* ------------------------------------------------------------------- commands */
 
 typedef struct {
@@ -1248,74 +1227,400 @@ static int report_no_network(const Config *cfg, int forced_index, int forced_por
     return 3;
 }
 
-static int cmd_login(const Config *cfg, char **userargs, int forced_index, int forced_port) {
+/* ------------------------------------------------------- master connection
+ * The OTP is single-use, so a fresh login per command is impossible: two
+ * commands inside one 30 s window would make the second fail.  One multiplexed
+ * master connection is opened (one OTP), and every command, sftp and scp then
+ * travels over that socket with no further authentication.
+ */
+
+static void mkdir_p(const char *path) {
+    char tmp[4096];
+    snprintf(tmp, sizeof tmp, "%s", path);
+    for (char *p = tmp + 1; *p; p++) {
+        if (*p != '/') continue;
+        *p = '\0';
+        mkdir(tmp, 0700);
+        *p = '/';
+    }
+    mkdir(tmp, 0700);
+}
+
+static void control_path(int port, char *out, size_t outsz) {
+    const char *cache = getenv("XDG_CACHE_HOME");
+    char base[4096];
+    if (!cache || !*cache) {
+        const char *home = getenv("HOME");
+        if (!home) die("HOME is not set");
+        snprintf(base, sizeof base, "%s/.cache", home);
+        mkdir_p(base);
+    } else {
+        snprintf(base, sizeof base, "%s", cache);
+        mkdir_p(base);
+    }
+    snprintf(out, outsz, "%s/oathpass", base);
+    mkdir_p(out);
+    chmod(out, 0700);
+    snprintf(out, outsz, "%s/oathpass/control-%d", base, port);
+}
+
+static void set_askpass_env(void) {
+    setenv("OATHPASS_ASKPASS", "1", 1);
+    setenv("SSH_ASKPASS", self_path(), 1);
+    setenv("SSH_ASKPASS_REQUIRE", "force", 1);
+    if (!getenv("DISPLAY")) setenv("DISPLAY", ":0", 1);
+}
+
+static int run_silent(char *const argv[]) {
+    pid_t pid = fork();
+    if (pid < 0) die("fork: %s", strerror(errno));
+    if (pid == 0) {
+        int null = open("/dev/null", O_RDWR);
+        if (null >= 0) {
+            dup2(null, STDIN_FILENO);
+            dup2(null, STDOUT_FILENO);
+            dup2(null, STDERR_FILENO);
+        }
+        execvp(argv[0], argv);
+        _exit(127);
+    }
+    int status = 0;
+    while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {
+    }
+    return WIFEXITED(status) ? WEXITSTATUS(status) : 255;
+}
+
+/* `ssh -O check` talks to the socket only, never to the network. */
+static int master_alive(const char *sock, int port, const Config *cfg) {
+    char target[600];
+    char portbuf[16];
+    snprintf(target, sizeof target, "%s@%s", cfg->user, cfg->host);
+    snprintf(portbuf, sizeof portbuf, "%d", port);
+    char *argv[] = {"ssh", "-O", "check", "-S", (char *)sock, "-p", portbuf, target, NULL};
+    return run_silent(argv) == 0;
+}
+
+static int master_exit(const char *sock, int port, const Config *cfg) {
+    char target[600];
+    char portbuf[16];
+    snprintf(target, sizeof target, "%s@%s", cfg->user, cfg->host);
+    snprintf(portbuf, sizeof portbuf, "%d", port);
+    char *argv[] = {"ssh", "-O", "exit", "-S", (char *)sock, "-p", portbuf, target, NULL};
+    return run_silent(argv) == 0;
+}
+
+/* Open the master if it is not already up.  This is the only place an OTP is
+   spent.  Returns 0 on success; `sock` and `port` come back filled in. */
+static int ensure_master(const Config *cfg, int forced_index, int forced_port, char *sock,
+                         size_t socksz, int *port_out) {
     Node nodes[16];
     int count = select_nodes(cfg, forced_index, forced_port, nodes, 16, NULL, NULL);
     if (count == -2) die("--node %d is out of range (1..%zu)", forced_index, cfg->nports);
     if (count < 0) return report_no_network(cfg, forced_index, forced_port);
 
-    char *slots[64];
-    int auth_attempts = 0;
-    int ssh_runs = 0;
-    const char *askpass_path = self_path();
+    int port = nodes[0].port;
+    control_path(port, sock, socksz);
+    if (port_out) *port_out = port;
+    if (master_alive(sock, port, cfg)) return 0;
 
-    for (int cursor = 0; cursor < count; cursor++) {
-        int port = nodes[cursor].port;
+    char portbuf[16], target[600];
+    snprintf(portbuf, sizeof portbuf, "%d", port);
+    snprintf(target, sizeof target, "%s@%s", cfg->user, cfg->host);
 
-        for (;;) {
-            if (ssh_runs >= MAX_SSH_RUNS) {
-                note("giving up after %d ssh runs", ssh_runs);
-                return 255;
-            }
-            memset(slots, 0, sizeof slots);
-            build_ssh(slots, cfg, port, userargs);
-            Tail tail;
-            memset(&tail, 0, sizeof tail);
-            ssh_runs++;
-            int status = run_command(slots, askpass_path, &tail);
-            if (status != 255) return status;
+    int attempts = 0;
+    for (;;) {
+        char *slots[64];
+        memset(slots, 0, sizeof slots);
+        size_t i = 0;
+        slots[i++] = "ssh";
+        slots[i++] = "-M";
+        slots[i++] = "-S";
+        slots[i++] = sock;
+        slots[i++] = "-fN";
+        slots[i++] = "-o";
+        slots[i++] = "PreferredAuthentications=keyboard-interactive";
+        slots[i++] = "-o";
+        slots[i++] = "PubkeyAuthentication=no";
+        slots[i++] = "-o";
+        slots[i++] = "NumberOfPasswordPrompts=1";
+        slots[i++] = "-o";
+        slots[i++] = "StrictHostKeyChecking=accept-new";
+        slots[i++] = "-o";
+        slots[i++] = "ConnectTimeout=10";
+        slots[i++] = "-o";
+        slots[i++] = "ControlPersist=yes";
+        slots[i++] = "-p";
+        slots[i++] = portbuf;
+        slots[i++] = target;
+        slots[i] = NULL;
 
-            if (contains_ci(tail.text, "locked") || contains_ci(tail.text, "too many")) {
-                note("the account looks locked or rate limited -- stopping now");
-                note("wait, then check the account portal; do not retry blindly");
-                return 255;
+        set_askpass_env();
+        Tail tail;
+        memset(&tail, 0, sizeof tail);
+        int status = run_command(slots, self_path(), &tail);
+
+        if (status == 0) {
+            for (int spin = 0; spin < 30; spin++) {
+                if (master_alive(sock, port, cfg)) return 0;
+                sleep_seconds(0.1);
             }
-            int auth_failed = contains_ci(tail.text, "permission denied") ||
-                              contains_ci(tail.text, "authentication failed") ||
-                              contains_ci(tail.text, "no more authentication methods");
-            if (auth_failed) {
-                auth_attempts++;
-                if (auth_attempts >= MAX_AUTH_ATTEMPTS) {
-                    note("%d authentication attempts rejected -- stopping", auth_attempts);
-                    note("a wrong seed and a drifting clock look identical here; run: oathpass doctor");
-                    return 255;
-                }
-                double wait_s = window_remaining(&cfg->token, monotime()) + 0.5;
-                note("code rejected (%d/%d); waiting %.0fs for a fresh window",
-                     auth_attempts, MAX_AUTH_ATTEMPTS, wait_s);
-                sleep_seconds(wait_s);
-                continue; /* retry on the same node: the backend is shared */
-            }
-            int transport = contains_ci(tail.text, "connection refused") ||
-                            contains_ci(tail.text, "connection timed out") ||
-                            contains_ci(tail.text, "operation timed out") ||
-                            contains_ci(tail.text, "no route to host") ||
-                            contains_ci(tail.text, "network is unreachable") ||
-                            contains_ci(tail.text, "connection reset") ||
-                            contains_ci(tail.text, "connection closed by") ||
-                            contains_ci(tail.text, "kex_exchange_identification") ||
-                            contains_ci(tail.text, "banner exchange") ||
-                            contains_ci(tail.text, "broken pipe");
-            if (transport) {
-                note("port %d dropped the connection, trying the next node", port);
-                break;
-            }
-            return status;
+            note("the master opened but its socket never became usable");
+            return 255;
         }
+        if (contains_ci(tail.text, "locked") || contains_ci(tail.text, "too many")) {
+            note("the account looks locked or rate limited -- stopping now");
+            return 255;
+        }
+        int auth_failed = contains_ci(tail.text, "permission denied") ||
+                          contains_ci(tail.text, "authentication failed");
+        if (!auth_failed) {
+            note("could not open the master connection (exit %d)", status);
+            return 255;
+        }
+        attempts++;
+        if (attempts >= MAX_AUTH_ATTEMPTS) {
+            note("%d authentication attempts rejected -- stopping", attempts);
+            note("a wrong seed and a drifting clock look identical here; run: oathpass doctor");
+            return 255;
+        }
+        double wait_s = window_remaining(&cfg->token, monotime()) + 0.5;
+        note("code rejected (%d/%d); waiting %.0fs for a fresh window", attempts,
+             MAX_AUTH_ATTEMPTS, wait_s);
+        sleep_seconds(wait_s);
+    }
+}
+
+/* ------------------------------------------------------------- guarded run
+ * A tripwire for the agent, not a jail: the account is a full shell, so a
+ * deliberate escape is always possible.  See the hpc-cluster skill.
+ */
+
+static const char *const allowed_commands[] = {"ls",     "cat",    "grep", "head",  "tail",
+                                               "wc",     "stat",   "file", "du",    "df",
+                                               "md5sum", "shasum", "find", "pwd",   NULL};
+
+static const char *const find_traps[] = {"-exec",   "-execdir", "-ok",    "-okdir", "-delete",
+                                         "-fprint", "-fprintf", "-fls",   "-fprint0", NULL};
+
+static int command_allowed(const char *name) {
+    for (size_t i = 0; allowed_commands[i]; i++)
+        if (!strcmp(name, allowed_commands[i])) return 1;
+    return 0;
+}
+
+/* No absolute paths, no "~", no "..", no shell syntax.  Arguments are quoted
+   for the remote shell anyway, so this is the second line of defence. */
+static int arg_safe(const char *arg) {
+    if (!arg) return 0;
+    if (strstr(arg, "..")) return 0;
+    if (arg[0] == '/' || arg[0] == '~') return 0;
+    for (const char *p = arg; *p; p++)
+        if (strchr(";|&$`<>\\\"'\n\r", *p)) return 0;
+    return 1;
+}
+
+static char *single_quote(const char *text) {
+    size_t n = strlen(text);
+    char *out = malloc(n + 3);
+    if (!out) die("out of memory");
+    out[0] = '\'';
+    memcpy(out + 1, text, n);
+    out[n + 1] = '\'';
+    out[n + 2] = '\0';
+    return out;
+}
+
+static int cmd_run(const Config *cfg, int forced_index, int forced_port, int argc, char **argv) {
+    if (argc < 1) die("run needs a command, e.g. oathpass run ls -la");
+    if (!command_allowed(argv[0]))
+        die("'%s' is not on the read-only list (ls cat grep head tail wc stat file du df "
+            "md5sum shasum find pwd)",
+            argv[0]);
+    for (int i = 0; i < argc; i++) {
+        if (!arg_safe(argv[i]))
+            die("refusing '%s': no absolute paths, no ~, no .., no shell syntax", argv[i]);
+    }
+    if (!strcmp(argv[0], "find")) {
+        for (int i = 1; i < argc; i++)
+            for (size_t k = 0; find_traps[k]; k++)
+                if (!strcmp(argv[i], find_traps[k]))
+                    die("refusing %s: find may not run or write anything", argv[i]);
     }
 
-    note("no login node answered after %d ssh runs", ssh_runs);
-    return 255;
+    char sock[4096];
+    int port = 0;
+    int rc = ensure_master(cfg, forced_index, forced_port, sock, sizeof sock, &port);
+    if (rc) return rc;
+
+    size_t size = 64;
+    for (int i = 0; i < argc; i++) size += strlen(argv[i]) * 4 + 8;
+    char *remote = malloc(size);
+    if (!remote) die("out of memory");
+    snprintf(remote, size, "cd ~ && exec");
+    for (int i = 0; i < argc; i++) {
+        char *quoted = single_quote(argv[i]);
+        strncat(remote, " ", size - strlen(remote) - 1);
+        strncat(remote, quoted, size - strlen(remote) - 1);
+        free(quoted);
+    }
+
+    char portbuf[16], target[600];
+    snprintf(portbuf, sizeof portbuf, "%d", port);
+    snprintf(target, sizeof target, "%s@%s", cfg->user, cfg->host);
+    char *slots[16];
+    memset(slots, 0, sizeof slots);
+    slots[0] = "ssh";
+    slots[1] = "-S";
+    slots[2] = sock;
+    slots[3] = "-p";
+    slots[4] = portbuf;
+    slots[5] = "-T";
+    slots[6] = target;
+    slots[7] = remote;
+    slots[8] = NULL;
+
+    set_askpass_env();
+    Tail tail;
+    memset(&tail, 0, sizeof tail);
+    return run_command(slots, self_path(), &tail);
+}
+
+static int cmd_sftp(const Config *cfg, int forced_index, int forced_port, int argc, char **argv) {
+    char sock[4096];
+    int port = 0;
+    int rc = ensure_master(cfg, forced_index, forced_port, sock, sizeof sock, &port);
+    if (rc) return rc;
+
+    char portbuf[16], target[600], control[4200];
+    snprintf(portbuf, sizeof portbuf, "%d", port);
+    snprintf(target, sizeof target, "%s@%s", cfg->user, cfg->host);
+    snprintf(control, sizeof control, "ControlPath=%s", sock);
+
+    char *slots[64];
+    memset(slots, 0, sizeof slots);
+    size_t i = 0;
+    slots[i++] = "sftp";
+    slots[i++] = "-o";
+    slots[i++] = control;
+    slots[i++] = "-P";
+    slots[i++] = portbuf;
+    for (int k = 0; k < argc && i < 60; k++) slots[i++] = argv[k];
+    slots[i++] = target;
+    slots[i] = NULL;
+    execvp(slots[0], slots);
+    die("cannot run sftp: %s", strerror(errno));
+    return 1;
+}
+
+static int cmd_scp(const Config *cfg, int forced_index, int forced_port, int argc, char **argv) {
+    char sock[4096];
+    int port = 0;
+    int rc = ensure_master(cfg, forced_index, forced_port, sock, sizeof sock, &port);
+    if (rc) return rc;
+
+    char portbuf[16], control[4200];
+    char target[600];
+    char prefix[700];
+    snprintf(portbuf, sizeof portbuf, "%d", port);
+    snprintf(target, sizeof target, "%s@%s", cfg->user, cfg->host);
+    snprintf(prefix, sizeof prefix, "%s:", target);
+    snprintf(control, sizeof control, "ControlPath=%s", sock);
+
+    char *slots[64];
+    memset(slots, 0, sizeof slots);
+    size_t i = 0;
+    slots[i++] = "scp";
+    slots[i++] = "-o";
+    slots[i++] = control;
+    slots[i++] = "-P";
+    slots[i++] = portbuf;
+    /* ":path" is shorthand for "<user>@<host>:path", so the host is never
+       typed and never has to match a stale copy. */
+    for (int k = 0; k < argc && i < 58; k++) {
+        if (argv[k][0] == ':' && argv[k][1]) {
+            char *joined = malloc(strlen(prefix) + strlen(argv[k]) + 1);
+            if (!joined) die("out of memory");
+            sprintf(joined, "%s%s", prefix, argv[k] + 1);
+            slots[i++] = joined;
+        } else {
+            slots[i++] = argv[k];
+        }
+    }
+    slots[i] = NULL;
+    execvp(slots[0], slots);
+    die("cannot run scp: %s", strerror(errno));
+    return 1;
+}
+
+static int cmd_status(const Config *cfg, int forced_index, int forced_port) {
+    Node nodes[16];
+    int answered = 0;
+    int count = select_nodes(cfg, forced_index, forced_port, nodes, 16, &answered, NULL);
+    if (count == -2) die("--node %d is out of range (1..%zu)", forced_index, cfg->nports);
+    if (count < 0) return report_no_network(cfg, forced_index, forced_port);
+
+    int port = nodes[0].port;
+    char sock[4096];
+    control_path(port, sock, sizeof sock);
+    printf("node     %d of %zu, port %d\n", nodes[0].index + 1, cfg->nports, port);
+    printf("master   %s\n", master_alive(sock, port, cfg) ? "connected" : "not connected (the next command opens it)");
+    printf("socket   %s\n", sock);
+    return 0;
+}
+
+static int cmd_sockpath(const Config *cfg, int forced_index, int forced_port) {
+    char sock[4096];
+    int port = 0;
+    int rc = ensure_master(cfg, forced_index, forced_port, sock, sizeof sock, &port);
+    if (rc) return rc;
+    printf("%s\n", sock);
+    return 0;
+}
+
+static int cmd_close(const Config *cfg, int forced_port) {
+    int closed = 0;
+    for (size_t i = 0; i < cfg->nports; i++) {
+        int port = forced_port ? forced_port : cfg->ports[i];
+        char sock[4096];
+        control_path(port, sock, sizeof sock);
+        if (!master_alive(sock, port, cfg)) continue;
+        if (master_exit(sock, port, cfg)) {
+            printf("closed port %d\n", port);
+            closed++;
+        }
+        if (forced_port) break;
+    }
+    if (!closed) printf("no master connection was open\n");
+    return 0;
+}
+
+static int cmd_login(const Config *cfg, char **userargs, int forced_index, int forced_port) {
+    char sock[4096];
+    int port = 0;
+    int rc = ensure_master(cfg, forced_index, forced_port, sock, sizeof sock, &port);
+    if (rc) return rc;
+
+    char portbuf[16], target[600];
+    snprintf(portbuf, sizeof portbuf, "%d", port);
+    snprintf(target, sizeof target, "%s@%s", cfg->user, cfg->host);
+
+    char *slots[64];
+    memset(slots, 0, sizeof slots);
+    size_t i = 0;
+    slots[i++] = "ssh";
+    slots[i++] = "-S";
+    slots[i++] = sock;
+    slots[i++] = "-p";
+    slots[i++] = portbuf;
+    slots[i++] = isatty(STDIN_FILENO) ? "-t" : "-T";
+    slots[i++] = target;
+    for (char **extra = userargs; extra && *extra && i < 60; extra++) slots[i++] = *extra;
+    slots[i] = NULL;
+
+    set_askpass_env();
+    Tail tail;
+    memset(&tail, 0, sizeof tail);
+    return run_command(slots, self_path(), &tail);
 }
 
 static int cmd_otp(const Config *cfg, int argc, char **argv) {
@@ -1351,32 +1656,33 @@ static int cmd_port(const Config *cfg, int forced_index, int forced_port) {
 /* Dry run: everything the login would do, except that ssh never runs. */
 static int cmd_check(const Config *cfg, int forced_index, int forced_port) {
     Node nodes[16];
-    int answered = 0, answered_again = 0;
-    int count = select_nodes(cfg, forced_index, forced_port, nodes, 16, &answered, &answered_again);
+    int answered = 0;
+    int count = select_nodes(cfg, forced_index, forced_port, nodes, 16, &answered, NULL);
     if (count == -2) die("--node %d is out of range (1..%zu)", forced_index, cfg->nports);
     if (count < 0) return report_no_network(cfg, forced_index, forced_port);
+
+    int port = nodes[0].port;
+    char sock[4096];
+    control_path(port, sock, sizeof sock);
 
     double now = monotime();
     char code[16];
     code_at(&cfg->token, now, code, sizeof code);
     double left = window_remaining(&cfg->token, now);
-
-    char *slots[64];
-    memset(slots, 0, sizeof slots);
-    build_ssh(slots, cfg, nodes[0].port, NULL);
+    int live = master_alive(sock, port, cfg);
 
     printf("config    %s\n", config_path());
     printf("target    %s@%s\n", cfg->user, cfg->host);
     printf("ports     %zu configured; %d reachable\n", cfg->nports, answered);
-    printf("node      would use %d of %zu, port %d\n", nodes[0].index + 1, cfg->nports, nodes[0].port);
+    printf("node      would use %d of %zu, port %d\n", nodes[0].index + 1, cfg->nports, port);
+    printf("master    %s\n", live ? "connected, commands need no code" : "not connected, one code will be spent");
     printf("token     %s/%d digits/%0.0fs; window %0.0fs left\n", cfg->token.name, cfg->token.digits,
            cfg->token.period, left);
     printf("code      %s\n", code);
     if (left < MIN_REMAINING)
         printf("caution   only %0.0fs left in this window -- run oathpass check again\n", left);
-    printf("ssh      ");
-    for (size_t i = 0; slots[i]; i++) printf(" %s", slots[i]);
-    printf("\nverdict   ready (nothing was sent; this code is live for %0.0fs)\n", left);
+    printf("ssh       ssh -S %s -p %d %s@%s\n", sock, port, cfg->user, cfg->host);
+    printf("verdict   ready (nothing was sent; the code is live for %0.0fs)\n", left);
     return 0;
 }
 
@@ -1539,16 +1845,22 @@ static int cmd_selftest(void) {
 
 static int usage(void) {
     printf("usage: oathpass [--node N | --port PORT] [ssh args...]\n"
-           "       oathpass check              dry run: target, node, code, no ssh\n"
-           "       oathpass otp [--at EPOCH]   print the current code\n"
-           "       oathpass port               print the login port that would be used\n"
-           "       oathpass target             print user@host\n"
-           "       oathpass wrap <command...>  run a command with the askpass exported\n"
-           "       oathpass doctor             why a code does not match the phone\n"
-           "       oathpass --selftest         replay the RFC 6238 vectors\n"
+           "       oathpass run <cmd> [args...]  read-only command inside your home\n"
+           "       oathpass sftp [-b file]       sftp over the shared connection\n"
+           "       oathpass scp <args...>        scp; ':path' means <user>@<host>:path\n"
+           "       oathpass status               node, master state, socket\n"
+           "       oathpass sockpath             print the socket, for rsync -e\n"
+           "       oathpass close                drop the shared connection\n"
+           "       oathpass check                dry run: node, code, nothing sent\n"
+           "       oathpass otp [--at EPOCH]     print the current code\n"
+           "       oathpass port                 print the login port in use\n"
+           "       oathpass target               print user@host\n"
+           "       oathpass doctor               why a code does not match the phone\n"
+           "       oathpass --selftest           replay the RFC 6238 vectors\n"
            "\n"
-           "The cluster asks one question -- One-time password (OATH) -- and this\n"
-           "answers it from the seed in %s.\n",
+           "One code opens a multiplexed master connection; later commands, sftp\n"
+           "and scp reuse it, because the code is single-use.  The seed comes from\n"
+           "%s.\n",
            config_path());
     return 0;
 }
@@ -1594,9 +1906,13 @@ int main(int argc, char **argv) {
     if (!strcmp(command, "--help") || !strcmp(command, "-h") || !strcmp(command, "help")) return usage();
     if (!strcmp(command, "--selftest") || !strcmp(command, "selftest")) return cmd_selftest();
 
-    if (!strcmp(command, "otp") || !strcmp(command, "target") || !strcmp(command, "doctor") ||
-        !strcmp(command, "wrap") || !strcmp(command, "port") || !strcmp(command, "check") ||
-        !strcmp(command, "--dry-run")) {
+    static const char *const with_config[] = {
+        "otp", "target", "doctor", "wrap", "port", "check", "--dry-run",
+        "run", "sftp", "scp",  "status", "sockpath", "close", NULL};
+    int known = 0;
+    for (size_t i = 0; with_config[i]; i++)
+        if (!strcmp(command, with_config[i])) known = 1;
+    if (known) {
         Config cfg;
         load_config(&cfg);
         if (!strcmp(command, "otp")) return cmd_otp(&cfg, restc - 1, rest + 1);
@@ -1605,6 +1921,12 @@ int main(int argc, char **argv) {
         if (!strcmp(command, "port")) return cmd_port(&cfg, forced_node, forced_port);
         if (!strcmp(command, "check") || !strcmp(command, "--dry-run"))
             return cmd_check(&cfg, forced_node, forced_port);
+        if (!strcmp(command, "run")) return cmd_run(&cfg, forced_node, forced_port, restc - 1, rest + 1);
+        if (!strcmp(command, "sftp")) return cmd_sftp(&cfg, forced_node, forced_port, restc - 1, rest + 1);
+        if (!strcmp(command, "scp")) return cmd_scp(&cfg, forced_node, forced_port, restc - 1, rest + 1);
+        if (!strcmp(command, "status")) return cmd_status(&cfg, forced_node, forced_port);
+        if (!strcmp(command, "sockpath")) return cmd_sockpath(&cfg, forced_node, forced_port);
+        if (!strcmp(command, "close")) return cmd_close(&cfg, forced_port);
         return cmd_wrap(&cfg, restc - 1, rest + 1);
     }
 

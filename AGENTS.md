@@ -176,6 +176,7 @@ A repository is not workable until it has **`AGENTS.md`** at its root and **`.op
 | data generation, long or matrixed CI jobs, artifact retrieval | `ci-artifacts` |
 | a long session, context pressure, or a topic that needs its own session | `session-hygiene` |
 | OpenCode itself, its config, or the Westlake HPC models and endpoints | `opencode-hpc-update` |
+| a cluster login, a read-only remote command, or a file transfer | `hpc-cluster` |
 | coding style, git/PR rules, LaTeX writing or source style | `repo-rules` |
 
 Load and apply the matching skill as soon as the trigger appears; do not ask the user whether a skill

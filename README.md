@@ -5,7 +5,7 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
 
 - `AGENTS.md` — the global instruction file, loaded by every OpenCode session.
 - `skills/` — the global skills: `repo-rules` (coding style, git/PR, LaTeX, upkeep),
-  `session-hygiene`, `opencode-hpc-update`, `network-access`, `ci-artifacts`.
+  `session-hygiene`, `opencode-hpc-update`, `network-access`, `ci-artifacts`, `hpc-cluster`.
 - `scripts/update-due.sh` — the daily upkeep check used by `opencode-hpc-update`.
 - `scripts/guides-due.sh` — the guide freshness check used by the commit gate in `repo-rules`
   (exit 0 = `STALE`, 1 = `OK`, 2 = `MISSING`); `--committed` judges the history only, which is
@@ -17,7 +17,9 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
   copies it into `$(PREFIX)/bin` (default `~/.local/bin`) — the build output *is* the command, so
   there is no interpreter, no symlink and no bytecode cache. `make test` replays the RFC 6238
   vectors, `oathpass check` is a dry run, and `.github/workflows/ci.yml` runs both on Ubuntu, macOS
-  and Windows (MSYS2). MIT licensed.
+  and Windows (MSYS2). MIT licensed. Because the OATH code is single-use, the first command opens
+  one multiplexed master connection and later commands, `sftp` and `scp` reuse it; `oathpass run`
+  is a guarded read-only door for agents (see the `hpc-cluster` skill).
 - `hooks/commit-msg` — installed machine-wide by `git config --global core.hooksPath
   ~/.config/opencode/hooks`; refuses a code/config/CI commit with neither a guide change nor a
   `Guides-Reviewed:` trailer, and skips docs-only, merge/revert, and repos without a guide.

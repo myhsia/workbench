@@ -1000,6 +1000,36 @@ that changes how text is typeset has to keep working with it on and off.
   live in the data file and the figure (legend, corner table, axis label), where a re-run updates
   them and the reader can see which machine produced them.
 
+## CTAN releases
+
+- **The package id is lower case and it is the archive's top directory.**  CTAN's submit API
+  accepts `pkg` as lower-case letters, digits, `-` and `_` only, and rejects an upload whose
+  top-level directory is not exactly that name, so an `l3build` project spells `module` in lower
+  case and keeps the package's own spelling in a separate variable: `module = "mypkg"` names the
+  archive directory, the `.tds.zip` and every TDS directory, while the file list, the repository
+  URL, the changelog heading and the release tag keep the mixed-case spelling.
+- **A `.tds.zip` sits beside the package directory.**
+  [CTAN's TDS guidelines](https://www.ctan.org/help/TDS-guidelines) ask for the flat `pkg/` tree
+  plus a `pkg.tds.zip` at the top level of the upload, and CTAN files that zip under `install/`.
+  It is worth creating only when the package spans more than one `tex/` tree (`tex/latex/` *and*
+  `tex/luatex/`, say); it is never a substitute for the flat tree, and it does not have to be
+  agreed with the TeX Live team first.
+- **Keep the form in `build.lua`.**  `uploadconfig` holds every field, so nothing is prompted for
+  and no field is left to memory: the mandatory ones (`pkg`, `author`, `uploader`, `email`,
+  `ctanPath`, `description`, `summary`, `version`, and the archive itself), plus `license`,
+  `repository`, `home`, `support`, `bugtracker`, `topic` (ids from
+  `https://ctan.org/json/2.0/topics`), `update` (`false` only for a first release), the internal
+  `note`, and the `announcement`, whose first line becomes its subject.  `version` drops the
+  leading `v` of a git tag, and `ctanPath` is the part after `/tex-archive`, with a leading slash.
+- **`l3build upload --dry-run` is not offline.**  It skips the publication step but still posts the
+  archive to `https://ctan.org/submit/validate`, which is where the directory and field rules above
+  actually fail.  For a check with no network, put a `curl` shim on `PATH` that saves the
+  `--config` file and exits 0: the field dump and the exact form are then visible with nothing
+  sent.
+- **The archives hold no derived files.**  The flat tree carries the source, the `.ins`, the README
+  and the manual; a `.sty`, `.lua` or `.def` that DocStrip writes belongs in the `.tds.zip` only,
+  and a generated `CHANGELOG.md` belongs in neither.
+
 ## Tooling and upkeep
 
 - **Lua on this Mac is `texlua`.**  There is no `lua` on `PATH`, so run `texlua build.lua …` and

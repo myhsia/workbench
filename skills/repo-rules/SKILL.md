@@ -439,6 +439,11 @@ READMEs, and the changelog; code comments and docstrings; and commit messages.
 - Keep cross-references label-strong: every symbol used should link, directly or via a chain, to
   its defining equation, and each `\eqref` should point to the equation that *explains* the
   quantity; after moving an equation, fix any ranges that then read backwards.
+- A break opportunity at a boundary needs a glue, not a kern: a kern of zero width still forbids the
+  break there, so a boundary whose spacing is removed keeps a glue of zero advance
+  (`width = 0, stretch = 0, shrink = 0`) and the kinsoku or penalty pass can still forbid the break
+  it would otherwise allow.  Deleting the spacer outright is the wrong fix whenever the same
+  boundary also carries a break rule.
 - Floats always use `[htbp]`, never `[tbp]`; full-width floats are a `figure` environment inside
   `\onecolumngrid`/`\twocolumngrid` (RevTeX), never `figure*`.  A figure may be stubbed with the
   TeX Live demo `example-image.pdf`.
@@ -751,6 +756,17 @@ repeating it.
   dimension is written plainly (`\val{glue}`). `function` stays for real control sequences.
 - A manual whose `codemo` demos execute is typeset by the engine the package targets, with the
   demos running in the same pass; a demo that only shows code does not need that engine.
+- **A demo that runs inside the manual is grouped in the source only.**  A font command registers a
+  family document-wide and a global key is global by design, so both survive the closing
+  `\endgroup`, and the headings after the demo lose the face they had or gain a synthetic one.
+  Keep the manual's own setup in one driver command, call it in the preamble, and re-run it from the
+  environment's `after` hook, which fires after the demo's result is typeset and before the source
+  closes the group.  Clear a key that acts when a family is registered **before** the fonts are set
+  again, or the restored family bakes in the fake face that the demo asked for.
+- A heading's text also enters a PDF bookmark, which is a plain string: a skip such as `\quad` in
+  `\contentsname` or in a section title makes hyperref warn `Token not allowed in a PDF string` and
+  drops the token.  Give the printed and the string form separately,
+  `\texorpdfstring{目录\quad Contents}{目录 Contents}`.
 - Never redirect the terminal output of a TeX run to `\jobname.out`: hyperref reads that file as
   its bookmarks, so the build fails on its own log with errors that point nowhere near the cause.
 
@@ -762,6 +778,16 @@ documentation, and what only the manual needs stays out of the derived files.
 Prove a documentation-only change inert instead of arguing it: unpack the previous commit in a
 worktree, `cmp` `build/unpacked/*` against the current build, and compare the text of the two PDFs
 (`mutool draw -F txt`).  Both being identical is the evidence that only prose moved.
+
+A manual written in two languages is an obligation, not an intention: state in the repository's
+guide that the two parts agree in the environment nesting, in the documented objects and their
+arguments, in the section levels, in the list items and in the multiset of interface references,
+while the prose and the titles are translated, and name there the check the build runs, if the
+repository chooses to have one.  No global checker is imposed; what is global is the obligation to
+say where the rule lives.  Two parts that restart the section counter repeat every section
+destination and every label l3doc builds from an object name, so a language tag joins the anchor and
+the label, and `multiply defined` with `duplicate destination` in the log is then a failure rather
+than a warning.
 
 - **A script that reads a source normalises the line ending.**  `.gitattributes` is `* text=auto`, so
   a Windows checkout holds `\r\n`; a comparison that flattens or splits on `\n` must strip `\r`
@@ -1074,6 +1100,14 @@ channels, `requirements.txt`) and runs the same commands as locally.  When a dep
 interpreter pin/channels, a validation suite, or the conda interface changes, update both the
 local setup and the CI workflow in the same change.  `environment.yaml` is the single source of
 truth: the workflow must not hard-code its own interpreter version or channel list.
+
+**Order the steps by the tools they call.**  A fresh runner holds no TeX Live and no interpreter
+until a step installs them, so a guide check that shells out to `texlua`, `latexmk` or `tlmgr` runs
+after that install, never before: the first failure is `texlua: command not found` inside a check
+that passes locally, where the tools are always present.
+
+A font the build needs is not a TeX Live package: the font steps of `ci-artifacts` §1 carry the
+release URLs, the cache keyed by their hash, the per-OS system font directory and `fc-cache -f`.
 
 **The bot proposes, CI decides.**  A dependency bot (Dependabot and the like) can only bump a
 declarator in `environment.yaml` or `requirements.txt`; it does not solve the environment, so it

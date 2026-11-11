@@ -50,6 +50,13 @@ generation, batch or matrix sweeps), then bring the results home as artifacts.
     platform's, not the test's.
 - Build any shared environment once in a `needs:`-gated job and hand it to the matrix through a
   cache rather than rebuilding it per job.
+- **A CJK font the build needs is not a TeX Live package.**  List the release URLs, one per line
+  with `#` comments, in a tracked file such as `.github/font-urls.txt`; key the cache on
+  `hashFiles()` of that file, so a changed URL invalidates it; download the collections, unzip the
+  `*.ttc` faces, copy them into the per-OS system font directory (`/usr/share/fonts/truetype`,
+  `/Library/Fonts`, `/c/Windows/Fonts`) and run `fc-cache -f`.  A font package that TeX Live does
+  carry (`lxgw-fonts`, `fandol`) joins the package list instead, and a `windows-latest` job needs
+  `wintools.windows` for `unzip`.
 - **A `combine`/`collect` job is what makes a batch one download.** `actions/download-artifact` with
   `pattern: '<prefix>-*'` and `merge-multiple: true` assembles every artifact of the run, and a
   `tar -czf` upload gives a single tarball. Guard an empty gather (`[ -n "$(ls -A dist)" ]`), or the
@@ -114,6 +121,11 @@ project's `output/`.
 - Re-running a workflow reuses the same run id and its artifacts replace the previous ones; redownload
   with `--clobber`.
 - Matrix jobs need **unique** artifact names; a shared name fails the upload.
+- A step-level `shell:` cannot read the `matrix` context: GitHub rejects the whole file with
+  `Invalid workflow file … Unrecognized named-value: 'matrix'`, and because the workflow never
+  parses the run does not start at all.  Put the per-OS shell in the job's `defaults.run.shell`
+  (`C:\\msys64\\usr\\bin\\bash.exe -e {0}` for MSYS2 bash), which accepts the context and applies
+  to every `run:` step of that job.
 - Heavy jobs bill runner minutes: keep triggers manual, cache the environment, and set
   `timeout-minutes` on the job. A private repo has a monthly free-minutes budget, and a matrix of many
   long jobs can exhaust it.

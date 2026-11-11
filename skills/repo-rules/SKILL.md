@@ -197,6 +197,11 @@ would rewrite the house style.  A review comment, not a failed check, is what as
 
 Recorded only as far as the code already obeys it; do not retrofit.
 
+**Deliberately unrecorded**: line length, naming conventions, string quoting and f-string policy,
+and blank-line placement.  No rule is imposed, nothing is retrofitted, and a change matches the
+file it edits.  The one exception is the numeric width of a table or array block, where the
+surrounding alignment governs (see "Numerical and array conventions").
+
 - Type annotations appear on a minority of signatures: annotate **new public functions**, and do
   not add annotations to existing ones merely for uniformity.
 - No module uses `from __future__ import annotations`; do not introduce it piecemeal.
@@ -340,17 +345,25 @@ for a two-line hotfix is outside that ritual: the hotfix is not the moment to op
 and the edit, with the reason it was needed, is recorded in the dependent repository's guide, which
 is where the reader of that dependency meets it.
 
+## Writing style (all carriers)
+
+The spelling and voice below apply to every carrier, not only to LaTeX: prose in manuals, guides,
+READMEs, and the changelog; code comments and docstrings; and commit messages.
+
+- Write US English: `color`, `center`, `behavior`, `label`/`labeled`, `model`/`modeling`,
+  `license`, `recognize`, `canceled`.  British spellings (`colour`, `centre`, `behaviour`,
+  `labelled`, `modelling`, `licence`, `recognise`, `cancelled`) are not used.  A licence text
+  quoted verbatim keeps its own spelling.
+- Impersonal prose in a manuscript (no first-person "we"), as the LaTeX rules below detail; a
+  guide may address the reader directly ("run the driver"), and code comments stay terse and
+  impersonal.
+
 ## LaTeX writing style
 
 - Impersonal prose (no first-person "we"); prefer "detailed workflow" over "by hand".
 - Avoid em dashes (`---`); prefer prose with paragraph breaks.  A list is for enumerable items
   (key names, the differences between two implementations), not for narrative, and a long list
   opens with a sentence that says what it enumerates.
-- Write US English: `color`, `center`, `behavior`, `label`/`labeled`, `model`/`modeling`,
-  `license`, `recognize`, `canceled`.  British spellings (`colour`, `centre`, `behaviour`,
-  `labelled`, `modelling`, `licence`, `recognise`, `cancelled`) are not used.  The rule covers
-  prose in manuals and guides, code comments, the changelog, and commit messages; a licence text
-  quoted verbatim keeps its own spelling.
 - Define each acronym once at first body use (the abstract defines only those it reuses).
 - Macros: `\kbproj0`/`\kbproj1` for same-label outer products and `\ketbra|a><b|` for cross
   products; `\iu` (imaginary), `\upe^{}` (exponential), `\d` (differential; never `\,`/`\!`

@@ -233,10 +233,12 @@ learned, and all three are now in the `CTAN releases` section of `repo-rules`.
   `module = "LuaCJK"` on the reading that `module` is the CTAN name, so `l3build ctan` produced
   `LuaCJK/` and `LuaCJK.tds.zip`; CTAN's submit interface accepts `pkg` as lower-case letters only
   and answers *Unexpected top level directory* when the two differ.  Nothing local catches it:
-  every test passes and both archives look well formed.  The fix was one variable split —
-  `module` for the id and the trees, a file-local `pkg` for the spelling — because `l3build` also
-  derives the tds zip's `doc/` and `source/` directories from `module`, and TeX Live carries no
-  upper-case directory under either.
+  every test passes and both archives look well formed.  The fix is a derived variable —
+  `local pkg = string.lower(module)`, handed to `ctanpkg` — not a second spelling of the package:
+  putting the id in `module` also makes the tag, the repository URL and the changelog heading
+  lower case, and moving `moduledir` out of `l3build`'s way is impossible, because
+  `l3build-variables.lua` assigns it after `build.lua` is read.  So the tds zip keeps
+  `doc/latex/LuaCJK/` and `source/latex/LuaCJK/`, accepted rather than fixed.
 - **A TDS zip does not need permission.**  The belief that CTAN rejects `.tds.zip` files unless
   TeX Live asks for them is wrong: its guidelines prescribe exactly l3build's layout, `pkg/` beside
   `pkg.tds.zip`, and file the zip under `install/`; `xeCJK` itself ships one.  It is worth creating

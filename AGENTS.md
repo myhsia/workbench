@@ -8,6 +8,9 @@ stay authoritative for their own project.
   upkeep, local/CI parity — live in the global `repo-rules` skill.
 - Session upkeep uses the `session-hygiene` skill; config/upstream upkeep uses
   `opencode-hpc-update`; bulk CI work uses `ci-artifacts`.
+- The narrative record — what was tried, what failed, and why the rules read as they do — is
+  `docs/handbook.md`.  It is history, not policy: where it disagrees with this file, the
+  configuration wins and the handbook is corrected.
 
 ## At session start
 

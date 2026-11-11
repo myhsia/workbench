@@ -224,6 +224,30 @@ dropped answers again.
   session's own claims.  A check nobody runs reports nothing, which is why the per-turn reminder
   carries the convention and the hook only backstops it.
 
+## 8. The first CTAN release
+
+LuaCJK v0.0.1 was the first release prepared under these rules (2026-11-11).  Three things were
+learned, and all three are now in the `CTAN releases` section of `repo-rules`.
+
+- **The package id is lower case, and it is the archive's top directory.**  `build.lua` had
+  `module = "LuaCJK"` on the reading that `module` is the CTAN name, so `l3build ctan` produced
+  `LuaCJK/` and `LuaCJK.tds.zip`; CTAN's submit interface accepts `pkg` as lower-case letters only
+  and answers *Unexpected top level directory* when the two differ.  Nothing local catches it:
+  every test passes and both archives look well formed.  The fix was one variable split —
+  `module` for the id and the trees, a file-local `pkg` for the spelling — because `l3build` also
+  derives the tds zip's `doc/` and `source/` directories from `module`, and TeX Live carries no
+  upper-case directory under either.
+- **A TDS zip does not need permission.**  The belief that CTAN rejects `.tds.zip` files unless
+  TeX Live asks for them is wrong: its guidelines prescribe exactly l3build's layout, `pkg/` beside
+  `pkg.tds.zip`, and file the zip under `install/`; `xeCJK` itself ships one.  It is worth creating
+  only for a package that spans more than one `tex/` tree, which LuaCJK does.
+- **`l3build upload --dry-run` is not offline.**  It skips publication but still posts the archive
+  to `ctan.org/submit/validate`, so a rehearsal with no network needs a `curl` stand-in on `PATH`
+  that saves the `--config` file and exits 0 — which prints every field and the exact form without
+  sending it.  A case-insensitive file system then produced the session's only self-inflicted
+  casualty: `LuaCJK-ctan.zip` and `luacjk-ctan.zip` are one file on APFS, so cleaning up the old
+  spelling deleted the new archives, and `l3build ctan` had to be run a second time.
+
 ## Decisions, verbatim
 
 Each line is the user's own wording, and what it settled:
@@ -239,3 +263,6 @@ Each line is the user's own wording, and what it settled:
 | `hard block` | a rule that must be refused by configuration, not merely discouraged by a prompt |
 | `Keep the verbatim user decisions` | this table exists; later summaries quote the user, not a paraphrase |
 | `@opencode-hpc-update v2.2.7 updated` | the version check is re-run after an upgrade, and the skill records what changed |
+| `module = "luacjk", hardcode LuaCJK` | the CTAN id and every TDS directory are lower case; `LuaCJK` survives only where it names the package |
+| `Keep v0.0.1` | a first public release may carry the number the sources already use; no `\changes` rewrite |
+| `Pack and inspect only` | the archives and the form are verified locally, and nothing is sent to `ctan.org` |

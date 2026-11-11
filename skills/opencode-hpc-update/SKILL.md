@@ -39,6 +39,17 @@ OpenCode (international — try direct first, fall back to the proxy from the `n
   a new build, and that restart ends any running session, so never do it yourself.
 - Docs <https://opencode.ai/v2/docs/> and migration guide <https://opencode.ai/v2/docs/migrate-v1>
   (note the three V2 breaking changes: plugins, server API, `cli.json`).
+- Release notes: `https://api.github.com/repos/anomalyco/opencode/releases?per_page=5` (the old
+  `sst/opencode` name redirects; the canonical repository is `anomalyco/opencode`). Read the
+  **Breaking changes** section before syncing anything.
+
+Measured on 2026-11-11 at v2.2.7 (latest release): neither breaking item touches this setup —
+`@opencode/ai`'s removal of `ImageResponse.image` hits only direct imports (our plugins import
+`@opencode/plugin` alone, verified by grep), and the shorter plugin wait shows up only as a
+partial `agent.list` at start-up. Two behaviour changes are worth knowing: the app's *export*
+action now writes into the current directory instead of the temp folder (the CLI
+`opencode session export <id>` still streams to stdout and creates no file, measured), and
+generated titles no longer carry the model's commentary.
 
 Westlake HPC (campus — no proxy):
 
@@ -67,11 +78,17 @@ Westlake HPC (campus — no proxy):
 - Config edits hot-reload, but `{env:...}` is resolved from the **background service's process
   environment**, so any environment change needs `opencode service restart`. **Never restart the
   service yourself** — the running session lives on it; ask the user to restart.
-- Verify with `opencode models` and `opencode api get /api/provider` (the list). In 2.2.6 the
-  single-provider route `GET /api/provider/<id>` is gone and answers `ProviderNotFoundError`, so
-  read the list instead: it carries `activation: "enabled"`, the `package` and `settings`, and the
-  **resolved key in plaintext**, which `/api/config` also returns. Both therefore write the secret
-  into whatever records the output, so check them by name or count, never by dumping the JSON.
+- Verify with `opencode models` and `opencode api get /api/provider` (the list): it carries
+  `activation: "enabled"`, the `package`, `settings`, and the **resolved key in plaintext**, which
+  `/api/config` and `/api/model` also return. Every one of them writes the secret into whatever
+  records the output, so parse the JSON and print ids, `activation`, `package` and a key *length* —
+  never a slice of the raw body. `head -c 300` on `/api/model` leaked the key on 2026-11-11; the
+  route is fine, the display was the mistake.
+- The single-provider route `GET /api/provider/<id>` was absent in 2.2.6 (`ProviderNotFoundError`)
+  and answers again in 2.2.7 (measured 2026-11-11). Try it; do not conclude from the version that
+  it is gone. After an upgrade, `opencode debug agents` may also show a **partial** list while
+  plugins load (2.2.7: `agent.list`, `integration.list`, `usage.limits`, `vcs.init`, `rpc.call`
+  and `artifact.*` no longer wait for plugins) — re-run before reporting an agent missing.
 
 ## Pitfalls
 
@@ -84,7 +101,8 @@ Westlake HPC (campus — no proxy):
   counts only **saved integration connections** (`/connect`) as connected; a provider declared only
   in `opencode.json` is treated as disconnected, so the dialog falls back to the free-models list and
   shows **no items** — even though the provider works and the session keeps its model. Diagnosis and
-  fix:
+  fix (status at 2.2.7: the release notes never mention #60587 and `new-designs` is still `true`
+  here, so the trap is presumed live but was **not** re-tested in the TUI this round):
   1. `opencode api get /api/model --header x-opencode-directory:<project>` — if the models are listed
      (with `/api/model/default`, `/api/agent`, `/api/command`, `/api/plugin` all valid too), the
      server is fine and the provider config is not at fault;

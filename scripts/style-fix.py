@@ -70,7 +70,7 @@ def fix_file(path):
     changed = False
     for row, items in edits.items():
         line = lines[row - 1]
-        for col, need_left, need_right in sorted(items, key=lambda x: -x[0]):
+        for col, need_left, need_right in sorted(items, key = lambda x: -x[0]):
             if need_right:
                 line = line[:col + 1] + " " + line[col + 1:]
                 changed = True
@@ -82,7 +82,7 @@ def fix_file(path):
         return False
     out = "\n".join(lines)
     if out != src.decode("utf-8"):
-        with open(path, "w", encoding="utf-8") as fh:
+        with open(path, "w", encoding = "utf-8") as fh:
             fh.write(out)
         return True
     return False
@@ -95,7 +95,7 @@ def main():
             if fix_file(p):
                 changed.append(p)
         except Exception as e:  # never fail a tree filter
-            print(f"skip {p}: {e}", file=sys.stderr)
+            print(f"skip {p}: {e}", file = sys.stderr)
     for c in changed:
         print(c)
     return 0

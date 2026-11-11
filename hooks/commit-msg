@@ -26,6 +26,41 @@ fi
 git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1 && exit 0
 head -1 "$msg_file" | grep -qE '^(Merge|Revert) ' && exit 0
 
+# House style, every repository: the tracked Python files are linted for the
+# keyword `=` spacing.  Tracked files only, so a generated output tree is never
+# crawled.  Fails open: a missing interpreter or script must not block commits.
+lint="$HOME/.config/opencode/scripts/style-lint.py"
+if [ -f "$lint" ]; then
+  py="$(command -v python3 || true)"
+  if [ -n "$py" ]; then
+    count="$(git ls-files -- '*.py' | wc -l | tr -d ' ')"
+    if [ "${count:-0}" -gt 0 ]; then
+      out="$(git ls-files -z -- '*.py' | xargs -0 "$py" "$lint" 2>&1)"
+      rc=$?
+      if [ "$rc" -ne 0 ]; then
+        cat >&2 <<EOF
+commit-msg: house style: spaces around '=' in keyword arguments.
+
+$out
+
+Run
+
+    python3 $lint <paths>
+
+to list them, or
+
+    python3 $HOME/.config/opencode/scripts/style-fix.py <paths>
+
+to fix the spacing.  --no-verify bypasses this check deliberately.
+EOF
+        exit 1
+      fi
+    fi
+  else
+    echo "commit-msg: python3 not found; skipping the style check." >&2
+  fi
+fi
+
 # Opt-in: only repositories that keep a guide and a skill are checked.
 [ -f AGENTS.md ] || exit 0
 skilldir=""

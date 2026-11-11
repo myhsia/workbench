@@ -98,7 +98,10 @@ as `Guides-Reviewed: unchanged, because …`.  A convention that is not specific
 belongs in the global scope — forgetting that half is the failure this rule exists for.  A
 machine-wide `commit-msg` hook (`core.hooksPath=~/.config/opencode/hooks`) refuses a code/config/CI
 commit that carries neither a guide change nor the trailer; docs-only commits and repositories
-without a guide pass, and `--no-verify` is the deliberate bypass.
+without a guide pass, and `--no-verify` is the deliberate bypass.  The same hook runs
+`scripts/style-lint.py` over the tracked Python files of **every** repository, gating the house
+keyword-`=` spacing at commit time (merge/revert commits skipped, fails open when the interpreter
+or script is missing).
 
 ## No unobserved results (MUST)
 

@@ -104,6 +104,20 @@ recursively, skipping `.git/`, `__pycache__/` and `*_legacy/`).  **Alignment is 
 tool checks it.  No formatter runs in CI: ruff and black are deliberately absent, because they
 would rewrite the house style.  A review comment, not a failed check, is what asks for alignment.
 
+The machine-wide `commit-msg` hook (`core.hooksPath=~/.config/opencode/hooks`) runs `style-lint.py`
+over the **tracked** Python files of every repository, so the spacing is gated at commit time
+rather than in CI.  Tracked files only — a generated `output/` tree is never crawled — merge and
+revert commits are skipped, and the check **fails open**: a missing interpreter or script prints a
+warning and lets the commit through.  `--no-verify` is the deliberate bypass.
+
+### Placement of shared code
+
+- A helper used by more than one driver goes to the **top-level `library/`**, parallel to
+  `pltools.py`, as a named module: it is then the single home of its definition (the metric, the
+  loader, the plot primitive) and can be synced to a sibling repository as one file.
+- A helper used by exactly one driver **stays in that driver** — a one-off `f"{m}/{n}"` key or a
+  scan loop is not worth a library round-trip.
+
 ### Numerical and array conventions
 
 - State the **sign convention** once, in the docstring of the function that defines it: the
@@ -190,6 +204,10 @@ would rewrite the house style.  A review comment, not a failed check, is what as
   convergence knob is reported as best achieved, not certified.
 - Machine-readable file first; the human-readable summary is generated from it and never edited by
   hand.
+- A ranking or comparison table caps its unreadable tail: a pair whose error is orders of magnitude
+  above the rest is dropped from the table (with the count of what is shown), while the
+  machine-readable file keeps every row.  Declare the cutoff as a named constant in the module that
+  owns the report, next to the metric it applies to.
 
 ### Tooling pitfalls
 

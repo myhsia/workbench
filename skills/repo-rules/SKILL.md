@@ -403,6 +403,15 @@ READMEs, and the changelog; code comments and docstrings; and commit messages.
   equation is actually referenced.
 - After an equation environment the text continues *without* paragraph indent; insert a blank
   line when the following sentence begins a new paragraph.
+- A display that continues the sentence ends with a comma, never a period before a lowercase
+  continuation.  When the display is the verb's object or complement ("we use the initial state
+  $[\rho_0 = \dots]$ and the Mori product"), leave it unpunctuated: the sentence is already
+  correct, and punctuation must never be inserted mechanically.  Conversely, a display that
+  closes the sentence takes a period even when the next sentence is short.
+- No long parenthetical asides in prose; recast the content as a clause, an apposition or a
+  sentence of its own, since a multi-clause bracket forces the reader to hold the main clause
+  open.  A short locator bracket such as "(bottom row of Fig.~2)" is fine.  The separators of
+  CRediT author contributions and acknowledgements are exempt.
 - Put a float's label **after** its `\caption`, not inside the caption.  Floats and cross-referenced
   sections use `\zlabel` (their references are `\zref`); `\label` is reserved for `\ref`/`\eqref`
   targets (equations and the remaining sections).  There is no auto-label hook.
@@ -418,6 +427,14 @@ READMEs, and the changelog; code comments and docstrings; and commit messages.
 - Label an equation only when it is actually `\eqref`-referenced; otherwise use an untagged display
   (`equation` environment to `\[…\]`, `align`/`multline` environment to `align*`/`multline*`), and
   downgrade any `\label` whose reference is later removed.
+- Label the substantive result, not the intermediate expansion: a result the reader will cite
+  (a kernel, a closed form, an observable) earns a label, while a step that only the adjacent
+  derivation uses (a series expansion, a substitution) stays untagged even when the text refers
+  to it in passing.
+- An appendix derivation keeps the result in the body: the body states the closed form and points
+  to the appendix, the appendix carries the steps and opens by citing the definitions it starts
+  from, and the labels travel with the equations.  A reader who trusts the result never leaves the
+  body, and one who checks the algebra lands on the first line of the derivation.
 - Use `\equiv` when defining a new symbol; use `=` for derived relations and physical assignments.
 - Keep cross-references label-strong: every symbol used should link, directly or via a chain, to
   its defining equation, and each `\eqref` should point to the equation that *explains* the

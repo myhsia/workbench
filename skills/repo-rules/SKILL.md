@@ -66,6 +66,14 @@ align their inline comments to a common column, and a related group of imports a
   `try: from numba import njit` / `except ImportError` fallback that silently changes speed or
   accuracy.  A shim is legitimate only where the code truly treats the package as optional,
   and then the degraded path is documented and tested.
+- **A default has one value, in every carrier.**  A tunable default lives in the `argparse`
+  definition, its `help` text, the function signature it feeds, the workflow input description
+  that shadowed it, and the guide sentence that quotes it.  Changing it means changing all of
+  them in one commit; a `help` that disagrees with `default` is a bug, because the reader (and
+  the CI, which passes nothing and inherits the parser) get different numbers.  The `-dt`
+  default in `sh4oqs/source/sh.py` was the counter-example: `default = 0.005` sat beside
+  `help = "… (default: 0.01)"`, and the workflow text and `run()` also said `0.01`, so a bare
+  `python sh.py` ran `0.005` while every doc promised `0.01`.
 - **A refactor is verified, not asserted.**  A pure move, rename, or consolidation is shown
   numerically neutral before it is reported: the regression suite, or an equivalence check
   against the old expression.  State any deviation with its size, and report an unrun check as

@@ -1022,14 +1022,15 @@ that changes how text is typeset has to keep working with it on and off.
   `repository`, `home`, `support`, `bugtracker`, `topic` (ids from
   `https://ctan.org/json/2.0/topics`, where tagged PDF is split into `tagged-pdf`,
   `tagged-pdf-partially`, `tagged-pdf-unsupported` and `tagged-pdf-incompatible`, one id each),
-  and `update` (`false` only for a first release).  `version` drops the leading `v` of a git tag,
-  and `ctanPath` is the part after `/tex-archive`, with a leading slash.
+  and `update` (`false` only for a first release).  `version` is the tag's version as written, a
+  leading `v` included, and `ctanPath` is the part after `/tex-archive`, with a leading slash.
 - **Read the prose fields, do not type them.**  The announcement belongs to the release notes:
   generate it from the newest section of the changelog — a subject line, then that release's
   bullets — and cap it at 8 192 characters by dropping whole bullets and saying how many were left
-  out, because an over-long field is rejected rather than truncated.  The internal note belongs to
-  one upload: keep it in a tracked markdown file, send it while that file is non-empty, and empty
-  it once the upload is through.
+  out, because an over-long field is rejected rather than truncated.  The helper belongs in the
+  changelog extractor, beside the code that writes that changelog, so `build.lua` stays
+  configuration and calls it.  The internal note belongs to one upload: keep it in a tracked
+  markdown file, send it while that file is non-empty, and empty it once the upload is through.
 - **`l3build upload --dry-run` is not offline.**  It skips the publication step but still posts the
   archive to `https://ctan.org/submit/validate`, which is where the directory and field rules above
   actually fail.  For a check with no network, put a `curl` shim on `PATH` that saves the

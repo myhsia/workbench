@@ -162,6 +162,12 @@ would rewrite the house style.  A review comment, not a failed check, is what as
   include names a page number and nothing else.
 - Pin labels by a fixed baseline coordinate rather than measuring them from ink, and build the
   legend once and reuse it across the pages of a figure family.
+- **A rounded box keeps its corners circular only when the corner size is in display units.**
+  `boxstyle="round,rounding_size=r"` measures `r` in the patch's own coordinates, so a patch
+  drawn in axes fractions or data units gets a quarter-ellipse whose aspect is the axes ratio.
+  Set `mutation_aspect` to the display scale per x unit over the display scale per y unit, in
+  one shared helper, never a `rounding_size` tuned per figure.  Reduce a fill's opacity in the
+  face colour, not with a patch-level `alpha`: that fades the frame together with the fill.
 
 ### Data and report outputs
 
@@ -895,6 +901,11 @@ that changes how text is typeset has to keep working with it on and off.
   anchoring) and nothing else: the caller passes the series, their colours, line styles, labels and
   annotations as explicit values, so one renderer serves every figure and a figure's content is
   visible where it is specified.
+- **A machine-dependent number stays out of the prose.**  A timing, a fitted exponent or an error
+  figure moves with the CPU model, the core count, the load and the platform, so it changes while
+  the physics does not.  The prose states the mechanism, the regime and the fit range; the numbers
+  live in the data file and the figure (legend, corner table, axis label), where a re-run updates
+  them and the reader can see which machine produced them.
 
 ## Tooling and upkeep
 

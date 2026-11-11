@@ -10,6 +10,10 @@ DocStrip, tooling and upkeep are **machine-global**: see the `repo-rules` skill 
 `~/.config/opencode/skills/repo-rules/SKILL.md`.  Do not copy them here;
 state only the exceptions this repository makes.
 
+The first commit creates both guides, `AGENTS.md` and `.opencode/skills/SKILL.md`, next to the build
+files: `guides-due.sh` reports `MISSING` until they exist, and a repository without them is not
+workable.
+
 ## Environment
 
 <!-- The toolchain, the directory all commands run from, the entry points.  A Python repository

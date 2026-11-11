@@ -511,6 +511,13 @@ READMEs, and the changelog; code comments and docstrings; and commit messages.
   `units_per_em` from the font file once and cache per file name, since the value is what follows
   the font and the size, not a constant; quote the vertical and the horizontal bearings separately,
   because they differ.  A font without OpenType metrics takes a documented fallback of its own.
+- **The top-level hook chunk runs last.**  Code without a label -- `\AddToHook { hook } { … }`, or
+  `\hook_gput_code:nnn { hook } { … }` while the current file is the module -- lands in the chunk
+  named `top-level`, which the kernel executes after every labelled chunk, whatever the order of the
+  calls.  Give the code a label and it runs before it, in the order the labels were first declared,
+  and two calls under the same label keep their call order.  A command that dumps a hook therefore
+  prints a different chunk and a different order as soon as a label is introduced, so a test that
+  compares such a dump is rebaselined on purpose rather than assumed inert.
 
 ## expl3 source style
 
@@ -527,8 +534,10 @@ repeating it.
   `\box_move_down:nn`, `\dim_set:Nn \tex_hsize:D`, `\int_use:N \allocationnumber` (not
   `\the\allocationnumber`), and `\c_zero_dim`/`\c_zero_int` for `\z@`.  Where no interface exists,
   use the `\tex_…:D` alias (`\tex_leaders:D`, `\tex_vrule:D`, `\tex_par:D`, `\tex_noindent:D`),
-  not the bare primitive.  A module that patches a LaTeX2e package (a `listings` hook, for
-  instance) stays LaTeX2e, and its `\@…`, `\def` and `\newif` are left alone.
+  not the bare primitive.  Where the function has a variant for the arguments at hand, call the
+  variant instead of wrapping the general form: `\iow_open:NV \l_@@_iow \l_@@_path_tl`, not
+  `\exp_args:NNV \iow_open:Nn \l_@@_iow \l_@@_path_tl`.  A module that patches a LaTeX2e package (a
+  `listings` hook, for instance) stays LaTeX2e, and its `\@…`, `\def` and `\newif` are left alone.
 - **Hooks go through `\hook_gput_code:nnn`.**  `\hook_gput_code:nnn { hook } { Package } { code }`,
   labeled with the package name so the chunk is deterministic; `.` resolves to the module only at
   load time, where the current file still is the module.  `\AtBeginDocument` is exactly

@@ -148,6 +148,26 @@ The pattern that works: **gather → aggregate → decide → execute**, one ses
 The audits' most common finding was "already documented": the global skills had the rule, the
 session had not followed it.  The missing rules were concentrated in TeX-on-CI and docext.
 
+### The second pass, 2026-11-11: the questions that survived
+
+The first pass switched to build only the sessions whose audit found **work**.  A session whose
+audit ended in questions stayed in Plan with those questions as its last message — the residue was
+invisible because "parked" had been read as "found nothing to do".  Two failures compounded it: the
+questions were handed to the user instead of being answered, and being generic (guides, CI, commit
+gates) they drifted off the session's title.  Measured: of the 30 sessions carrying the standard
+audit turn, two ended with eight open questions, one sat in Plan for seventeen hours and stopped
+inside a tool call, and seven others needed a second "check for residue" prompt before their
+questions were answered — several of those answers then arrived as four more turns.
+
+What was done: those sessions were closed in build with `Residue: none` (LuaCJK commits `999dac7`,
+`dc311cb` for the eight answers), the audit exchanges were removed in place — **478 whole messages
+across 30 sessions**, one transaction each, after a `.backup` to
+`~/.local/share/opencode/session-backups/opencode-2026-11-11-preprune.db` and a
+`PRAGMA integrity_check`, with every remaining row `json_valid` and ids and titles unchanged — and
+three kept replies lost their trailing offers.  The lesson is now a rule in `AGENTS.md`
+§Orchestrating other sessions: **an audit's questions are answered by the orchestrator, a session
+ends in build with `Residue: none`, and the finding stays inside the title**.
+
 ## 6. Upkeep
 
 - `scripts/update-due.sh` — the day (Asia/Shanghai) has no stamp → due; `--mark` stamps it.  No
@@ -191,6 +211,11 @@ dropped answers again.
   plaintext; parse, print ids and a key *length*.
 - **The hook only enforces the local half.**  Whether a convention belongs in the machine-global
   scope is a judgement; the rule, the per-turn reminder and the trailer are what carry it.
+- **A question is not a closure.**  A session that ends on a question reads as finished to a script
+  and as unfinished to the user.  The end state has to be a line the orchestrator writes —
+  `Residue: none` — not a question it forwards.  The 2026-11-11 pass is the proof: 30 sessions
+  "completed", two of them with eight open questions, and one stopped mid-tool-call for seventeen
+  hours.
 - **Duplication is allowed.**  Branching (a bus line) beats compacting; a little overlap between
   sessions keeps each readable.  "Finished Build" closes a thematic copy.
 - **A guide gap outlived its own gate.**  The extended-DEOM filtering change carried neither a guide

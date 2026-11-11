@@ -397,5 +397,19 @@ The working pattern that matched the user's own manual workflow:
 4. **Stop before pushing** when the user asked for review: gather commits, diffs and `git status`, and
    wait for explicit approval.
 
+An audit's questions are answered by the orchestrator, or waived in one written line — never handed
+back to the user, and never left as the session's last message.  Every driven session ends in build
+with the literal line `Residue: none`; one turn carries audit, decision and execution.  A finding
+outside the session's title goes to a guide session or the global config, not to the topical one.
+
+Once the decision is executed, the audit exchange can be pruned **in place**: whole messages only,
+`DELETE FROM session_message WHERE session_id=? AND seq>=? AND seq<?`, one transaction per session,
+after `sqlite3 opencode.db ".backup 'session-backups/<name>.db'"`.  Deleting whole rows edits no
+message JSON and leaves ids, titles and `seq` gaps alone; `session_part` is empty on this store, so
+no cascade is involved, and the app reads messages in `seq` order without requiring contiguity.
+Verify afterwards: `PRAGMA integrity_check` → `ok`, `select count(*) ... where not json_valid(data)`
+→ 0, `/api/session/<id>/context` returns 200, and the session's own tail shows the task then the
+single result turn.  An open TUI tab keeps rendering the deleted messages until it is reopened.
+
 Cost is one full context replay per run, so sequence, do not fan out, unless the step is read-only and
 the user accepts the throttle risk.

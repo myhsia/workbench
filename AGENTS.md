@@ -85,6 +85,24 @@ plugin directory for the rule set itself.  Since the shell remains available, re
 than quoting a result from before the switch.  A denied `read` says `Permission denied: read`; a
 guard rejection names the reason and the directory.
 
+## Orchestrating other sessions
+
+An audit asks; the orchestrator answers.  A read-only audit may end with questions, but those are
+resolved here — answered, or waived in one written line — never handed back to the user and never
+left as a session's last message.
+
+- **One turn, not two.**  Audit, decision and execution are a single build turn: send the decisions
+  with the instruction, and require a reply that names what changed, the verification actually run,
+  and the literal line `Residue: none`.  A session that ends on a question is parked, exactly like
+  one whose audit found nothing — "leave no session parked" covers both.
+- **Stay inside the title.**  A finding outside the session's title belongs to a guide session or to
+  the machine-global config; ask about it there, or fix it in the same turn without asking.
+- **Prune the question turn once it is answered.**  The audit exchange may then be removed in place:
+  whole messages only, one transaction per session, after a `sqlite3 .backup`, leaving the task
+  history and the single result turn.  No message JSON is edited, ids and titles stay stable;
+  `session-hygiene` carries the procedure and its verification.  The 2026-11-11 run and its numbers
+  are in `docs/handbook.md`.
+
 ## Guide check after every build run (mandatory)
 
 A run that changes code, configuration, CI or output ends by checking **both** scopes, not only the

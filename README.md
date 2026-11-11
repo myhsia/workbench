@@ -16,7 +16,9 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
   `One-time password (OATH)` prompt itself (RFC 6238; SHA-1/256/512). `make install` builds and
   copies it into `$(PREFIX)/bin` (default `~/.local/bin`) — the build output *is* the command, so
   there is no interpreter, no symlink and no bytecode cache. `make test` replays the RFC 6238
-  vectors, `oathpass check` is a dry run, and `.github/workflows/ci.yml` runs both on Ubuntu, macOS
+  vectors, `oathpass --init` guides a fresh machine through the four config values (reading the OTP
+  URI with the terminal echo off), `oathpass check` is a dry run, and `.github/workflows/ci.yml`
+  runs both on Ubuntu, macOS
   and Windows (MSYS2). MIT licensed. Because the OATH code is single-use, the first command opens
   one multiplexed master connection and later commands, `sftp` and `scp` reuse it; `oathpass run`
   is a guarded read-only door for agents (see the `hpc-cluster` skill).

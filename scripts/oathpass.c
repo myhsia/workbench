@@ -74,6 +74,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <termios.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -1966,6 +1967,312 @@ static int cmd_selftest(void) {
     return failures ? 1 : 0;
 }
 
+/* ------------------------------------------------------------------ first run
+ * A fresh machine should not meet "No such file or directory": the tool guides
+ * the user instead, prompts on the controlling terminal for the four values,
+ * and reads the OTP URI with echo off -- the same mechanism sudo uses -- so the
+ * secret never appears on screen.
+ */
+
+struct Setup {
+    char host[256];
+    char user[256];
+    int ports[16];
+    size_t nports;
+    char uri[1024];
+};
+
+static int config_ready(void) {
+    FILE *f = fopen(config_path(), "rb");
+    if (!f) return 0;
+    char *text = read_all(f);
+    fclose(f);
+    int ready = !(strstr(text, "<IP address>") || strstr(text, "<username>") ||
+                  strstr(text, "<port") || strstr(text, "<otpauth"));
+    free(text);
+    return ready;
+}
+
+static void print_guide(const char *path) {
+    printf("oathpass is not configured yet.\n\n"
+           "  file  %s   (mode 600)\n\n"
+           "Fill in four things:\n\n"
+           "  1. host     the cluster's IP address or name, from your account e-mail\n"
+           "  2. ports    the login ports, as numbers: [\"2201\", \"2202\"]\n"
+           "  3. user     your login name\n"
+           "  4. otp.uri  the otpauth:// URI from your authenticator's export or share\n"
+           "              action. If you only have the base32 seed, put it in\n"
+           "              \"otp.secret\" instead and drop \"uri\".\n\n"
+           "The file holds the account's only factor: keep it mode 600 and never\n"
+           "commit it. Then check the result:\n\n"
+           "  oathpass otp      compare the code with your authenticator\n"
+           "  oathpass check    dry run: node, code, ssh command\n\n",
+           path);
+}
+
+static void json_escape(const char *in, char *out, size_t outsz) {
+    size_t o = 0;
+    for (const char *p = in; *p && o + 8 < outsz; p++) {
+        if (*p == '"' || *p == '\\') {
+            out[o++] = '\\';
+            out[o++] = *p;
+        } else if ((unsigned char)*p < 0x20) {
+            o += (size_t)snprintf(out + o, outsz - o, "\\u%04x", (unsigned char)*p);
+        } else {
+            out[o++] = *p;
+        }
+    }
+    out[o] = '\0';
+}
+
+static int parse_ports(const char *text, struct Setup *s) {
+    char copy[512];
+    s->nports = 0;
+    snprintf(copy, sizeof copy, "%s", text);
+    for (char *t = strtok(copy, ", \t"); t; t = strtok(NULL, ", \t")) {
+        char *end = NULL;
+        long value = strtol(t, &end, 10);
+        if (!*t || (end && *end) || value < 1 || value > 65535 || s->nports >= 16) return 0;
+        s->ports[s->nports++] = (int)value;
+    }
+    return s->nports > 0;
+}
+
+static int uri_usable(const char *uri) {
+    if (strncmp(uri, "otpauth://", 10) != 0) return 0;
+    const char *query = strchr(uri, '?');
+    if (!query) return 0;
+
+    char secret[512] = {0};
+    char algorithm[16] = "SHA512";
+    int digits = 8;
+    double period = 30.0;
+    char *copy = strdup(query + 1);
+    if (!copy) die("out of memory");
+    for (char *pair = strtok(copy, "&"); pair; pair = strtok(NULL, "&")) {
+        char *eq = strchr(pair, '=');
+        if (!eq) continue;
+        *eq = '\0';
+        char *value = eq + 1;
+        percent_decode(value);
+        if (!strcmp(pair, "secret")) snprintf(secret, sizeof secret, "%s", value);
+        else if (!strcmp(pair, "algorithm")) snprintf(algorithm, sizeof algorithm, "%s", value);
+        else if (!strcmp(pair, "digits")) digits = atoi(value);
+        else if (!strcmp(pair, "period")) period = atof(value);
+    }
+    free(copy);
+
+    if (!secret[0]) return 0;
+    unsigned char key[512];
+    size_t length = 0;
+    if (base32_decode(secret, key, sizeof key, &length) != 0) return 0;
+    if (strcasecmp(algorithm, "SHA1") && strcasecmp(algorithm, "SHA256") &&
+        strcasecmp(algorithm, "SHA512"))
+        return 0;
+    if (digits < 6 || digits > 10) return 0;
+    if (period < 1 || period > 3600) return 0;
+    return 1;
+}
+
+static FILE *open_terminal(void) {
+    FILE *tty = fopen("/dev/tty", "r+");
+    if (!tty) return NULL;
+    setvbuf(tty, NULL, _IONBF, 0);
+    return tty;
+}
+
+static int ask_shown(FILE *tty, const char *prompt, char *buf, size_t size) {
+    fprintf(tty, "%s", prompt);
+    if (!fgets(buf, (int)size, tty)) return 0;
+    size_t n = strlen(buf);
+    while (n && (buf[n - 1] == '\n' || buf[n - 1] == '\r')) buf[--n] = '\0';
+    return 1;
+}
+
+/* Echo off for the secret.  The terminal is restored before this returns, so a
+   later failure can never leave the user unable to see their typing. */
+static int ask_hidden(FILE *tty, const char *prompt, char *buf, size_t size) {
+    int fd = fileno(tty);
+    struct termios original, quiet;
+    if (tcgetattr(fd, &original) != 0) return 0;
+    quiet = original;
+    quiet.c_lflag &= ~(tcflag_t)ECHO;
+    tcsetattr(fd, TCSAFLUSH, &quiet);
+
+    fprintf(tty, "%s", prompt);
+    int ok = fgets(buf, (int)size, tty) != NULL;
+
+    tcsetattr(fd, TCSAFLUSH, &original);
+    fprintf(tty, "\n");
+    if (!ok) return 0;
+    size_t n = strlen(buf);
+    while (n && (buf[n - 1] == '\n' || buf[n - 1] == '\r')) buf[--n] = '\0';
+    return 1;
+}
+
+static void wipe(void *buffer, size_t length) {
+    volatile unsigned char *p = buffer;
+    while (length--) *p++ = 0;
+}
+
+static void write_setup(const char *path, const struct Setup *setup) {
+    char host[600], user[600], uri[2400], ports[300];
+    json_escape(setup->host, host, sizeof host);
+    json_escape(setup->user, user, sizeof user);
+    json_escape(setup->uri, uri, sizeof uri);
+
+    size_t used = 0;
+    for (size_t i = 0; i < setup->nports; i++) {
+        int written = snprintf(ports + used, sizeof ports - used, "%s\"%d\"", i ? ", " : "",
+                               setup->ports[i]);
+        if (written < 0 || (size_t)written >= sizeof ports - used) die("too many ports");
+        used += (size_t)written;
+    }
+
+    char dir[CONTROL_PATH_MAX];
+    size_t length = strlen(path);
+    if (length >= sizeof dir) die("path too long");
+    memcpy(dir, path, length + 1);
+    char *slash = strrchr(dir, '/');
+    if (slash) *slash = '\0';
+    mkdir_p(dir);
+    chmod(dir, 0700);
+
+    char temporary[CONTROL_PATH_MAX];
+    snprintf(temporary, sizeof temporary, "%s.tmp", path);
+
+    char body[4096];
+    int n = snprintf(body, sizeof body,
+                     "{\n"
+                     "  \"oathpass\": {\n"
+                     "    \"host\": \"%s\",\n"
+                     "    \"ports\": [%s],\n"
+                     "    \"user\": \"%s\",\n"
+                     "    \"otp\": {\n"
+                     "      \"uri\": \"%s\"\n"
+                     "    }\n"
+                     "  }\n"
+                     "}\n",
+                     host, ports, user, uri);
+    if (n < 0 || (size_t)n >= sizeof body) die("the configuration is too long");
+
+    int fd = open(temporary, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    if (fd < 0) die("cannot write %s: %s", temporary, strerror(errno));
+    if (write(fd, body, (size_t)n) != n) die("cannot write %s", temporary);
+    close(fd);
+    chmod(temporary, 0600);
+    if (rename(temporary, path) != 0) die("cannot move the config into place: %s", strerror(errno));
+    wipe(body, sizeof body);
+}
+
+static void write_skeleton(const char *path) {
+    struct stat st;
+    if (stat(path, &st) == 0) return; /* never touch an existing file */
+
+    char dir[CONTROL_PATH_MAX];
+    size_t length = strlen(path);
+    if (length >= sizeof dir) die("path too long");
+    memcpy(dir, path, length + 1);
+    char *slash = strrchr(dir, '/');
+    if (slash) *slash = '\0';
+    mkdir_p(dir);
+    chmod(dir, 0700);
+
+    char temporary[CONTROL_PATH_MAX];
+    snprintf(temporary, sizeof temporary, "%s.tmp", path);
+    static const char body[] =
+        "{\n"
+        "  \"oathpass\": {\n"
+        "    \"host\": \"<IP address>\",\n"
+        "    \"ports\": [\"<port 1>\", \"<port 2>\"],\n"
+        "    \"user\": \"<username>\",\n"
+        "    \"otp\": {\n"
+        "      \"uri\": \"<otpauth://totp/...?secret=...&algorithm=SHA512&digits=8&period=30>\"\n"
+        "    }\n"
+        "  }\n"
+        "}\n";
+    int fd = open(temporary, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    if (fd < 0) die("cannot write %s: %s", temporary, strerror(errno));
+    size_t n = strlen(body);
+    if (write(fd, body, n) != (ssize_t)n) die("cannot write %s", temporary);
+    close(fd);
+    chmod(temporary, 0600);
+    if (rename(temporary, path) != 0) die("cannot move the config into place: %s", strerror(errno));
+}
+
+static int cmd_init(int force) {
+    const char *path = config_path();
+
+    if (!force && config_ready()) {
+        Config cfg;
+        load_config(&cfg);
+        printf("oathpass is already configured: %s\n", path);
+        printf("  host   %s\n  user   %s\n  ports  %s\n", cfg.host, cfg.user, cfg.ports_render);
+        printf("  force  oathpass --init --force rewrites the skeleton\n");
+        return 0;
+    }
+
+    write_skeleton(path);
+    print_guide(path);
+
+    FILE *tty = open_terminal();
+    if (!tty) {
+        fflush(stdout);
+        note("no terminal is available here, so the values cannot be collected");
+        note("edit the file above, then run: oathpass otp");
+        return 1;
+    }
+
+    fprintf(tty, "configure now? [Y/n] ");
+    char answer[16];
+    if (!fgets(answer, sizeof answer, tty) || answer[0] == 'n' || answer[0] == 'N') {
+        fclose(tty);
+        note("nothing written; edit %s by hand", path);
+        return 1;
+    }
+
+    struct Setup setup;
+    memset(&setup, 0, sizeof setup);
+    char ports_text[512];
+    int complete = 0;
+    for (int attempt = 0; attempt < 3 && !complete; attempt++) {
+        if (attempt) fprintf(tty, "\ntry again:\n");
+        if (!ask_shown(tty, "cluster host: ", setup.host, sizeof setup.host)) break;
+        if (!ask_shown(tty, "login ports (comma separated): ", ports_text, sizeof ports_text)) break;
+        if (!ask_shown(tty, "user name: ", setup.user, sizeof setup.user)) break;
+        if (!ask_hidden(tty, "otpauth URI (input hidden): ", setup.uri, sizeof setup.uri)) break;
+
+        if (!setup.host[0] || !setup.user[0] || !parse_ports(ports_text, &setup)) {
+            note("host, user and at least one port are required");
+            continue;
+        }
+        if (!uri_usable(setup.uri)) {
+            note("that URI is not usable: it must be otpauth:// with a valid base32 secret");
+            continue;
+        }
+        complete = 1;
+    }
+    fclose(tty);
+
+    if (!complete) {
+        wipe(setup.uri, sizeof setup.uri);
+        note("nothing written");
+        return 1;
+    }
+
+    write_setup(path, &setup);
+    wipe(setup.uri, sizeof setup.uri);
+
+    printf("written %s (mode 600)\n", path);
+    Config cfg;
+    load_config(&cfg);
+    char code[16];
+    code_at(&cfg.token, monotime(), code, sizeof code);
+    printf("current code  %s  -- compare it with your authenticator now\n", code);
+    printf("next          oathpass check\n");
+    return 0;
+}
+
 static int usage(void) {
     printf("usage: oathpass [--node N | --port PORT] [ssh args...]\n"
            "       oathpass run <cmd> [args...]  read-only command inside your home\n"
@@ -1980,6 +2287,7 @@ static int usage(void) {
            "       oathpass target               print user@host\n"
            "       oathpass doctor               why a code does not match the phone\n"
            "       oathpass --selftest           replay the RFC 6238 vectors\n"
+           "       oathpass --init [--force]     guided set-up of the config file\n"
            "\n"
            "One code opens a multiplexed master connection; later commands, sftp\n"
            "and scp reuse it, because the code is single-use.  The seed comes from\n"
@@ -2028,6 +2336,8 @@ int main(int argc, char **argv) {
 
     if (!strcmp(command, "--help") || !strcmp(command, "-h") || !strcmp(command, "help")) return usage();
     if (!strcmp(command, "--selftest") || !strcmp(command, "selftest")) return cmd_selftest();
+    if (!strcmp(command, "--init") || !strcmp(command, "init"))
+        return cmd_init(restc > 1 && !strcmp(rest[1], "--force"));
 
     static const char *const with_config[] = {
         "otp", "target", "doctor", "wrap", "port", "check", "--dry-run",
@@ -2036,6 +2346,7 @@ int main(int argc, char **argv) {
     for (size_t i = 0; with_config[i]; i++)
         if (!strcmp(command, with_config[i])) known = 1;
     if (known) {
+        if (!config_ready()) return cmd_init(0);
         Config cfg;
         load_config(&cfg);
         if (!strcmp(command, "otp")) return cmd_otp(&cfg, restc - 1, rest + 1);
@@ -2053,6 +2364,7 @@ int main(int argc, char **argv) {
         return cmd_wrap(&cfg, restc - 1, rest + 1);
     }
 
+    if (!config_ready()) return cmd_init(0);
     Config cfg;
     load_config(&cfg);
     return cmd_login(&cfg, rest, forced_node, forced_port);

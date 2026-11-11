@@ -119,6 +119,24 @@ for probe in 'get /etc/passwd' 'ls ..' 'cd /tmp' '!id' 'put /etc/x ./y'; do
     fi
 done
 
+# First run: no config means guidance, not an errno message.
+expect 1 "init guides a fresh machine"  missing --init
+if [ -f "$CONFIG" ] && [ "$(ls -l "$CONFIG" | cut -c1-10)" = "-rw-------" ]; then
+    ok "init writes a skeleton at mode 600"
+else
+    bad "init writes a skeleton at mode 600" "$(ls -l "$CONFIG" 2>&1)"
+fi
+for field in host ports user otpauth; do
+    if grep -q "$field" "$CONFIG" 2>/dev/null; then
+        ok "skeleton names $field"
+    else
+        bad "skeleton names $field"
+    fi
+done
+expect 1 "run guides with no config"    missing run ls
+expect 0 "init says already configured" "$TMP/valid.json" --init
+expect 1 "init --force rewrites"        "$TMP/valid.json" --init --force
+
 # The help text must name the tool and advertise the selftest.
 use_config missing
 help=$("$BIN" --help 2>&1)

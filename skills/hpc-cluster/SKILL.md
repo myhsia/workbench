@@ -14,6 +14,16 @@ The cluster asks one question, `One-time password (OATH)`, and nothing else.
 `oathpass` answers it from a seed in `~/.config/oathpass/config.json`, so no
 phone and no interactive shell are involved.
 
+## First run
+
+On a machine without `~/.config/oathpass/config.json`, every command prints the
+set-up guide instead of failing, and creates a mode-600 skeleton to edit. With a
+terminal attached, `oathpass --init` collects the four values itself -- host,
+ports, user, and the `otpauth://` URI, which is read with the terminal echo off
+so the seed never appears on screen -- validates the URI, writes the file, and
+prints the current code for comparison with the authenticator. Without a
+terminal it prints the guide and exits 1 rather than blocking on a prompt.
+
 ## Approval first
 
 **Never touch the cluster without an explicit yes from the user.** Before anything else:

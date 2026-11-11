@@ -266,5 +266,6 @@ Each line is the user's own wording, and what it settled:
 | `Keep the verbatim user decisions` | this table exists; later summaries quote the user, not a paraphrase |
 | `@opencode-hpc-update v2.2.7 updated` | the version check is re-run after an upgrade, and the skill records what changed |
 | `module = "luacjk", hardcode LuaCJK` | the CTAN id and every TDS directory are lower case; `LuaCJK` survives only where it names the package |
+| `I think just keep module = "LuaCJK", then local pkg is a lowercase warpper of module` | that first split is reversed: `module` keeps the package spelling and the id is derived from it; the tds zip's mixed-case `doc/`/`source/` directories are accepted |
 | `Keep v0.0.1` | a first public release may carry the number the sources already use; no `\changes` rewrite |
 | `Pack and inspect only` | the archives and the form are verified locally, and nothing is sent to `ctan.org` |

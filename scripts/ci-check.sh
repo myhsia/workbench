@@ -121,11 +121,24 @@ done
 
 # First run: no config means guidance, not an errno message.
 expect 1 "init guides a fresh machine"  missing --init
-if [ -f "$CONFIG" ] && [ "$(ls -l "$CONFIG" | cut -c1-10)" = "-rw-------" ]; then
-    ok "init writes a skeleton at mode 600"
-else
-    bad "init writes a skeleton at mode 600" "$(ls -l "$CONFIG" 2>&1)"
-fi
+# Windows has no POSIX mode bits: MSYS emulates chmod through ACLs, and the file
+# is protected by the user profile instead.  The assertion is POSIX-only.
+case "$(uname -s)" in
+MSYS* | MINGW* | CYGWIN*)
+    if [ -f "$CONFIG" ]; then
+        ok "init writes a skeleton (POSIX modes are emulated here)"
+    else
+        bad "init writes a skeleton" "missing"
+    fi
+    ;;
+*)
+    if [ -f "$CONFIG" ] && [ "$(ls -l "$CONFIG" | cut -c1-10)" = "-rw-------" ]; then
+        ok "init writes a skeleton at mode 600"
+    else
+        bad "init writes a skeleton at mode 600" "$(ls -l "$CONFIG" 2>&1)"
+    fi
+    ;;
+esac
 for field in host ports user otpauth; do
     if grep -q "$field" "$CONFIG" 2>/dev/null; then
         ok "skeleton names $field"

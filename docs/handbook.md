@@ -193,6 +193,11 @@ dropped answers again.
   scope is a judgement; the rule, the per-turn reminder and the trailer are what carry it.
 - **Duplication is allowed.**  Branching (a bus line) beats compacting; a little overlap between
   sessions keeps each readable.  "Finished Build" closes a thematic copy.
+- **A guide gap outlived its own gate.**  The extended-DEOM filtering change carried neither a guide
+  change nor a `Guides-Reviewed:` trailer, so `guides-due.sh --committed` read STALE until the
+  pitfall and the reference-solver gates were finally written, two commits later, by an audit of the
+  session's own claims.  A check nobody runs reports nothing, which is why the per-turn reminder
+  carries the convention and the hook only backstops it.
 
 ## Decisions, verbatim
 

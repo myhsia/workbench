@@ -19,6 +19,10 @@ This file lives in the global repository (`myhsia/workbench`, checked out at
 
 ## Repository etiquette
 
+- **A piece shared by sibling checkouts has one owner.** Change the canonical copy, run every
+  mirror's sync script, and commit each repository. A copy script copies but does not delete, so a
+  renamed or removed shared file is removed in the mirrors by hand; a leftover copy is dead code
+  that the guide no longer names.
 - **Preserve the user's uncommitted changes.** If `git status` shows uncommitted changes you did
   not make, treat them as the user's intentional edits: never discard, revert, overwrite, or "fix"
   them back. Build on top of them; if they cause a problem (e.g., a compile overfull), flag it
@@ -129,7 +133,11 @@ would rewrite the house style.  A review comment, not a failed check, is what as
   `dps` raised to about 100) before trusting the double-precision result; the ill-conditioning of
   a moment sequence only shows up above machine precision.
 - Compare against an **independent route** — a second engine, exact diagonalisation, or a closed
-  form — and report the residual, not just the agreement.
+  form — and report the residual, not just the agreement.  Compare the fitted object against its
+  target, not against the shape it ought to have: a decomposition of a complex kernel must
+  reproduce both parts, because qutip's `separate=False` coefficients carry only `Re C(t)`, and the
+  missing imaginary part was the dissipative one — every curve stayed plausible and every number
+  was wrong.
 - Give the tolerance and the quantity it is relative to (`|Δ| / max|ref|`), and state the regime
   in which the approximation holds.
 - No unobserved results (machine-wide MUST): a measurement that was not run is reported as not run.
@@ -152,7 +160,9 @@ would rewrite the house style.  A review comment, not a failed check, is what as
   an input the code never reaches proves nothing about the branch that names it — a character the
   format already discards, a glyph the test font does not have, a list that is empty before the guard
   runs.  Read the failing output, not only its presence: the reported value must be the wrong one for
-  the reason the guard exists.
+  the reason the guard exists.  The same case decides between rival conventions only when it
+  separates them by orders of magnitude: a conjugation convention was settled by `1.0e-5` against
+  `2.2e-1`, and a case where the candidates agree decides nothing.
 
 ### Plotting
 

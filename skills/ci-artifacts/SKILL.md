@@ -19,12 +19,29 @@ generation, batch or matrix sweeps), then bring the results home as artifacts.
 - Fan out with `strategy.matrix` over the cases and set `fail-fast: false` so one case does not
   cancel the rest. A matrix value can come from a job output, e.g.
   `matrix: { config: ${{ fromJSON(needs.plan.outputs.configs) }} }`.
+- **Set `strategy.max-parallel` explicitly.** Its default is 10, so a 44-job matrix silently runs ten
+  at a time and the rest queue behind them; a job that then exceeds its timeout is lost work. The
+  ceiling is per **account**, not per run (about 20 concurrent jobs on the free plan), so splitting
+  one batch into several runs or several workflows does **not** add machines — it only makes the
+  queue harder to see. Size one batch to the ceiling and put the work that must not be split inside
+  a single job.
+- **One job per heavy unit; sub-units go inside it, on all the cores.** A job with four cores should
+  run its four cases as parallel *processes* (`-nproc`) rather than exporting a `case` matrix
+  dimension that leaves each core idle. Only split a dimension into the matrix when one job genuinely
+  cannot hold the whole unit.
+- **`timeout-minutes:` on the job is the real cap** (≤ 350 min here), not the run's. A workflow run
+  may last 35 days; a job is killed at its own timeout and its artifact never uploads, so quote the
+  step estimate against that number, not against the run.
+- **Name the dispatch.** GitHub titles every run of a workflow with the workflow's `name:`, so a
+  dozen identical `Data` rows are indistinguishable. Set
+  `run-name: Data · ${{ inputs.configs }} · ${{ inputs.methods }}` (inputs and `github.*` are
+  available). It cannot be applied retroactively — it is stamped at dispatch.
 - Each job uploads its own result with `actions/upload-artifact`:
   - `name:` must be unique per matrix job (include the matrix value).
   - `path:` may list several paths; the artifact is rooted at their **least common ancestor**, so
     listing sibling output dirs gives a tidy tree.
-  - `if-no-files-found: ignore` when some jobs legitimately produce nothing; `retention-days:` caps
-    storage.
+  - `if-no-files-found: error` when a missing file is a failure (use `ignore` only when some jobs
+    legitimately produce nothing); `retention-days:` caps storage.
   - An `l3build` job uploads `build/**/*.diff`, `build/**/*.fc` and `build/**/*.log`: the
     comparison it could not satisfy is written to `<test>.<engine>.fc`, so without it the artifact
     arrives with "no difference files" and no evidence of which line moved.
@@ -33,6 +50,13 @@ generation, batch or matrix sweeps), then bring the results home as artifacts.
     platform's, not the test's.
 - Build any shared environment once in a `needs:`-gated job and hand it to the matrix through a
   cache rather than rebuilding it per job.
+- **A `combine`/`collect` job is what makes a batch one download.** `actions/download-artifact` with
+  `pattern: '<prefix>-*'` and `merge-multiple: true` assembles every artifact of the run, and a
+  `tar -czf` upload gives a single tarball. Guard an empty gather (`[ -n "$(ls -A dist)" ]`), or the
+  `tar` exits 2 and the failure reads as a packaging bug. To join *several runs* (one dispatch per
+  config, say), dispatch a small `collect` workflow with a `runs` input and download each run's
+  tarball by id into one tree — the artifacts stay addressable per run, and the batch is still one
+  download at the end.
 
 ## 2. Dispatch and watch
 
@@ -59,7 +83,7 @@ badly throttled on a direct route (tens of kB/s).  **Always download through the
 plain `gh api` call works without it:
 
 ```bash
-PROXY=$(python3 -c "import json,os;print(json.load(open(os.path.expanduser('~/.config/opencode/service.json')))['env']['HTTPS_PROXY'])")
+PROXY=$(cat ~/.config/opencode/proxy)   # mode 600, the single source of the address
 export https_proxy="$PROXY" http_proxy="$PROXY"
 
 gh run download <run-id> -D <tmp>            # all artifacts

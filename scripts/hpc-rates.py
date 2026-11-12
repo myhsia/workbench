@@ -93,7 +93,9 @@ def main(argv):
         if abs(have["rate"] - spec["rate"]) > 1e-9:
             print(f"  rate       {name}: {have['rate']} -> {spec['rate']} ¥/{spec['unit']}")
             differences += 1
-        if spec["cores"] and have.get("cores") != spec["cores"]:
+        # For card-hour partitions the page's core count describes the node,
+        # not something this model prices, so it is not compared.
+        if spec["unit"] == "core-hour" and spec["cores"] and have.get("cores") != spec["cores"]:
             print(f"  cores      {name}: {have.get('cores')} -> {spec['cores']}")
             differences += 1
 

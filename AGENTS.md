@@ -134,6 +134,25 @@ instead of implying it was.
 - State an approximation with its regime and residual; never let a clean-looking plot stand in for
   a tolerance.
 
+## Binaries are released, never hand-built
+
+A tool that has a release workflow is installed from a release, not compiled in place.  The rule:
+CI builds every supported target on a tag; each target must have *run* its selftest, not merely
+compiled; the release publishes a `SHA256SUMS` beside the assets; and the installer verifies that
+sum and restores the previous binary if the new one fails.  `make install` is a development
+shortcut, never the way a tool gets onto a machine.
+
+`oathpass` follows it this way.  CI builds five targets -- `macos-arm64`, `macos-amd64`,
+`linux-arm64`, `linux-amd64`, `windows-amd64` -- with the ARM Linux one running under
+`qemu-aarch64-static` and the x86 macOS one under Rosetta.  The installer is
+`curl -fsSL https://raw.githubusercontent.com/myhsia/oathpass/main/install.sh | sh`, and the daily
+upkeep keeps the installed binary on the latest release.
+
+`windows-arm64` is not released: MSYS2 has no Cygwin layer for ARM, so the source would need a
+native Win32 port (fork/poll/termios) before that target can exist.  The askpass mechanism itself is
+not the obstacle -- measured on windows-latest with Win32-OpenSSH 9.5p2, a helper wired to
+`SSH_ASKPASS` is invoked, so a native build would work once the POSIX calls are replaced.
+
 ## Repository etiquette
 
 - **Preserve the user's uncommitted changes.**  If `git status` shows uncommitted changes you did

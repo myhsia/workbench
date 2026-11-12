@@ -12,8 +12,11 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
   what the session-start check needs, and `--staged` judges the index, which is what the hook runs.
 - `oathpass` — a separate repository (`github.com/myhsia/oathpass`, cloned at `~/GitHub/oathpass`):
   a small C tool that answers an SSH `One-time password (OATH)` prompt from a local seed, with one
-  multiplexed master connection, a guarded read-only door and `scp`/`sftp`/`rsync` over it. Built and
-  installed with `make install` from that checkout; `hpc-cluster` carries the session rules.
+  multiplexed master connection, a guarded read-only door and `scp`/`sftp`/`rsync` over it. CI builds
+  every release (`v0.3.0` covers macOS arm64/amd64, Linux arm64/amd64, Windows amd64, each having run
+  `--selftest` on the target), and `install.sh` downloads this machine's asset, verifies
+  `SHA256SUMS`, installs atomically and restores the previous binary if the selftest fails. Never
+  `make install` for use -- that is a development shortcut. `hpc-cluster` carries the session rules.
 - `hpc-rates.json` + `scripts/hpc-job.py` + `scripts/hpc-rates.py` — the cluster's economics,
   kept local: the per-partition rates, a `cost`/`submit` wrapper that enforces the per-job spend
   cap and picks the fastest plan inside it, and a daily check that compares the table with the

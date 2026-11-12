@@ -51,8 +51,18 @@ action now writes into the current directory instead of the temp folder (the CLI
 `opencode session export <id>` still streams to stdout and creates no file, measured), and
 generated titles no longer carry the model's commentary.
 
-Westlake HPC billing (campus — no proxy), as part of the daily check:
+`oathpass` release (as part of the daily check):
 
+- Compare what is installed with the latest release and move forward:
+  `oathpass --version` against `gh release view --repo myhsia/oathpass --json tagName -q .tagName`.
+  When the release is newer, run
+  `sh ~/GitHub/oathpass/install.sh` (or the raw URL, which needs no checkout), which downloads this
+  machine's asset, verifies `SHA256SUMS`, replaces the binary atomically and restores the previous
+  one if its `--selftest` fails.  Report the transition as `oathpass 0.3.0 -> 0.3.1`; never say
+  "updated" without the selftest line.
+- Never rebuild it with `make`; the installed binary always comes from a release.
+
+Westlake HPC billing (campus — no proxy), as part of the daily check:
 - `python3 ~/.config/opencode/scripts/hpc-rates.py --check` fetches
   <https://hpc.westlake.edu.cn/document/science/en/money.html#partition-billing-standards>
   and compares it with `~/.config/opencode/hpc-rates.json`. It exits 0 when

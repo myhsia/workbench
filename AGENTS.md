@@ -151,12 +151,12 @@ instead of implying it was.
   and whether the tree is dirty.  Call out uncommitted changes (and whose they are) and any
   unpushed commit.
 - **Open issues are categorised in the session that sees them.**  Every issue carries one *subsystem*
-  label and one *type* label.  The subsystem labels are the repository's commit scopes, so the label
-  names where the fix lands and predicts the scope of the commit that closes the issue; the type
-  labels are the forge's own (`bug`, `enhancement`, `question`, `documentation`).  A session that
-  finds an unlabelled open issue labels it before the task it was asked to do, and a repository that
-  automates the report declares the triage script in its session check rather than adding a second
-  one, because a repository may declare one check.
+  label, and its type is the forge's native issue type (`Bug`, `Feature`, `Task`), which is not a
+  label.  The subsystem labels are the repository's commit scopes, so the label names where the fix
+  lands and predicts the scope of the commit that closes the issue.  A session that finds an open
+  issue without one labels it before the task it was asked to do, and a repository that automates the
+  report declares the triage script in its session check rather than adding a second one, because a
+  repository may declare one check.
 - **Never put secrets or addresses in commits.**  Machine endpoints, proxy addresses, API keys,
   cluster IPs and the cluster's OTP seed stay in untracked files or environment variables.  The
   seed lives in `~/.config/oathpass/config.json`, which is the only place the `oathpass` tool (its

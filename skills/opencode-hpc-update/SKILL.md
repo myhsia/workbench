@@ -51,6 +51,17 @@ action now writes into the current directory instead of the temp folder (the CLI
 `opencode session export <id>` still streams to stdout and creates no file, measured), and
 generated titles no longer carry the model's commentary.
 
+Westlake HPC billing (campus — no proxy), as part of the daily check:
+
+- Partition rates <https://hpc.westlake.edu.cn/document/science/en/money.html#partition-billing-standards>
+  — fetch it and compare with the `builtin_partitions` table in
+  `~/GitHub/oathpass/src/oathpass.c` and with any `partitions` block in
+  `~/.config/oathpass/config.json`. **Report a difference, do not edit the
+  rates**: a price change is the user's decision. Storage pricing (currently a
+  50% → 83.3% → 100% schedule) is on the same page.
+- Slurm bills allocated cores per started hour, so a rate change moves the
+  `oathpass cost` recommendation; mention it when the table moves.
+
 Westlake HPC (campus — no proxy):
 
 - Model table <https://hpc.westlake.edu.cn/#/ai-campus> is a Vue SPA; its data is in

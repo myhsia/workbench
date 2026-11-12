@@ -142,9 +142,12 @@ compiled; the release publishes a `SHA256SUMS` beside the assets; and the instal
 sum and restores the previous binary if the new one fails.  `make install` is a development
 shortcut, never the way a tool gets onto a machine.
 
-`oathpass` follows it this way.  CI builds five targets -- `macos-arm64`, `macos-amd64`,
+`oathpass` follows it this way.  CI builds five architectures -- `macos-arm64`, `macos-amd64`,
 `linux-arm64`, `linux-amd64`, `windows-amd64` -- with the ARM Linux one running under
-`qemu-aarch64-static` and the x86 macOS one under Rosetta.  The installer is
+`qemu-aarch64-static` and the x86 macOS one under Rosetta, and it also lipos the two macOS slices
+into `macos-universal`, which is what the installer takes: on an arm64 Mac `uname -m` reports
+`x86_64` whenever the shell runs under Rosetta, so letting the installer choose per architecture
+would be a guess.  The installer is
 `curl -fsSL https://raw.githubusercontent.com/myhsia/oathpass/main/install.sh | sh`, and the daily
 upkeep keeps the installed binary on the latest release.
 

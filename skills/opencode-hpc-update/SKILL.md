@@ -65,6 +65,12 @@ Westlake HPC billing (campus — no proxy), as part of the daily check:
 - Slurm bills allocated cores per started hour, so a rate change moves what
   `hpc-job` recommends. Storage pricing (currently a 50% → 83.3% → 100%
   schedule) is on the same page; mention it if the schedule moves.
+- `python3 ~/.config/opencode/scripts/hpc-docs.py --check` covers the rest of
+  the documentation: it hashes every English page in the sitemap and reports
+  added, changed and removed pages (exit 0 clean, 1 moved, 2 unreadable). A
+  moved page is a prompt to read it and update `skills/hpc-cluster/SKILL.md`,
+  then `--update` to accept the new state. Partitions, QoS and storage live
+  there, so a silent page change is how a skill goes stale.
 
 Westlake HPC (campus — no proxy):
 

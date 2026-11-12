@@ -3,19 +3,22 @@
 
 Slurm bills allocated cores per started hour, so cost = cores x rate x
 ceil(hours): a two-minute job costs a full core-hour, and an over-sized request
-is charged while it sits idle.  The rates live in ``hpc-rates.json`` next to
-this script, refreshed by ``hpc-rates.py`` from the cluster's own page -- they
-are not compiled into any tool.
+is charged while it sits idle.  The rates and the QoS rules live in
+``hpc-rates.json`` next to this script, refreshed by ``hpc-rates.py`` from the
+cluster's own page -- they are not compiled into any tool.
 
     hpc-job cost -c 64 --time 04:00:00
     hpc-job submit -c 64 --time 04:00:00 ./run.sh          # fastest within the cap
     hpc-job submit --cheap -c 64 --time 04:00:00 ./run.sh  # cheapest
+    hpc-job submit -c 256 --time 08:00:00 --qos huge ./run.sh
     hpc-job list | show ID | log ID | cancel ID
     hpc-job shell -p PARTITION -c 8 --time 01:00:00
 
-The submission itself is `oathpass job submit`, so it rides the single-use
-master connection; this script only decides which partition and whether the
-price is acceptable.
+The default QoS is `normal`, which caps a job at 200 cores but has high
+priority; `huge` allows 6400 and queues lower.  A job wider than 200 cores is
+refused unless `--qos huge` is given, so the fast plan never silently buys a
+long wait.  The submission itself is `oathpass job submit`, which rides the
+single-use master connection and adds the completion mail.
 """
 
 import json
@@ -28,6 +31,7 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.dirname(HERE)
 RATES = os.path.join(ROOT, "hpc-rates.json")
 OATHPASS = "oathpass"
+DEFAULT_QOS = "normal"
 
 
 def die(message):
@@ -44,9 +48,8 @@ def load_rates(path = RATES):
 
 
 def parse_time(text):
-    parts = text.split(":")
     try:
-        numbers = [int(p) for p in parts]
+        numbers = [int(part) for part in text.split(":")]
     except ValueError:
         die("--time must be HH:MM:SS, MM:SS or minutes")
     if len(numbers) == 3:
@@ -63,13 +66,14 @@ def parse_time(text):
 
 
 class Plan:
-    def __init__(self, name, spec, cores, wall, billed, cost):
+    def __init__(self, name, spec, cores, wall, billed, cost, qos):
         self.name = name
         self.spec = spec
-        self.cores = cores          # cores requested on this partition
-        self.wall = wall            # wall-clock hours at that width
-        self.billed = billed        # charged hours (ceil)
+        self.cores = cores
+        self.wall = wall
+        self.billed = billed
         self.cost = cost
+        self.qos = qos
 
     def wall_text(self):
         hours = int(self.wall)
@@ -79,38 +83,63 @@ class Plan:
         return f"{hours}h{minutes:02d}m"
 
 
-def plan_job(rates, cores, hours, efficiency, max_cores):
+def round_up(value, step):
+    return step * math.ceil(value / step) if step > 1 else value
+
+
+def plan_job(rates, cores, hours, efficiency, max_cores, qos_name):
+    """Plans for one QoS.  `cores` is the job width, `max_cores` how far it may scale."""
+    qos = rates["qos"].get(qos_name)
+    if qos is None:
+        die(f"unknown QoS '{qos_name}'")
+    limit = qos.get("max_cores")
+    if limit and cores > limit:
+        hint = "" if qos_name != DEFAULT_QOS else "  (pass --qos huge to run wider than 200 cores)"
+        die(f"{cores} cores exceed the {qos_name} QoS limit of {limit}{hint}")
+
     plans = []
     for name, spec in rates["partitions"].items():
         if spec.get("unit", "core-hour") != "core-hour":
             continue  # GPU partitions bill per card-hour; not modelled here
-        capacity = int(spec.get("cores", 0))
-        minimum = int(spec.get("min_cores", 1))
-        if capacity < cores or cores < minimum:
+        if qos_name not in spec.get("qos", []):
             continue
-        usable = min(capacity, max_cores)
-        usable = max(usable, cores)
-        wall = hours * cores / usable / efficiency
+        capacity = int(spec.get("cores", 0))
+        if capacity < cores or cores < int(spec.get("min_cores", 1)):
+            continue
+        if hours > float(spec.get("max_hours", 1e9)):
+            continue
+        # `useful` is the parallelism the job actually gets; `request` is what
+        # Slurm is asked for, which may be padded up to a granularity.  The
+        # padding is billed but does not make the job faster.
+        useful = max(min(capacity, max_cores), cores)
+        if useful > capacity:
+            continue
+        request = useful
+        if "multiple_of" in spec:
+            request = round_up(useful, int(spec["multiple_of"]))
+            if request > capacity:
+                continue
+        wall = hours * cores / useful / efficiency
         billed = max(1, math.ceil(wall - 1e-9))
-        plans.append(Plan(name, spec, usable, wall, billed, spec["rate"] * usable * billed))
+        plans.append(Plan(name, spec, request, wall, billed, spec["rate"] * request * billed, qos_name))
     if not plans:
-        die(f"no partition can hold {cores} cores")
+        die(f"no partition can hold {cores} cores under QoS {qos_name}")
     return plans
 
 
 def choose(plans, limit, cheap):
-    cheapest = min(plans, key = lambda p: p.cost)
+    cheapest = min(plans, key = lambda plan: plan.cost)
     if cheap:
         return cheapest, cheapest, False
-    within = [p for p in plans if p.cost <= limit + 1e-9]
+    within = [plan for plan in plans if plan.cost <= limit + 1e-9]
     if not within:
         return cheapest, cheapest, True
-    fastest = min(within, key = lambda p: (p.wall, p.cost))
+    fastest = min(within, key = lambda plan: (plan.wall, plan.cost))
     return fastest, cheapest, False
 
 
 def print_table(plans, chosen, cheapest):
-    print(f"{'partition':<16}{'cores':>7}{'rate':>9}{'wall':>9}{'billed':>8}{'cost':>10}")
+    print(f"{'partition':<16}{'cores':>7}{'rate':>9}{'wall':>9}{'billed':>8}{'cost':>10}  qos")
     for plan in plans:
         marks = ""
         if plan is chosen:
@@ -118,37 +147,43 @@ def print_table(plans, chosen, cheapest):
         if plan is cheapest:
             marks += " (cheapest)"
         print(f"{plan.name:<16}{plan.cores:>7}{plan.spec['rate']:>9.3f}{plan.wall_text():>9}"
-              f"{plan.billed:>7}h{plan.cost:>10.2f}{marks}")
+              f"{plan.billed:>7}h{plan.cost:>10.2f}  {plan.qos}{marks}")
 
 
 def describe(rates, chosen, cheapest, over, limit):
     print()
     currency = rates.get("currency", "")
+    priority = rates["qos"][chosen.qos].get("priority", "?")
     tag = "  (over the cap)" if over else ""
-    print(f"plan       {chosen.name}  {chosen.cores} cores  {chosen.cost:.2f} {currency}{tag}")
+    print(f"plan       {chosen.name}  {chosen.cores} cores  {chosen.cost:.2f} {currency}"
+          f"  qos {chosen.qos} ({priority} priority){tag}")
     if chosen is not cheapest:
         saving = chosen.cost - cheapest.cost
         slower = cheapest.wall - chosen.wall
         print(f"cheaper    {cheapest.name}  {cheapest.cost:.2f}  "
               f"({slower:.1f}h slower, saves {saving:.2f})")
+    if chosen.qos != DEFAULT_QOS:
+        print(f"queue      {chosen.qos} is low priority; a normal plan may start sooner")
+    if chosen.spec.get("login_node"):
+        print(f"login      {chosen.name} is only reachable from {chosen.spec['login_node']}")
     if over:
         print(f"cap        {limit:.2f} {currency} -- pass --yes to accept {chosen.cost:.2f}")
     return 0
 
 
 def split_options(argv):
-    """Options up to the first non-option; the rest is the script and its gate."""
     options, rest = {}, []
     index = 0
     while index < len(argv):
         item = argv[index]
-        if item in ("-c", "--time", "-p", "-q", "--mem", "--efficiency", "--max-cores", "--budget"):
+        if item in ("-c", "--time", "-p", "-q", "--mem", "--efficiency", "--max-cores", "--budget",
+                    "--qos", "--mail-type"):
             if index + 1 >= len(argv):
                 die(f"{item} needs a value")
             options[item] = argv[index + 1]
             index += 2
             continue
-        if item in ("--cheap", "--yes"):
+        if item in ("--cheap", "--yes", "--no-mail", "--dry-run"):
             options[item] = True
             index += 1
             continue
@@ -157,44 +192,40 @@ def split_options(argv):
     return options, rest
 
 
-def cmd_cost(rates, argv):
-    options, rest = split_options(argv)
-    if rest:
-        die(f"unexpected argument '{rest[0]}'")
+def resolve(rates, options):
     if "-c" not in options:
-        die("cost needs -c N")
+        die("-c N is required")
     if "--time" not in options:
-        die("cost needs --time HH:MM:SS")
+        die("--time is required: no job is submitted without a wall-clock limit")
     cores = int(options["-c"])
     hours = parse_time(options["--time"])
     efficiency = float(options.get("--efficiency", 1.0))
     limit = float(options.get("--budget", rates["spend_limit"]))
     max_cores = int(options.get("--max-cores", 1 << 30))
+    qos = options.get("--qos", DEFAULT_QOS)
+    return cores, hours, efficiency, limit, max_cores, qos
 
-    plans = plan_job(rates, cores, hours, efficiency, max_cores)
+
+def cmd_cost(rates, argv):
+    options, rest = split_options(argv)
+    if rest:
+        die(f"unexpected argument '{rest[0]}'")
+    cores, hours, efficiency, limit, max_cores, qos = resolve(rates, options)
+    plans = plan_job(rates, cores, hours, efficiency, max_cores, qos)
     chosen, cheapest, over = choose(plans, limit, False)
-    print(f"job        {cores} cores, up to {hours:.2f}h, efficiency {efficiency:.2f}\n")
+    print(f"job        {cores} cores, up to {hours:.2f}h, efficiency {efficiency:.2f}, qos {qos}\n")
     print_table(plans, chosen, cheapest)
     return describe(rates, chosen, cheapest, over, limit)
 
 
 def cmd_submit(rates, argv):
     options, rest = split_options(argv)
-    if "--time" not in options:
-        die("--time is required: no job is submitted without a wall-clock limit")
-    if "-c" not in options:
-        die("-c N is required")
     if not rest:
         die("submit needs a script")
     script = rest[0]
+    cores, hours, efficiency, limit, max_cores, qos = resolve(rates, options)
 
-    cores = int(options["-c"])
-    hours = parse_time(options["--time"])
-    efficiency = float(options.get("--efficiency", 1.0))
-    limit = float(options.get("--budget", rates["spend_limit"]))
-    max_cores = int(options.get("--max-cores", 1 << 30))
-
-    plans = plan_job(rates, cores, hours, efficiency, max_cores)
+    plans = plan_job(rates, cores, hours, efficiency, max_cores, qos)
     chosen, cheapest, over = choose(plans, limit, bool(options.get("--cheap")))
     print_table(plans, chosen, cheapest)
     describe(rates, chosen, cheapest, over, limit)
@@ -204,10 +235,13 @@ def cmd_submit(rates, argv):
     total = int(round(hours * 3600))
     wall = f"{total // 3600:02d}:{(total // 60) % 60:02d}:{total % 60:02d}"
     command = [OATHPASS, "job", "submit", "-p", chosen.name, "-c", str(chosen.cores),
-               "--time", wall]
-    for option in ("-q", "--mem"):
+               "--time", wall, "-q", qos]
+    for option in ("--mem", "--mail-type"):
         if option in options:
             command += [option, options[option]]
+    for flag in ("--no-mail", "--dry-run"):
+        if options.get(flag):
+            command.append(flag)
     command.append(script)
 
     print()
@@ -224,55 +258,61 @@ def selftest():
     failures = []
 
     def check(label, got, want):
-        if isinstance(want, float):
-            good = abs(got - want) < 1e-6
-        else:
-            good = got == want
-        print(f"  {label:<44}{got}   {'OK' if good else 'MISMATCH, want ' + str(want)}")
+        good = abs(got - want) < 1e-6 if isinstance(want, float) else got == want
+        print(f"  {label:<46}{got}   {'OK' if good else 'MISMATCH, want ' + str(want)}")
         if not good:
             failures.append(label)
 
-    plans = plan_job(rates, 64, 4.0, 1.0, 1 << 30)
-    by_name = {p.name: p for p in plans}
-    check("64 cores/4h: intel-sc3-32c cost", by_name["intel-sc3-32c"].cost, 5.12)
-    check("64 cores/4h: amd-ep5-first cost", by_name["amd-ep5-first"].cost, 7.68)
-    check("64 cores/4h: amd-ep5-first wall", by_name["amd-ep5-first"].wall, 1.0)
-    chosen, cheapest, over = choose(plans, 7.8, False)
-    check("64 cores/4h: fastest within cap", chosen.name, "amd-ep5-first")
-    check("64 cores/4h: cheapest", cheapest.name, "intel-sc3-32c")
+    plans = plan_job(rates, 64, 4.0, 1.0, 1 << 30, "normal")
+    by_name = {plan.name: plan for plan in plans}
+    check("64c/4h normal: intel-sc3-32c cost", by_name["intel-sc3-32c"].cost, 5.12)
+    check("64c/4h normal: amd-ep5-first cost", by_name["amd-ep5-first"].cost, 7.68)
+    check("64c/4h normal: amd-ep5-first wall", by_name["amd-ep5-first"].wall, 1.0)
+    check("64c/4h normal: 256 cores allowed (<=200? no)", 256 <= 200, False)
 
-    small = plan_job(rates, 1, 0.5, 1.0, 1)
-    check("1 core: no 32-core partition", any(p.name == "intel-sc3-32c" for p in small), False)
-    check("1 core: billed as one hour", small[0].billed, 1)
-    check("1 core: cost is one core-hour", round(small[0].cost, 2), 0.02)
+    planned = plan_job(rates, 33, 2.0, 1.0, 33, "normal")
+    rounded = {plan.name: plan.cores for plan in planned}
+    check("33 cores, no scaling: 32c rounds to 64", rounded.get("intel-sc3-32c"), 64)
+    check("33 cores, no scaling: intel-sc3 stays 33", rounded.get("intel-sc3"), 33)
 
-    over_plans = plan_job(rates, 64, 20.0, 1.0, 1 << 30)
-    _, _, over = choose(over_plans, 7.8, False)
-    check("64 cores/20h: over the cap", over, True)
+    huge = plan_job(rates, 256, 4.0, 1.0, 1 << 30, "huge")
+    check("256 cores: huge plans exist", len(huge) > 0, True)
+    check("256 cores: amd-ep5-first cost", {p.name: p.cost for p in huge}["amd-ep5-first"], 30.72)
+
+    try:
+        plan_job(rates, 201, 1.0, 1.0, 1 << 30, "normal")
+        over_core = False
+    except SystemExit:
+        over_core = True
+    check("201 cores: refused under normal", over_core, True)
+
+    small = plan_job(rates, 1, 0.5, 1.0, 1, "normal")
+    widths = {plan.name: plan.cores for plan in small}
+    check("1 core: 32c partition requests 32", widths.get("intel-sc3-32c"), 32)
+    check("1 core: intel-sc3 requests 1", widths.get("intel-sc3"), 1)
+    check("1 core: no intel-fat", "intel-fat" in widths, False)
+    check("1 core: billed one hour", small[0].billed, 1)
+    chosen, _, _ = choose(small, 7.8, False)
+    check("1 core: cheapest plan is a 1-core request", chosen.cores, 1)
 
     print("selftest passed" if not failures else "selftest FAILED")
     return 0 if not failures else 1
 
 
 def main(argv):
-    if not argv:
+    if not argv or argv[0] in ("-h", "--help", "help"):
         print(__doc__.strip())
         return 0
-    command, rest = argv[0], argv[1:]
-    if command in ("-h", "--help", "help"):
-        print(__doc__.strip())
-        return 0
-    if command == "--selftest":
+    if argv[0] == "--selftest":
         return selftest()
-    if command in ("list", "show", "log", "cancel", "shell"):
+    if argv[0] in ("list", "show", "log", "cancel", "shell"):
         return passthrough(argv)
-
     rates = load_rates()
-    if command == "cost":
-        return cmd_cost(rates, rest)
-    if command == "submit":
-        return cmd_submit(rates, rest)
-    die(f"unknown command '{command}'")
+    if argv[0] == "cost":
+        return cmd_cost(rates, argv[1:])
+    if argv[0] == "submit":
+        return cmd_submit(rates, argv[1:])
+    die(f"unknown command '{argv[0]}'")
 
 
 if __name__ == "__main__":

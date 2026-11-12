@@ -24,36 +24,104 @@ so the seed never appears on screen -- validates the URI, writes the file, and
 prints the current code for comparison with the authenticator. Without a
 terminal it prints the guide and exits 1 rather than blocking on a prompt.
 
+## Partitions and QoS
+
+| partition | cores | mem | QOS | notes |
+|---|---|---|---|---|
+| `intel-sc3` (default) | 64 | 480G | normal/huge | SSD `/data` |
+| `intel-sc3-32c` | 64 | 480G | normal/huge | **cores must be a multiple of 32** |
+| `amd-ep2`, `amd-ep2-short`, `amdepyc` | 64 | 480G | normal/huge | `/data` |
+| `amd-ep5`, `amd-ep5-first` | 256 | 1.5T | normal/huge | `/data`, **`login05` only** |
+| `intel-fat` | 96 | 3T | `hmem` only | min memory 450G, 30-day limit |
+| GPU partitions | 28–64 | — | gpu/gpu-huge | min 1 GPU; `rt-2080ti-short` 8 h |
+
+| QOS | priority | limit |
+|---|---|---|
+| `normal` (default) | **high** | **≤200 CPU cores**, 30 concurrent |
+| `huge` | **low** | ≤6400 cores |
+| `hmem` | high | memory ≥450G, `intel-fat` only |
+| `gpu` / `gpu-huge` | high / low | ≤8 / ≤32 GPUs |
+
+Consequences that matter:
+
+- **200 cores is a wall.** Wider than that needs `--qos huge`, which is *low*
+  priority: the job may queue far longer than a 64-core `normal` job. `hpc-job`
+  refuses >200 cores without `--qos huge` and keeps the default search inside
+  `normal`.
+- Within one QOS, more resources requested means lower priority.
+- `intel-sc3-32c` pads the request to a multiple of 32; the padding is billed
+  but does not make the job faster (the tool models that correctly).
+- `intel-fat` needs `-p intel-fat --qos hmem --mem 450G`; monthly memory
+  efficiency below 50 % gets an account downgraded to `hmem_strict`.
+
 ## Jobs and money
 
 Slurm bills **allocated cores per started hour** (`cores × rate × ceil(hours)`),
 so a job is a money decision before it is a submission, and an idle allocation
-still bills. The rates are **not** in any tool: they live in
-`hpc-rates.json` in this repository, and `scripts/hpc-rates.py --check`
-compares them with the cluster's own page.
+still bills. The rates and QoS rules are **not** in any tool: they live in
+`hpc-rates.json` in this repository, checked daily by `scripts/hpc-rates.py`.
 
 ```bash
 hpc-job cost -c 64 --time 04:00:00                     # price it first
 hpc-job submit -c 64 --time 04:00:00 ./run.sh          # fastest within the cap
 hpc-job submit --cheap -c 64 --time 04:00:00 ./run.sh  # cheapest
+hpc-job submit -c 256 --time 08:00:00 --qos huge ./run.sh
 hpc-job list | show ID | log ID | cancel ID
 ```
 
-Rules:
-
 - `--time` is mandatory everywhere; the cluster's default is *no limit*.
-- The per-job cap is `spend_limit` in `hpc-rates.json` (currently ¥7.80).
-  Above it, `hpc-job submit` refuses unless `--yes`; a session must ask the
-  user first and quote the estimate.
-- The default is the **fastest plan within the cap**; `--cheap` is the
-  money-first path. `-c` is the job's width, `--max-cores` caps scaling.
-- `intel-sc3-32c` cancels jobs under 32 cores (measured: `CANCELLED by 0`), so
-  it is excluded for small jobs via `min_cores`.
-- `oathpass job` does no pricing: it needs `-p` and `--time` and passes them to
-  `sbatch`. Always go through `hpc-job`.
-- Slurm lives under `/soft`; `oathpass` runs job commands through `bash -lc` for
-  that reason. Cancel what you no longer need, and read MaxRSS in
-  `hpc-job show ID` before raising `--mem` next time.
+- The per-job cap is `spend_limit` in `hpc-rates.json` (¥7.80). Above it,
+  submit refuses unless `--yes`; a session asks the user first and quotes the
+  estimate.
+- Default is the **fastest plan within the cap**; `--cheap` is money-first.
+- `oathpass job` does no pricing: it needs `-p` and `--time`. Always go
+  through `hpc-job`.
+- Slurm lives under `/soft`; `oathpass` runs job commands through `bash -lc`.
+  Cancel what you no longer need, and read MaxRSS in `hpc-job show ID` before
+  raising `--mem`.
+
+## Notifications
+
+`oathpass job submit` sends mail to `<login name>@<mail_domain>` (from
+`~/.config/oathpass/config.json`) with `--mail-type=END,FAIL,TIME_LIMIT_80`
+unless `--no-mail` is passed. The mail is for the **user**: an agent cannot
+read the inbox, so it still polls `hpc-job show ID` / `hpc-job log ID`. The
+80 % trigger exists so the user can cancel before another billed hour starts.
+
+## Storage
+
+- **Home** `/home/<group>Lab/<user>`, **50 GB** — code and configuration only.
+  Large data there, or jobs doing heavy I/O from it, risks job cancellation and
+  a one-day suspension. `df -h ~` shows the quota.
+- **Working directory** `/storage/<group>Lab/<user>` (or `/storage2/…`), 10 TB
+  per group; `lfs quota -uh <user> /storage`.
+- **`/data` SSD** on the compute nodes of `amd-ep2|intel-sc3|intel-sc3-32c|amd-ep5|amd-ep5-first`.
+  Jobs with heavy I/O (>50 concurrent) **must** stage inputs there at job start
+  and write outputs there, then copy back and delete. Files are auto-removed
+  after 1 day (`amd-ep2`), 3 days (`intel-sc3`), 7 days (login05 partitions).
+- Heavy I/O left in the working directory can cap the account at 10 concurrent
+  jobs.
+
+## Software
+
+No `sudo`, no `yum`/`apt`. Use the module system:
+
+```bash
+module avail | grep -i <name>    # or: module av
+module load <name>[/<version>]
+module list
+module purge
+```
+
+`module load anaconda3` then conda for private environments; compile from
+source only as a last resort.
+
+## The documentation itself
+
+`scripts/hpc-docs.py --check` hashes all 22 English pages listed in the site's
+sitemap and reports what changed; the daily upkeep runs it beside
+`hpc-rates.py --check`. When a page moves, read it and update this skill —
+the tables above are only as good as the page they came from.
 
 ## Approval first
 

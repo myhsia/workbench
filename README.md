@@ -18,9 +18,10 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
   kept local: the per-partition rates, a `cost`/`submit` wrapper that enforces the per-job spend
   cap and picks the fastest plan inside it, and a daily check that compares the table with the
   HPC centre's page (`--check`, then `--update` once you accept the change). `hpc-job` calls
-  `oathpass job submit`, which does no pricing. Install both with
-  `ln -sfn ~/.config/opencode/scripts/hpc-job.py ~/.local/bin/hpc-job` and the same for
-  `hpc-rates`.
+  `oathpass job submit`, which does no pricing. `scripts/hpc-docs.py` hashes the 22 English
+  documentation pages and reports what moved (`--check`, then `--update`), so the skill's tables
+  cannot drift silently. Install with `ln -sfn ~/.config/opencode/scripts/<name>.py
+  ~/.local/bin/<name>` for `hpc-job`, `hpc-rates` and `hpc-docs`.
 - `hooks/commit-msg` — installed machine-wide by `git config --global core.hooksPath
   ~/.config/opencode/hooks`; refuses a code/config/CI commit with neither a guide change nor a
   `Guides-Reviewed:` trailer, and skips docs-only, merge/revert, and repos without a guide.

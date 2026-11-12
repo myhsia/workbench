@@ -1676,6 +1676,55 @@ static int cmd_scp(const Config *cfg, int forced_index, int forced_port, int arg
     return 1;
 }
 
+static int cmd_rsync(const Config *cfg, int forced_index, int forced_port, int argc, char **argv) {
+    for (int k = 0; k < argc; k++) {
+        const char *a = argv[k];
+        /* These either replace our transport or run a command on the remote
+           side, which would step straight around the home-directory rule. */
+        if (!strcmp(a, "-e") || !strcmp(a, "--rsh") || !strncmp(a, "--rsh=", 6) ||
+            !strcmp(a, "-M") || !strcmp(a, "--remote-option") || !strncmp(a, "--remote-option=", 16) ||
+            !strcmp(a, "--rsync-path") || !strncmp(a, "--rsync-path=", 13) || !strcmp(a, "--copy-as"))
+            die("refusing '%s': oathpass sets rsync's transport itself", a);
+        if (!scp_arg_safe(a))
+            die("refusing '%s': remote paths must stay inside your home "
+                "(no absolute path, no ~, no ..)",
+                a);
+    }
+    if (argc < 2) die("rsync needs operands, e.g. oathpass rsync -av ./data/ :dest/");
+
+    char sock[CONTROL_PATH_MAX];
+    int port = 0;
+    int rc = ensure_master(cfg, forced_index, forced_port, sock, &port);
+    if (rc) return rc;
+
+    char portbuf[16], target[600], rsh[4200], prefix[700];
+    snprintf(portbuf, sizeof portbuf, "%d", port);
+    snprintf(target, sizeof target, "%s@%s", cfg->user, cfg->host);
+    snprintf(prefix, sizeof prefix, "%s:", target);
+    snprintf(rsh, sizeof rsh, "ssh -S %s -p %d", sock, port);
+
+    char *slots[64];
+    memset(slots, 0, sizeof slots);
+    size_t i = 0;
+    slots[i++] = "rsync";
+    slots[i++] = "-e";
+    slots[i++] = rsh;
+    for (int k = 0; k < argc && i < 60; k++) {
+        if (argv[k][0] == ':' && argv[k][1]) {
+            char *joined = malloc(strlen(prefix) + strlen(argv[k]) + 1);
+            if (!joined) die("out of memory");
+            sprintf(joined, "%s%s", prefix, argv[k] + 1);
+            slots[i++] = joined;
+        } else {
+            slots[i++] = argv[k];
+        }
+    }
+    slots[i] = NULL;
+    execvp(slots[0], slots);
+    die("cannot run rsync: %s", strerror(errno));
+    return 1;
+}
+
 static int cmd_status(const Config *cfg, int forced_index, int forced_port) {
     Node nodes[16];
     int answered = 0;
@@ -2278,6 +2327,7 @@ static int usage(void) {
            "       oathpass run <cmd> [args...]  read-only command inside your home\n"
            "       oathpass sftp -b FILE|-       batch sftp; paths stay inside your home\n"
            "       oathpass scp <args...>        scp; ':path' means <user>@<host>:path\n"
+           "       oathpass rsync <args...>      rsync over the master, same path rules\n"
            "       oathpass status               node, master state, socket\n"
            "       oathpass sockpath             print the socket, for rsync -e\n"
            "       oathpass close                drop the shared connection\n"
@@ -2341,7 +2391,7 @@ int main(int argc, char **argv) {
 
     static const char *const with_config[] = {
         "otp", "target", "doctor", "wrap", "port", "check", "--dry-run",
-        "run", "sftp", "scp",  "status", "sockpath", "close", NULL};
+        "run", "sftp", "scp",  "rsync", "status", "sockpath", "close", NULL};
     int known = 0;
     for (size_t i = 0; with_config[i]; i++)
         if (!strcmp(command, with_config[i])) known = 1;
@@ -2358,6 +2408,7 @@ int main(int argc, char **argv) {
         if (!strcmp(command, "run")) return cmd_run(&cfg, forced_node, forced_port, restc - 1, rest + 1);
         if (!strcmp(command, "sftp")) return cmd_sftp(&cfg, forced_node, forced_port, restc - 1, rest + 1);
         if (!strcmp(command, "scp")) return cmd_scp(&cfg, forced_node, forced_port, restc - 1, rest + 1);
+        if (!strcmp(command, "rsync")) return cmd_rsync(&cfg, forced_node, forced_port, restc - 1, rest + 1);
         if (!strcmp(command, "status")) return cmd_status(&cfg, forced_node, forced_port);
         if (!strcmp(command, "sockpath")) return cmd_sockpath(&cfg, forced_node, forced_port);
         if (!strcmp(command, "close")) return cmd_close(&cfg, forced_port);

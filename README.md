@@ -20,7 +20,7 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
   URI with the terminal echo off), `oathpass check` is a dry run, and `.github/workflows/ci.yml`
   runs both on Ubuntu, macOS
   and Windows (MSYS2). MIT licensed. Because the OATH code is single-use, the first command opens
-  one multiplexed master connection and later commands, `sftp` and `scp` reuse it; `oathpass run`
+  one multiplexed master connection and later commands, `sftp`, `scp` and `rsync` reuse it; `oathpass run`
   is a guarded read-only door for agents (see the `hpc-cluster` skill).
 - `hooks/commit-msg` — installed machine-wide by `git config --global core.hooksPath
   ~/.config/opencode/hooks`; refuses a code/config/CI commit with neither a guide change nor a

@@ -62,6 +62,7 @@ oathpass run grep -rn TITLE .   # no shell syntax, no globbing -- see below
 oathpass run find . -name '*.py'
 oathpass sftp -b -              # batch sftp; interactive sftp is refused
 oathpass scp local.txt :dest/   # ':path' means <user>@<host>:path
+oathpass rsync -av ./data/ :dest/
 oathpass scp :dest/file.txt .   # fetch
 oathpass sockpath               # the socket, for rsync -e
 oathpass close                  # drop the master when finished
@@ -93,8 +94,30 @@ connection opens.
 - `sftp` is **batch-only**: `-b FILE` or `-b -` (stdin); there is no interactive
   mode, because its commands could not be validated. `!` shell escapes are
   refused. To browse, use `oathpass run ls`.
-- `scp` accepts `:path` so the host never has to be typed, and checks every
-  operand's remote half.
+- `scp` and `rsync` accept `:path` so the host never has to be typed, and check
+  every operand's remote half. `rsync` refuses `-e`, `-M`, `--remote-option`,
+  `--rsync-path` and `--copy-as`, because those either replace the transport or
+  run a command on the far side, stepping around that rule.
+
+### What the cluster's own guide requires
+
+The HPC centre's data-transfer page is the authority; these are its rules.
+
+- **Only login nodes** may be used for upload and download. The master is on a
+  login node, so every transfer above complies.
+- **`scp`/`rsync` command line is the recommended route**; graphical SFTP is an
+  acceptable alternative, **FileZilla is explicitly not allowed**, and SCOW
+  handles small files in a browser.
+- **Never let a client save a credential for this account.** The page warns that
+  a TOTP code is dynamic and single-use, so a saved one causes repeated failed
+  logins and the account gets blocked as a suspected attack. `oathpass` never
+  gives a client a code: one code authenticates the master, and scp/sftp/rsync
+  reach the far side over that socket with no authentication at all. `oathpass
+  otp` prints a code for a human to read -- it must never be pasted into a
+  client's saved-password field.
+- **Mind the trailing slash.** `rsync -a dir host:` copies `dir`; `rsync -a
+  dir/ host:` copies its contents. With `--delete` the wrong form removes
+  files, and the page notes deleted cluster data cannot be recovered.
 
 ## Isolation: what this does *not* give you
 

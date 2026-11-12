@@ -103,6 +103,10 @@ expect 1 "run refuses an unlisted cmd" "$TMP/valid.json" run rm -rf .
 expect 1 "run refuses find -exec"      "$TMP/valid.json" run find . -name x -exec ls {} +
 expect 1 "scp refuses .."              "$TMP/valid.json" scp x :../y
 expect 1 "scp refuses an absolute path" "$TMP/valid.json" scp x host:/etc/passwd
+expect 1 "rsync refuses .."            "$TMP/valid.json" rsync x :../y
+expect 1 "rsync refuses its own -e"    "$TMP/valid.json" rsync -e ssh x :y
+expect 1 "rsync refuses --rsync-path"  "$TMP/valid.json" rsync --rsync-path=rm x :y
+expect 3 "rsync with no network"       "$TMP/valid.json" rsync -a ./x :y
 expect 1 "sftp refuses interactive"    "$TMP/valid.json" sftp
 expect 3 "sftp accepts a valid batch"  "$TMP/valid.json" sftp -b "$TMP/batch-ok.txt"
 # A bad *second* line must be caught. If only the first line were validated

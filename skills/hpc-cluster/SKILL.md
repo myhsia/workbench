@@ -37,11 +37,17 @@ terminal it prints the guide and exits 1 rather than blocking on a prompt.
 | GPU partitions | 28–64 | — | gpu/gpu-huge | min 1 GPU; `rt-2080ti-short` 8 h |
 
 **`douwj` is the partition to use.** It is the group's private server (10 nodes × 64 cores, 640
-CPUs) and it is **not billed**, so `hpc-rates.json` carries it at `rate: 0.0` with
-`"preferred": true`; `hpc-job` therefore chooses it for any job that fits one 64-core node, whatever
-the paid partitions would have cost (a 64-core hour on `intel-sc3`/`amd-ep2` is ¥1.28). A job wider
-than 64 cores cannot use it and falls back to the paid partitions — so split such a job into
-per-node pieces rather than asking for 128 cores. `-p douwj` states the choice explicitly.
+CPUs) and it is **not billed**, so `hpc-rates.json` carries it at `rate: 0.0` (a 64-core hour on
+`intel-sc3`/`amd-ep2` is ¥1.28). The *choice* of default is machine-local, not part of the rates
+table: `~/.config/opencode/hpc-default` (untracked, mode 600) holds a partition name, currently
+`douwj`, and `hpc-job` pins every job to it unless told otherwise. Precedence:
+`-p PARTITION` > `$HPC_PARTITION` > that file; `--any` and `--cheap` ignore the default and rank the
+whole table.  Setting it: `hpc-job default douwj` (validated against the rates table), reading it:
+`hpc-job default`.
+
+A job **wider than 64 cores** cannot use `douwj`, and the tool refuses rather than silently
+escalating to a paid partition: `douwj holds 64 cores per node, 128 requested -- pass -p PARTITION
+to use another`. Split such a job into per-node pieces, or pass `-p` deliberately.
 
 | QOS | priority | limit |
 |---|---|---|
@@ -71,18 +77,21 @@ still bills. The rates and QoS rules are **not** in any tool: they live in
 
 ```bash
 hpc-job cost -c 64 --time 04:00:00                     # price it first
-hpc-job submit -c 64 --time 04:00:00 ./run.sh          # douwj: free, preferred
-hpc-job submit --cheap -c 64 --time 04:00:00 ./run.sh  # cheapest
+hpc-job default                                        # which partition, and from where
+hpc-job default douwj                                  # set the machine-local default
+hpc-job submit -c 64 --time 04:00:00 ./run.sh          # the default partition (douwj: free)
+hpc-job submit --cheap -c 64 --time 04:00:00 ./run.sh  # cheapest, ignoring the default
+hpc-job cost -c 4 --time 01:00:00 --any                # rank the whole table
 hpc-job submit -c 64 --time 06:00:00 -p amd-ep2 ./run.sh   # pin the partition
 hpc-job submit -c 256 --time 08:00:00 --qos huge ./run.sh
 hpc-job list | show ID | log ID | cancel ID
 ```
 
-`-p PARTITION` (also `--partition`) restricts `cost` and `submit` to one named
-partition.  Without it the planner takes the partition marked `preferred` in
-`hpc-rates.json` (`douwj`, free) when the job fits it, and otherwise the fastest
-plan inside the cap; on an exact cost tie that would be the first entry of the
-rates file, not necessarily the hardware the user asked for.  Use `-p` whenever
+The partition is pinned by, in order, `-p PARTITION`/`--partition`, `$HPC_PARTITION`, and the file
+`~/.config/opencode/hpc-default` (machine-local, untracked); `hpc-job` prints which one applied, as
+`partition  douwj  (from /Users/…/hpc-default)`.  `--any` and `--cheap` drop the pin and rank the
+whole table, which is what a node comparison needs; on an exact cost tie that ranking takes the
+first entry of the rates file, not necessarily the hardware the user asked for, so use `-p` whenever
 the choice of hardware is part of the measurement.
 
 - `--time` is mandatory everywhere; the cluster's default is *no limit*.

@@ -225,10 +225,11 @@ permission rule below prompts the user on every shell command that names `oathpa
 `oathpass close`.  The `hpc-cluster` skill carries the workflow, the guarded `run` door, and the
 honest note that the guard is a tripwire rather than a jail.
 
-State the estimate with the partition in mind: the group's own **`douwj`** partition (10 nodes,
-64 cores each) is free, so a job that fits one node costs nothing and `hpc-job` selects it by
-default.  A request wider than 64 cores cannot use it: split the work into per-node jobs instead of
-escalating to a paid partition.
+State the estimate with the partition in mind: the machine-local default partition (see
+`hpc-job default`; currently `douwj`, the group's own 10-node, 64-core server) is free, so a job
+that fits one node costs nothing.  A request wider than 64 cores cannot use it, and the tool refuses
+rather than silently escalating to a paid partition: split the work into per-node jobs, or pass
+`-p` deliberately.
 
 ## Keeping these rules current
 

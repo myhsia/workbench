@@ -73,8 +73,7 @@
         "normal",
         "huge"
       ],
-      "ssd_data": true,
-      "preferred": true
+      "ssd_data": true
     },
     "amd-ep2-short": {
       "rate": 0.02,

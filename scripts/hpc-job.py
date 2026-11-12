@@ -30,6 +30,7 @@ import sys
 HERE = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.dirname(HERE)
 RATES = os.path.join(ROOT, "hpc-rates.json")
+DEFAULT_PARTITION_FILE = os.path.join(ROOT, "hpc-default")
 OATHPASS = "oathpass"
 DEFAULT_QOS = "normal"
 
@@ -126,6 +127,10 @@ def plan_job(rates, cores, hours, efficiency, max_cores, qos_name, only = None):
         billed = max(1, math.ceil(wall - 1e-9))
         plans.append(Plan(name, spec, request, wall, billed, spec["rate"] * request * billed, qos_name))
     if not plans:
+        if only:
+            capacity = rates["partitions"][only].get("cores", 0)
+            die(f"{only} holds {capacity} cores per node, {cores} requested "
+                f"-- pass -p PARTITION to use another")
         die(f"no partition can hold {cores} cores under QoS {qos_name}")
     return plans
 
@@ -134,12 +139,6 @@ def choose(plans, limit, cheap):
     cheapest = min(plans, key = lambda plan: plan.cost)
     if cheap:
         return cheapest, cheapest, False
-    # A partition can be marked `preferred` (the group's own, free node): it wins
-    # whenever it can hold the job, whatever the paid partitions would have cost.
-    preferred = [plan for plan in plans if plan.spec.get("preferred")]
-    if preferred:
-        pick = max(preferred, key = lambda plan: (plan.cores, -plan.cost))
-        return pick, cheapest, pick.cost > limit + 1e-9
     within = [plan for plan in plans if plan.cost <= limit + 1e-9]
     if not within:
         return cheapest, cheapest, True
@@ -155,8 +154,6 @@ def print_table(plans, chosen, cheapest):
             marks += "  <-"
         if plan is cheapest and plan is not chosen:
             marks += " (cheapest)"
-        if plan.spec.get("preferred"):
-            marks += " (preferred)"
         print(f"{plan.name:<16}{plan.cores:>7}{plan.spec['rate']:>9.3f}{plan.wall_text():>9}"
               f"{plan.billed:>7}h{plan.cost:>10.2f}  {plan.qos}{marks}")
 
@@ -194,7 +191,7 @@ def split_options(argv):
             options[item] = argv[index + 1]
             index += 2
             continue
-        if item in ("--cheap", "--yes", "--no-mail", "--dry-run"):
+        if item in ("--cheap", "--yes", "--no-mail", "--dry-run", "--any"):
             options[item] = True
             index += 1
             continue
@@ -214,51 +211,69 @@ def resolve(rates, options):
     limit = float(options.get("--budget", rates["spend_limit"]))
     max_cores = int(options.get("--max-cores", 1 << 30))
     qos = options.get("--qos", DEFAULT_QOS)
-    only = options.get("-p") or options.get("--partition")
-    return cores, hours, efficiency, limit, max_cores, qos, only
+    # Partition choice: an explicit -p wins, then the machine-local default
+    # ($HPC_PARTITION, then ~/.config/opencode/hpc-default).  --any and --cheap
+    # ignore the local default, because both state a different intent.
+    only, source = (options.get("-p") or options.get("--partition")), "-p"
+    if not only and not options.get("--any") and not options.get("--cheap"):
+        only, source = default_partition()
+    if only and only not in rates["partitions"]:
+        die(f"unknown partition '{only}' (see hpc-rates.json)")
+    return cores, hours, efficiency, limit, max_cores, qos, only, source
+
+
+def default_partition():
+    """The machine-local default partition, and where it came from."""
+    env = os.environ.get("HPC_PARTITION")
+    if env and env.strip():
+        return env.strip(), "HPC_PARTITION"
+    try:
+        with open(DEFAULT_PARTITION_FILE) as handle:
+            name = handle.read().strip()
+    except FileNotFoundError:
+        return None, None
+    return (name, DEFAULT_PARTITION_FILE) if name else (None, None)
+
+
+def print_partition(only, source):
+    """One line stating which partition the job is pinned to, and why."""
+    if only:
+        print(f"partition  {only}  (from {source})")
+
+
+def cmd_default(rates, argv):
+    """Show or set the machine-local default partition."""
+    if not argv:
+        only, source = default_partition()
+        if only:
+            print(f"{only}  (from {source})")
+        else:
+            print("none  (the planner takes the fastest plan inside the cap; "
+                  f"set one with: hpc-job default NAME)")
+        return 0
+    name = argv[0]
+    if name not in rates["partitions"]:
+        die(f"unknown partition '{name}' (see hpc-rates.json)")
+    spec = rates["partitions"][name]
+    with open(DEFAULT_PARTITION_FILE, "w") as handle:
+        handle.write(name + "\n")
+    os.chmod(DEFAULT_PARTITION_FILE, 0o600)
+    print(f"default    {name}  ({DEFAULT_PARTITION_FILE})")
+    print(f"           {spec['cores']} cores, rate {spec['rate']} per {spec.get('unit', 'core-hour')}")
+    return 0
 
 
 def cmd_cost(rates, argv):
     options, rest = split_options(argv)
     if rest:
         die(f"unexpected argument '{rest[0]}'")
-    cores, hours, efficiency, limit, max_cores, qos, only = resolve(rates, options)
-    plans = plan_job(rates, cores, hours, efficiency, max_cores, qos, only)
-    chosen, cheapest, over = choose(plans, limit, False)
-    print(f"job        {cores} cores, up to {hours:.2f}h, efficiency {efficiency:.2f}, qos {qos}\n")
-    print_table(plans, chosen, cheapest)
-    return describe(rates, chosen, cheapest, over, limit)
-
-
-def cmd_submit(rates, argv):
-    options, rest = split_options(argv)
-    if not rest:
-        die("submit needs a script")
-    script = rest[0]
-    cores, hours, efficiency, limit, max_cores, qos, only = resolve(rates, options)
-
+    cores, hours, efficiency, limit, max_cores, qos, only, source = resolve(rates, options)
     plans = plan_job(rates, cores, hours, efficiency, max_cores, qos, only)
     chosen, cheapest, over = choose(plans, limit, bool(options.get("--cheap")))
+    print(f"job        {cores} cores, up to {hours:.2f}h, efficiency {efficiency:.2f}, qos {qos}\n")
+    print_partition(only, source)
     print_table(plans, chosen, cheapest)
-    describe(rates, chosen, cheapest, over, limit)
-    if over and not options.get("--yes"):
-        die(f"{chosen.cost:.2f} is above the {limit:.2f} cap -- pass --yes to accept it")
-
-    total = int(round(hours * 3600))
-    wall = f"{total // 3600:02d}:{(total // 60) % 60:02d}:{total % 60:02d}"
-    command = [OATHPASS, "job", "submit", "-p", chosen.name, "-c", str(chosen.cores),
-               "--time", wall, "-q", qos]
-    for option in ("--mem", "--mail-type"):
-        if option in options:
-            command += [option, options[option]]
-    for flag in ("--no-mail", "--dry-run"):
-        if options.get(flag):
-            command.append(flag)
-    command.append(script)
-
-    print()
-    print("running    " + " ".join(command))
-    return subprocess.call(command)
+    return describe(rates, chosen, cheapest, over, limit)
 
 
 def login_name():
@@ -346,10 +361,11 @@ def cmd_submit(rates, argv):
     if not rest:
         die("submit needs a script")
     script = rest[0]
-    cores, hours, efficiency, limit, max_cores, qos, only = resolve(rates, options)
+    cores, hours, efficiency, limit, max_cores, qos, only, source = resolve(rates, options)
 
     plans = plan_job(rates, cores, hours, efficiency, max_cores, qos, only)
     chosen, cheapest, over = choose(plans, limit, bool(options.get("--cheap")))
+    print_partition(only, source)
     print_table(plans, chosen, cheapest)
     describe(rates, chosen, cheapest, over, limit)
     if over and not options.get("--yes"):
@@ -438,6 +454,25 @@ def selftest():
     chosen, _, _ = choose(small, 7.8, False)
     check("1 core: cheapest plan is a 1-core request", chosen.cores, 1)
 
+    # partition choice: -p wins, --any ignores the local default, and the
+    # default file (or $HPC_PARTITION) pins the plans when neither is given
+    os.environ["HPC_PARTITION"] = "intel-sc3"
+    name, source = default_partition()
+    check("default: $HPC_PARTITION wins", (name, source), ("intel-sc3", "HPC_PARTITION"))
+    _, _, _, _, _, _, pinned, src = resolve(rates, {"-c": "8", "--time": "01:00:00"})
+    check("default: no -p uses the default", (pinned, src), ("intel-sc3", "HPC_PARTITION"))
+    _, _, _, _, _, _, pinned, src = resolve(rates, {"-c": "8", "--time": "01:00:00", "-p": "amd-ep2"})
+    check("default: -p beats the default", (pinned, src), ("amd-ep2", "-p"))
+    _, _, _, _, _, _, pinned, _ = resolve(rates, {"-c": "8", "--time": "01:00:00", "--any": True})
+    check("default: --any ignores it", pinned, None)
+    try:
+        plan_job(rates, 128, 1.0, 1.0, 1 << 30, "normal", "douwj")
+        strict = False
+    except SystemExit:
+        strict = True
+    check("default: a job wider than the pin is refused", strict, True)
+    del os.environ["HPC_PARTITION"]
+
     print("selftest passed" if not failures else "selftest FAILED")
     return 0 if not failures else 1
 
@@ -452,6 +487,8 @@ def main(argv):
     command = argv[0]
     if command == "cost":
         return cmd_cost(rates, argv[1:])
+    if command == "default":
+        return cmd_default(rates, argv[1:])
     if command == "submit":
         return cmd_submit(rates, argv[1:])
     if command == "list":

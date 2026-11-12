@@ -8,6 +8,7 @@ proxy
 service.json
 cli.json
 .update-check
+hpc-default
 .models-check
 opencode.json.bak
 *.tmp

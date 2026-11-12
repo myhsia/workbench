@@ -64,6 +64,18 @@
       ],
       "ssd_data": true
     },
+    "douwj": {
+      "rate": 0.0,
+      "cores": 64,
+      "min_cores": 1,
+      "unit": "core-hour",
+      "qos": [
+        "normal",
+        "huge"
+      ],
+      "ssd_data": true,
+      "preferred": true
+    },
     "amd-ep2-short": {
       "rate": 0.02,
       "cores": 64,

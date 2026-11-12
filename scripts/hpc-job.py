@@ -87,8 +87,9 @@ def round_up(value, step):
     return step * math.ceil(value / step) if step > 1 else value
 
 
-def plan_job(rates, cores, hours, efficiency, max_cores, qos_name):
-    """Plans for one QoS.  `cores` is the job width, `max_cores` how far it may scale."""
+def plan_job(rates, cores, hours, efficiency, max_cores, qos_name, only = None):
+    """Plans for one QoS.  `cores` is the job width, `max_cores` how far it may
+    scale, `only` restricts the plans to one named partition."""
     qos = rates["qos"].get(qos_name)
     if qos is None:
         die(f"unknown QoS '{qos_name}'")
@@ -102,6 +103,8 @@ def plan_job(rates, cores, hours, efficiency, max_cores, qos_name):
         if spec.get("unit", "core-hour") != "core-hour":
             continue  # GPU partitions bill per card-hour; not modelled here
         if qos_name not in spec.get("qos", []):
+            continue
+        if only and name != only:
             continue
         capacity = int(spec.get("cores", 0))
         if capacity < cores or cores < int(spec.get("min_cores", 1)):
@@ -131,6 +134,12 @@ def choose(plans, limit, cheap):
     cheapest = min(plans, key = lambda plan: plan.cost)
     if cheap:
         return cheapest, cheapest, False
+    # A partition can be marked `preferred` (the group's own, free node): it wins
+    # whenever it can hold the job, whatever the paid partitions would have cost.
+    preferred = [plan for plan in plans if plan.spec.get("preferred")]
+    if preferred:
+        pick = max(preferred, key = lambda plan: (plan.cores, -plan.cost))
+        return pick, cheapest, pick.cost > limit + 1e-9
     within = [plan for plan in plans if plan.cost <= limit + 1e-9]
     if not within:
         return cheapest, cheapest, True
@@ -144,8 +153,10 @@ def print_table(plans, chosen, cheapest):
         marks = ""
         if plan is chosen:
             marks += "  <-"
-        if plan is cheapest:
+        if plan is cheapest and plan is not chosen:
             marks += " (cheapest)"
+        if plan.spec.get("preferred"):
+            marks += " (preferred)"
         print(f"{plan.name:<16}{plan.cores:>7}{plan.spec['rate']:>9.3f}{plan.wall_text():>9}"
               f"{plan.billed:>7}h{plan.cost:>10.2f}  {plan.qos}{marks}")
 
@@ -203,15 +214,16 @@ def resolve(rates, options):
     limit = float(options.get("--budget", rates["spend_limit"]))
     max_cores = int(options.get("--max-cores", 1 << 30))
     qos = options.get("--qos", DEFAULT_QOS)
-    return cores, hours, efficiency, limit, max_cores, qos
+    only = options.get("-p") or options.get("--partition")
+    return cores, hours, efficiency, limit, max_cores, qos, only
 
 
 def cmd_cost(rates, argv):
     options, rest = split_options(argv)
     if rest:
         die(f"unexpected argument '{rest[0]}'")
-    cores, hours, efficiency, limit, max_cores, qos = resolve(rates, options)
-    plans = plan_job(rates, cores, hours, efficiency, max_cores, qos)
+    cores, hours, efficiency, limit, max_cores, qos, only = resolve(rates, options)
+    plans = plan_job(rates, cores, hours, efficiency, max_cores, qos, only)
     chosen, cheapest, over = choose(plans, limit, False)
     print(f"job        {cores} cores, up to {hours:.2f}h, efficiency {efficiency:.2f}, qos {qos}\n")
     print_table(plans, chosen, cheapest)
@@ -223,9 +235,9 @@ def cmd_submit(rates, argv):
     if not rest:
         die("submit needs a script")
     script = rest[0]
-    cores, hours, efficiency, limit, max_cores, qos = resolve(rates, options)
+    cores, hours, efficiency, limit, max_cores, qos, only = resolve(rates, options)
 
-    plans = plan_job(rates, cores, hours, efficiency, max_cores, qos)
+    plans = plan_job(rates, cores, hours, efficiency, max_cores, qos, only)
     chosen, cheapest, over = choose(plans, limit, bool(options.get("--cheap")))
     print_table(plans, chosen, cheapest)
     describe(rates, chosen, cheapest, over, limit)
@@ -334,9 +346,9 @@ def cmd_submit(rates, argv):
     if not rest:
         die("submit needs a script")
     script = rest[0]
-    cores, hours, efficiency, limit, max_cores, qos = resolve(rates, options)
+    cores, hours, efficiency, limit, max_cores, qos, only = resolve(rates, options)
 
-    plans = plan_job(rates, cores, hours, efficiency, max_cores, qos)
+    plans = plan_job(rates, cores, hours, efficiency, max_cores, qos, only)
     chosen, cheapest, over = choose(plans, limit, bool(options.get("--cheap")))
     print_table(plans, chosen, cheapest)
     describe(rates, chosen, cheapest, over, limit)

@@ -28,12 +28,20 @@ terminal it prints the guide and exits 1 rather than blocking on a prompt.
 
 | partition | cores | mem | QOS | notes |
 |---|---|---|---|---|
-| `intel-sc3` (default) | 64 | 480G | normal/huge | SSD `/data` |
+| **`douwj`** | 64 | 250G | normal/huge | **the group's own, free**, 10 nodes, `AllowGroups=douwenjie,hpc` |
+| `intel-sc3` (Slurm default) | 64 | 480G | normal/huge | SSD `/data` |
 | `intel-sc3-32c` | 64 | 480G | normal/huge | **cores must be a multiple of 32** |
-| `amd-ep2`, `amd-ep2-short`, `amdepyc` | 64 | 480G | normal/huge | `/data` |
+| `amd-ep2`, `amd-ep2-short`, `amdepyc` | 64 | 480G | normal/huge | `/data`; `amd-ep2-short` and `amdepyc` are in the rates file but **absent from `scontrol show partition`** |
 | `amd-ep5`, `amd-ep5-first` | 256 | 1.5T | normal/huge | `/data`, **`login05` only** |
 | `intel-fat` | 96 | 3T | `hmem` only | min memory 450G, 30-day limit |
 | GPU partitions | 28–64 | — | gpu/gpu-huge | min 1 GPU; `rt-2080ti-short` 8 h |
+
+**`douwj` is the partition to use.** It is the group's private server (10 nodes × 64 cores, 640
+CPUs) and it is **not billed**, so `hpc-rates.json` carries it at `rate: 0.0` with
+`"preferred": true`; `hpc-job` therefore chooses it for any job that fits one 64-core node, whatever
+the paid partitions would have cost (a 64-core hour on `intel-sc3`/`amd-ep2` is ¥1.28). A job wider
+than 64 cores cannot use it and falls back to the paid partitions — so split such a job into
+per-node pieces rather than asking for 128 cores. `-p douwj` states the choice explicitly.
 
 | QOS | priority | limit |
 |---|---|---|
@@ -63,11 +71,19 @@ still bills. The rates and QoS rules are **not** in any tool: they live in
 
 ```bash
 hpc-job cost -c 64 --time 04:00:00                     # price it first
-hpc-job submit -c 64 --time 04:00:00 ./run.sh          # fastest within the cap
+hpc-job submit -c 64 --time 04:00:00 ./run.sh          # douwj: free, preferred
 hpc-job submit --cheap -c 64 --time 04:00:00 ./run.sh  # cheapest
+hpc-job submit -c 64 --time 06:00:00 -p amd-ep2 ./run.sh   # pin the partition
 hpc-job submit -c 256 --time 08:00:00 --qos huge ./run.sh
 hpc-job list | show ID | log ID | cancel ID
 ```
+
+`-p PARTITION` (also `--partition`) restricts `cost` and `submit` to one named
+partition.  Without it the planner takes the partition marked `preferred` in
+`hpc-rates.json` (`douwj`, free) when the job fits it, and otherwise the fastest
+plan inside the cap; on an exact cost tie that would be the first entry of the
+rates file, not necessarily the hardware the user asked for.  Use `-p` whenever
+the choice of hardware is part of the measurement.
 
 - `--time` is mandatory everywhere; the cluster's default is *no limit*.
 - The per-job cap is `spend_limit` in `hpc-rates.json` (¥7.80). Above it,

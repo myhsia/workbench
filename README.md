@@ -18,7 +18,7 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
   kept local: the per-partition rates, a `cost`/`submit` wrapper that enforces the per-job spend
   cap and picks the fastest plan inside it, and a daily check that compares the table with the
   HPC centre's page (`--check`, then `--update` once you accept the change). `hpc-job` calls
-  `oathpass job submit`, which does no pricing. `scripts/hpc-docs.py` hashes the 22 English
+  `oathpass` itself, which carries no Slurm code at all. `scripts/hpc-docs.py` hashes the 22 English
   documentation pages and reports what moved (`--check`, then `--update`), so the skill's tables
   cannot drift silently. Install with `ln -sfn ~/.config/opencode/scripts/<name>.py
   ~/.local/bin/<name>` for `hpc-job`, `hpc-rates` and `hpc-docs`.

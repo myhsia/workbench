@@ -249,8 +249,139 @@ def cmd_submit(rates, argv):
     return subprocess.call(command)
 
 
-def passthrough(argv):
-    return subprocess.call([OATHPASS, "job"] + argv)
+def login_name():
+    """The cluster login name, read from oathpass's own config."""
+    result = subprocess.run([OATHPASS, "target"], capture_output = True, text = True)
+    if result.returncode != 0:
+        die("oathpass target failed -- is the config in place?")
+    target = result.stdout.strip()
+    if "@" not in target:
+        die(f"unexpected oathpass target output: {target!r}")
+    return target.split("@", 1)[0]
+
+
+def remote(command, stdin = None, capture = False):
+    """Run a command on the login node through the master connection.
+
+    oathpass passes the string to ssh, which hands it to the remote shell; the
+    login shell is what puts Slurm on PATH, so every command is wrapped in
+    `bash -lc`.  The wrapper uses single quotes, so the command may not contain
+    one.
+    """
+    if "'" in command:
+        die("internal: a remote command may not contain a single quote")
+    argv = [OATHPASS, f"bash -lc '{command}'"]
+    if capture:
+        return subprocess.run(argv, stdin = stdin, capture_output = True, text = True)
+    return subprocess.run(argv, stdin = stdin)
+
+
+def job_id_ok(value):
+    return bool(value) and value.isdigit()
+
+
+def cmd_list(rates, argv):
+    return remote('squeue -u "$USER" -o "%.8i %.20j %.9T %.11M %.5D %R"').returncode
+
+
+def cmd_show(argv):
+    if not argv or not job_id_ok(argv[0]):
+        die("show needs a numeric job id")
+    command = (f"sacct -j {argv[0]} --noheader --format=JobID%20,JobName%24,State%12,"
+               "Elapsed%12,AllocCPUS%10,ReqMem%10,MaxRSS%12,ExitCode%10")
+    return subprocess.run([OATHPASS, f"bash -lc '{command}'"]).returncode
+
+
+def cmd_log(argv):
+    if not argv or not job_id_ok(argv[0]):
+        die("log needs a numeric job id")
+    return remote(f"cat jobs/slurm-{argv[0]}.out").returncode
+
+
+def cmd_cancel(argv):
+    if not argv or not job_id_ok(argv[0]):
+        die("cancel needs a numeric job id")
+    return remote(f"scancel {argv[0]}").returncode
+
+
+def cmd_shell(rates, argv):
+    options, rest = split_options(argv)
+    if "--time" not in options:
+        die("--time is required: no interactive session without a wall-clock limit")
+    if "-p" not in options:
+        die("-p PARTITION is required")
+    total = int(round(parse_time(options["--time"]) * 3600))
+    wall = f"{total // 3600:02d}:{(total // 60) % 60:02d}:{total % 60:02d}"
+    cores = int(options.get("-c", 1))
+    command = f"srun --pty --time={wall} -c {cores} -p {options['-p']}"
+    if "-q" in options:
+        command += f" -q {options['-q']}"
+    return remote(f"{command} bash").returncode
+
+
+def mail_flags(rates, options):
+    if options.get("--no-mail"):
+        return ""
+    domain = rates.get("mail_domain")
+    if not domain:
+        return ""
+    triggers = options.get("--mail-type", "END,FAIL,TIME_LIMIT_80")
+    return f" --mail-user={login_name()}@{domain} --mail-type={triggers}"
+
+
+def cmd_submit(rates, argv):
+    options, rest = split_options(argv)
+    if not rest:
+        die("submit needs a script")
+    script = rest[0]
+    cores, hours, efficiency, limit, max_cores, qos = resolve(rates, options)
+
+    plans = plan_job(rates, cores, hours, efficiency, max_cores, qos)
+    chosen, cheapest, over = choose(plans, limit, bool(options.get("--cheap")))
+    print_table(plans, chosen, cheapest)
+    describe(rates, chosen, cheapest, over, limit)
+    if over and not options.get("--yes"):
+        die(f"{chosen.cost:.2f} is above the {limit:.2f} cap -- pass --yes to accept it")
+
+    total = int(round(hours * 3600))
+    wall = f"{total // 3600:02d}:{(total // 60) % 60:02d}:{total % 60:02d}"
+    base = os.path.basename(script)
+    if not base or " " in base or "'" in base:
+        die("the script name must not contain spaces or quotes")
+
+    command = (f"sbatch --parsable -o jobs/slurm-%j.out -J {base[:40]} -p {chosen.name} "
+               f"-c {chosen.cores} -t {wall} -q {qos}")
+    if "--mem" in options:
+        command += f" --mem={options['--mem']}"
+    command += mail_flags(rates, options)
+    command += f" jobs/{base}"
+
+    if options.get("--dry-run"):
+        print()
+        print(command)
+        return 0
+
+    with open(script, "rb") as handle:
+        upload = remote(f"mkdir -p jobs && cat > jobs/{base}", stdin = handle)
+    if upload.returncode != 0:
+        return upload.returncode
+
+    print()
+    result = remote(command, capture = True)
+    if result.returncode != 0:
+        sys.stderr.write(result.stderr)
+        return result.returncode
+    job_id = result.stdout.strip().split(";")[0]
+    if not job_id_ok(job_id):
+        die(f"sbatch did not return a job id (got {result.stdout.strip()!r})")
+
+    print(f"submitted  job {job_id}  on {chosen.name}, {chosen.cores} cores, wall {wall}")
+    if rates.get("mail_domain") and not options.get("--no-mail"):
+        print(f"notify     {login_name()}@{rates['mail_domain']}  "
+              f"({options.get('--mail-type', 'END,FAIL,TIME_LIMIT_80')})")
+    print(f"watch      hpc-job show {job_id}   /   hpc-job log {job_id}")
+    print(f"cancel     hpc-job cancel {job_id}")
+    return 0
 
 
 def selftest():
@@ -305,13 +436,22 @@ def main(argv):
         return 0
     if argv[0] == "--selftest":
         return selftest()
-    if argv[0] in ("list", "show", "log", "cancel", "shell"):
-        return passthrough(argv)
     rates = load_rates()
-    if argv[0] == "cost":
+    command = argv[0]
+    if command == "cost":
         return cmd_cost(rates, argv[1:])
-    if argv[0] == "submit":
+    if command == "submit":
         return cmd_submit(rates, argv[1:])
+    if command == "list":
+        return cmd_list(rates, argv[1:])
+    if command == "show":
+        return cmd_show(argv[1:])
+    if command == "log":
+        return cmd_log(argv[1:])
+    if command == "cancel":
+        return cmd_cancel(argv[1:])
+    if command == "shell":
+        return cmd_shell(rates, argv[1:])
     die(f"unknown command '{argv[0]}'")
 
 

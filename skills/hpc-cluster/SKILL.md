@@ -74,17 +74,20 @@ hpc-job list | show ID | log ID | cancel ID
   submit refuses unless `--yes`; a session asks the user first and quotes the
   estimate.
 - Default is the **fastest plan within the cap**; `--cheap` is money-first.
-- `oathpass job` does no pricing: it needs `-p` and `--time`. Always go
-  through `hpc-job`.
+- `oathpass` has **no job surface**: it is the authenticated connection.
+  `hpc-job` builds the Slurm command itself and runs it through the master
+  (`oathpass 'bash -lc "…"'`), so always go through `hpc-job`.
 - Slurm lives under `/soft`; `oathpass` runs job commands through `bash -lc`.
   Cancel what you no longer need, and read MaxRSS in `hpc-job show ID` before
   raising `--mem`.
 
 ## Notifications
 
-`oathpass job submit` sends mail to `<login name>@<mail_domain>` (from
-`~/.config/oathpass/config.json`) with `--mail-type=END,FAIL,TIME_LIMIT_80`
-unless `--no-mail` is passed. The mail is for the **user**: an agent cannot
+`hpc-job submit` sends mail to `<login name>@<mail_domain>` (the domain is in
+`hpc-rates.json`, the name comes from `oathpass target`) with
+`--mail-type=END,FAIL,TIME_LIMIT_80`, unless `--no-mail` is passed.
+`hpc-job submit --dry-run` prints the exact `sbatch` line without spending
+anything. The mail is for the **user**: an agent cannot
 read the inbox, so it still polls `hpc-job show ID` / `hpc-job log ID`. The
 80 % trigger exists so the user can cancel before another billed hour starts.
 

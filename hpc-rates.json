@@ -67,6 +67,7 @@
     "douwj": {
       "rate": 0.0,
       "cores": 64,
+      "nodes": 10,
       "min_cores": 1,
       "unit": "core-hour",
       "qos": [

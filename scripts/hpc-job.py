@@ -17,8 +17,9 @@ cluster's own page -- they are not compiled into any tool.
 The default QoS is `normal`, which caps a job at 200 cores but has high
 priority; `huge` allows 6400 and queues lower.  A job wider than 200 cores is
 refused unless `--qos huge` is given, so the fast plan never silently buys a
-long wait.  The submission itself is `oathpass job submit`, which rides the
-single-use master connection and adds the completion mail.
+long wait.  The `sbatch` line is built here and run through
+`oathpass 'bash -lc ...'`, so it rides the single-use master connection; the
+completion mail is appended to that same command.
 """
 
 import json
@@ -107,7 +108,7 @@ def plan_job(rates, cores, hours, efficiency, max_cores, qos_name, only = None):
             continue
         if only and name != only:
             continue
-        capacity = int(spec.get("cores", 0))
+        capacity = int(spec.get("cores", 0)) * int(spec.get("nodes", 1))
         if capacity < cores or cores < int(spec.get("min_cores", 1)):
             continue
         if hours > float(spec.get("max_hours", 1e9)):
@@ -128,8 +129,10 @@ def plan_job(rates, cores, hours, efficiency, max_cores, qos_name, only = None):
         plans.append(Plan(name, spec, request, wall, billed, spec["rate"] * request * billed, qos_name))
     if not plans:
         if only:
-            capacity = rates["partitions"][only].get("cores", 0)
-            die(f"{only} holds {capacity} cores per node, {cores} requested "
+            spec = rates["partitions"][only]
+            capacity = int(spec.get("cores", 0)) * int(spec.get("nodes", 1))
+            die(f"{only} holds {capacity} cores ({spec.get('cores', 0)} x "
+                f"{spec.get('nodes', 1)} nodes), {cores} requested "
                 f"-- pass -p PARTITION to use another")
         die(f"no partition can hold {cores} cores under QoS {qos_name}")
     return plans
@@ -466,11 +469,17 @@ def selftest():
     _, _, _, _, _, _, pinned, _ = resolve(rates, {"-c": "8", "--time": "01:00:00", "--any": True})
     check("default: --any ignores it", pinned, None)
     try:
-        plan_job(rates, 128, 1.0, 1.0, 1 << 30, "normal", "douwj")
+        plan_job(rates, 641, 1.0, 1.0, 1 << 30, "huge", "douwj")
         strict = False
     except SystemExit:
         strict = True
-    check("default: a job wider than the pin is refused", strict, True)
+    check("default: a job beyond the pin is refused", strict, True)
+
+    # douwj is 10 nodes x 64 cores: a 128-core job fits the partition, not one node
+    wide = plan_job(rates, 128, 2.0, 1.0, 1 << 30, "normal", "douwj")
+    check("128 cores on douwj: feasible", len(wide), 1)
+    check("128 cores on douwj: costs nothing", wide[0].cost, 0.0)
+    check("128 cores on douwj: capacity is 10 x 64", wide[0].cores, 640)
     del os.environ["HPC_PARTITION"]
 
     print("selftest passed" if not failures else "selftest FAILED")

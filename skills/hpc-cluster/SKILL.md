@@ -45,9 +45,10 @@ table: `~/.config/opencode/hpc-default` (untracked, mode 600) holds a partition 
 whole table.  Setting it: `hpc-job default douwj` (validated against the rates table), reading it:
 `hpc-job default`.
 
-A job **wider than 64 cores** cannot use `douwj`, and the tool refuses rather than silently
-escalating to a paid partition: `douwj holds 64 cores per node, 128 requested -- pass -p PARTITION
-to use another`. Split such a job into per-node pieces, or pass `-p` deliberately.
+`douwj` is free for a job up to its **640 cores** (10 nodes x 64), so such a job costs nothing; only
+a request beyond that, or one needing another node type, goes to a paid partition, and the tool
+refuses rather than escalating silently: `douwj holds 640 cores (64 x 10 nodes), 700 requested --
+pass -p PARTITION to use another`.
 
 | QOS | priority | limit |
 |---|---|---|

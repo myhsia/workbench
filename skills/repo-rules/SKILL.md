@@ -221,6 +221,42 @@ warning and lets the commit through.  `--no-verify` is the deliberate bypass.
   pins the first directory, so state the limitation where the hook is written, not only in a
   review note.
 
+### Distribution binaries (PyInstaller on CI)
+
+- **Build against the oldest glibc the consumer has, not the runner's.** A wheel's `manylinux_2_28`
+  tag is a floor, and a frozen binary built on `ubuntu-22.04` (glibc 2.35) does not start on a
+  Rocky 9 node (2.34). Build inside `quay.io/pypa/manylinux_2_28_*`, then prove it twice: audit
+  `objdump -T` for the highest `GLIBC_` symbol over every bundled ELF, and run the packed artifact
+  in a bare target-OS container. Check the target's `ldd --version` before writing the matrix.
+- **A frozen entry script must not share its name with a package it imports.** `dmrg.py` doing
+  `from dmrg import chain` freezes as a module named `dmrg` and shadows the package
+  ("partially initialized module"). Copy the driver to `<driver>_main.py` and freeze the copy.
+- **Publish releases, not workflow artifacts, once assets are tens of MB.** Artifacts count
+  against the account's storage (500 MB private); three ~50–80 MB assets per build exhaust it on
+  the first run, while release assets do not. Tag with the commit (`bin-<sha7>`) so source and
+  binary cannot drift, and let the download script derive the tag from `git rev-parse`.
+- **Ship a `--version` and a `--selftest` in the artifact.** `--version` prints the git sha, the
+  interpreter and the *loaded* dependency versions (import nothing extra just to print a number);
+  `--selftest` runs a small deterministic real computation so a downloaded binary is verified on
+  the target machine, not on the build machine. Bake the identity in with a generated JSON file
+  collected at freeze time.
+- **A build container may have no `git`.** Pass the commit in as an environment variable and fail
+  the build when the frozen `--version` does not echo it; otherwise the Linux asset reports
+  `sha=unknown` while the macOS one is correct, and the artifact is unidentifiable on the target.
+- **A release tag derived from the commit strands docs-only commits.** Nothing under `source/`
+  changed, so nothing was built, so `HEAD` has no release; the installer must fall back to the
+  newest release and print the sha it actually received.
+- **Never bake configuration into the artifact.** A packed binary should take its inputs as
+  arguments — a name, a path, or a glob the driver expands itself so an unexpanded pattern on a
+  batch node still works — and fail loudly (`error: no config file at …`, exit 1) when none
+  resolves. A frozen copy under the bundle is invisible and goes stale; a plain directory beside
+  the executable, found relative to it, is the most a release should assume.
+- **Resolve paths instead of assuming the CWD**: keep caches (`NUMBA_CACHE_DIR`, and
+  `MPLCONFIGDIR` only if the artifact plots) in a temp directory, skip `sys.pycache_prefix` writes
+  when frozen, and honour `SLURM_*` CPU variables, because `os.cpu_count()` reports the whole node
+  inside an allocation.
+
+
 ### Typing, docstrings, and import order
 
 Recorded only as far as the code already obeys it; do not retrofit.

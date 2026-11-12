@@ -10,18 +10,10 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
 - `scripts/guides-due.sh` — the guide freshness check used by the commit gate in `repo-rules`
   (exit 0 = `STALE`, 1 = `OK`, 2 = `MISSING`); `--committed` judges the history only, which is
   what the session-start check needs, and `--staged` judges the index, which is what the hook runs.
-- `scripts/oathpass.c` + `Makefile` — `oathpass`, a small C tool that answers an SSH OATH/TOTP
-  prompt from a local seed, so a cluster login needs no phone and no typing of host or port. It
-  resolves host, user and login port from `~/.config/oathpass/config.json` (mode 600), and speaks the
-  `One-time password (OATH)` prompt itself (RFC 6238; SHA-1/256/512). `make install` builds and
-  copies it into `$(PREFIX)/bin` (default `~/.local/bin`) — the build output *is* the command, so
-  there is no interpreter, no symlink and no bytecode cache. `make test` replays the RFC 6238
-  vectors, `oathpass --init` guides a fresh machine through the four config values (reading the OTP
-  URI with the terminal echo off), `oathpass check` is a dry run, and `.github/workflows/ci.yml`
-  runs both on Ubuntu, macOS
-  and Windows (MSYS2). MIT licensed. Because the OATH code is single-use, the first command opens
-  one multiplexed master connection and later commands, `sftp`, `scp` and `rsync` reuse it; `oathpass run`
-  is a guarded read-only door for agents (see the `hpc-cluster` skill).
+- `oathpass` — a separate repository (`github.com/myhsia/oathpass`, cloned at `~/GitHub/oathpass`):
+  a small C tool that answers an SSH `One-time password (OATH)` prompt from a local seed, with one
+  multiplexed master connection, a guarded read-only door and `scp`/`sftp`/`rsync` over it. Built and
+  installed with `make install` from that checkout; `hpc-cluster` carries the session rules.
 - `hooks/commit-msg` — installed machine-wide by `git config --global core.hooksPath
   ~/.config/opencode/hooks`; refuses a code/config/CI commit with neither a guide change nor a
   `Guides-Reviewed:` trailer, and skips docs-only, merge/revert, and repos without a guide.

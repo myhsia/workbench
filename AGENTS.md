@@ -152,9 +152,9 @@ instead of implying it was.
   unpushed commit.
 - **Never put secrets or addresses in commits.**  Machine endpoints, proxy addresses, API keys,
   cluster IPs and the cluster's OTP seed stay in untracked files or environment variables.  The
-  seed lives in `~/.config/oathpass/config.json`, which is the only place `scripts/oathpass.c` reads
-  it from; since the cluster asks for the OATH code alone, that file holds the whole cluster
-  credential and stays mode 600.
+  seed lives in `~/.config/oathpass/config.json`, which is the only place the `oathpass` tool (its
+  own repository, `myhsia/oathpass`) reads it from; since the cluster asks for the OATH code alone,
+  that file holds the whole cluster credential and stays mode 600.
 
 ## Network access
 

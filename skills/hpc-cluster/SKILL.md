@@ -27,30 +27,33 @@ terminal it prints the guide and exits 1 rather than blocking on a prompt.
 ## Jobs and money
 
 Slurm bills **allocated cores per started hour** (`cores × rate × ceil(hours)`),
-so a two-minute job costs a full core-hour and an idle allocation still bills.
-Never submit without a wall-clock limit: the cluster's default is *no limit*.
+so a job is a money decision before it is a submission, and an idle allocation
+still bills. The rates are **not** in any tool: they live in
+`hpc-rates.json` in this repository, and `scripts/hpc-rates.py --check`
+compares them with the cluster's own page.
 
 ```bash
-oathpass cost -c 64 --time 04:00:00      # price it on every partition first
-oathpass job submit -c 64 --time 04:00:00 ./run.sh   # fastest within the cap
-oathpass job submit --cheap -c 64 --time 04:00:00 ./run.sh   # cheapest
-oathpass job list | show ID | log ID | cancel ID
+hpc-job cost -c 64 --time 04:00:00                     # price it first
+hpc-job submit -c 64 --time 04:00:00 ./run.sh          # fastest within the cap
+hpc-job submit --cheap -c 64 --time 04:00:00 ./run.sh  # cheapest
+hpc-job list | show ID | log ID | cancel ID
 ```
 
-Rules the tool enforces, and the session must respect:
+Rules:
 
-- `--time` is mandatory; `-c` is the job's width and `--max-cores` caps scaling.
-- The spend cap is ¥7.80 per job (`spend_limit` in the config). Above it the
-  submission fails unless `--yes`; a session must ask the user before passing
-  `--yes`, and quote the estimate.
+- `--time` is mandatory everywhere; the cluster's default is *no limit*.
+- The per-job cap is `spend_limit` in `hpc-rates.json` (currently ¥7.80).
+  Above it, `hpc-job submit` refuses unless `--yes`; a session must ask the
+  user first and quote the estimate.
+- The default is the **fastest plan within the cap**; `--cheap` is the
+  money-first path. `-c` is the job's width, `--max-cores` caps scaling.
 - `intel-sc3-32c` cancels jobs under 32 cores (measured: `CANCELLED by 0`), so
-  the planner never routes small jobs there. `amd-ep5-first` is 256 cores at
-  ¥0.03/core-hour, `intel-sc3` 64 at ¥0.02.
-- Slurm lives under `/soft` and only the login profile puts it on `PATH`; job
-  commands run through `bash -lc` for that reason. A raw `oathpass 'sbatch …'`
-  will not find it.
-- Cancel what you no longer need (`oathpass job cancel ID`), and read
-  `oathpass job show ID` for MaxRSS before raising `--mem` next time.
+  it is excluded for small jobs via `min_cores`.
+- `oathpass job` does no pricing: it needs `-p` and `--time` and passes them to
+  `sbatch`. Always go through `hpc-job`.
+- Slurm lives under `/soft`; `oathpass` runs job commands through `bash -lc` for
+  that reason. Cancel what you no longer need, and read MaxRSS in
+  `hpc-job show ID` before raising `--mem` next time.
 
 ## Approval first
 

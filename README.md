@@ -14,6 +14,13 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
   a small C tool that answers an SSH `One-time password (OATH)` prompt from a local seed, with one
   multiplexed master connection, a guarded read-only door and `scp`/`sftp`/`rsync` over it. Built and
   installed with `make install` from that checkout; `hpc-cluster` carries the session rules.
+- `hpc-rates.json` + `scripts/hpc-job.py` + `scripts/hpc-rates.py` — the cluster's economics,
+  kept local: the per-partition rates, a `cost`/`submit` wrapper that enforces the per-job spend
+  cap and picks the fastest plan inside it, and a daily check that compares the table with the
+  HPC centre's page (`--check`, then `--update` once you accept the change). `hpc-job` calls
+  `oathpass job submit`, which does no pricing. Install both with
+  `ln -sfn ~/.config/opencode/scripts/hpc-job.py ~/.local/bin/hpc-job` and the same for
+  `hpc-rates`.
 - `hooks/commit-msg` — installed machine-wide by `git config --global core.hooksPath
   ~/.config/opencode/hooks`; refuses a code/config/CI commit with neither a guide change nor a
   `Guides-Reviewed:` trailer, and skips docs-only, merge/revert, and repos without a guide.

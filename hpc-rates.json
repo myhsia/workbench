@@ -1,0 +1,22 @@
+{
+  "currency": "CNY",
+  "updated": "2026-11-12",
+  "source": "https://hpc.westlake.edu.cn/document/science/en/money.html#partition-billing-standards",
+  "spend_limit": 7.80,
+  "partitions": {
+    "intel-sc3-32c": { "rate": 0.02, "cores": 64, "min_cores": 32, "unit": "core-hour" },
+    "intel-sc3": { "rate": 0.02, "cores": 64, "min_cores": 1, "unit": "core-hour" },
+    "amd-ep5-first": { "rate": 0.03, "cores": 256, "min_cores": 1, "unit": "core-hour" },
+    "amd-ep5": { "rate": 0.03, "cores": 256, "min_cores": 1, "unit": "core-hour" },
+    "amd-ep2": { "rate": 0.02, "cores": 64, "min_cores": 1, "unit": "core-hour" },
+    "amd-ep2-short": { "rate": 0.02, "cores": 64, "min_cores": 1, "unit": "core-hour" },
+    "amdepyc": { "rate": 0.02, "cores": 64, "min_cores": 1, "unit": "core-hour" },
+    "intel-fat": { "rate": 0.15, "cores": 96, "min_cores": 1, "unit": "core-hour" },
+    "v100-af": { "rate": 2.0, "cores": 28, "min_cores": 1, "unit": "card-hour" },
+    "v100": { "rate": 2.0, "cores": 36, "min_cores": 1, "unit": "card-hour" },
+    "a40-quad": { "rate": 2.0, "cores": 64, "min_cores": 1, "unit": "card-hour" },
+    "a40-tmp": { "rate": 2.0, "cores": 64, "min_cores": 1, "unit": "card-hour" },
+    "a100-40g": { "rate": 3.0, "cores": 64, "min_cores": 1, "unit": "card-hour" },
+    "rt-2080ti-short": { "rate": 0.5, "cores": 20, "min_cores": 1, "unit": "card-hour" }
+  }
+}

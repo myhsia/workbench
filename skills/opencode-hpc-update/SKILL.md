@@ -53,14 +53,18 @@ generated titles no longer carry the model's commentary.
 
 Westlake HPC billing (campus — no proxy), as part of the daily check:
 
-- Partition rates <https://hpc.westlake.edu.cn/document/science/en/money.html#partition-billing-standards>
-  — fetch it and compare with the `builtin_partitions` table in
-  `~/GitHub/oathpass/src/oathpass.c` and with any `partitions` block in
-  `~/.config/oathpass/config.json`. **Report a difference, do not edit the
-  rates**: a price change is the user's decision. Storage pricing (currently a
-  50% → 83.3% → 100% schedule) is on the same page.
-- Slurm bills allocated cores per started hour, so a rate change moves the
-  `oathpass cost` recommendation; mention it when the table moves.
+- `python3 ~/.config/opencode/scripts/hpc-rates.py --check` fetches
+  <https://hpc.westlake.edu.cn/document/science/en/money.html#partition-billing-standards>
+  and compares it with `~/.config/opencode/hpc-rates.json`. It exits 0 when
+  everything matches, 1 on a difference, 2 when the page cannot be read or no
+  longer parses.
+- **Report a difference, do not accept it silently.** A rate change is the
+  user's decision; after they agree, `--update` rewrites the rate and cores of
+  the known partitions, keeps every `min_cores` (local knowledge that the page
+  does not publish), and stamps `updated`.
+- Slurm bills allocated cores per started hour, so a rate change moves what
+  `hpc-job` recommends. Storage pricing (currently a 50% → 83.3% → 100%
+  schedule) is on the same page; mention it if the schedule moves.
 
 Westlake HPC (campus — no proxy):
 

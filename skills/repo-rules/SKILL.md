@@ -235,11 +235,13 @@ warning and lets the commit through.  `--no-verify` is the deliberate bypass.
   against the account's storage (500 MB private); three ~50–80 MB assets per build exhaust it on
   the first run, while release assets do not. Tag with the commit (`bin-<sha7>`) so source and
   binary cannot drift, and let the download script derive the tag from `git rev-parse`.
-- **Ship a `--version` and a `--selftest` in the artifact.** `--version` prints the git sha, the
-  interpreter and the *loaded* dependency versions (import nothing extra just to print a number);
-  `--selftest` runs a small deterministic real computation so a downloaded binary is verified on
-  the target machine, not on the build machine. Bake the identity in with a generated JSON file
-  collected at freeze time.
+- **Ship a `--version`; keep the check outside the physics code.** `--version` prints the git sha,
+  the interpreter and the *loaded* dependency versions (import nothing extra just to print a
+  number), baked in with a generated JSON file collected at freeze time. The verification itself
+  belongs in a small standalone tool that drives the binary through its **normal** flags — a
+  generated config, a real miniature run, the archive read back and compared — so the driver
+  keeps no test scaffolding, and the same tool can run in CI, on the installer's machine and on a
+  remote node.
 - **A build container may have no `git`.** Pass the commit in as an environment variable and fail
   the build when the frozen `--version` does not echo it; otherwise the Linux asset reports
   `sha=unknown` while the macOS one is correct, and the artifact is unidentifiable on the target.

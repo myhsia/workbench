@@ -790,7 +790,15 @@ repeating it.
   demo; the demos are `codemo` pairs of code and result, one per effect or per option group.
 - In a demo, parallel commands align their arguments in one column (`\CJKunderline   {…}` under
   `\CJKunderdblline{…}`), a command is not split from the text it affects, and font options come
-  before the font name (`\setCJKmainfont[Kana = Kai]{Song}`), broken between the two arguments.
+  before the font name (`\setCJKmainfont[Kana = Kai]{Song}`), broken between the two arguments:
+  the option list closes the first line and the font braces open the next, which for a family
+  command means `\setCJKfamilyfont{fam}[options]` then `{font}`.
+- A length in code drops the leading zero, `\dim_set:Nn \l_x_dim { .3em }` and
+  `[Baseline = .3em]`, while the prose keeps it, `\texttt{0.3em}`; the stretch and shrink of a glue
+  spec stay as they are, because `.3333em plus` is harder to read than `0.3333em plus`.
+- A line-ending `%` in a demo stays only where the space it removes would show in the result: after
+  `\LuaCJKsetup{…}` when the next line begins the typeset text, gone after a `\quad` whose trailing
+  space is wanted.
 - Aligning the continuation of a `syntax` line uses `\` plus spaces, never `\phantom`.
 - In LaTeX and Markdown prose, start a sentence on a new source line and break a long sentence at
   a comma, semicolon, or colon rather than mid-phrase.  A paragraph keeps its line count and its

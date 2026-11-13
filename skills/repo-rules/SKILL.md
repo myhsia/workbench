@@ -298,6 +298,17 @@ auth is backed by `gh` (run `gh auth setup-git` if push auth ever fails).
 an issue/comment/release, print it back once (`--jq '.body'`, `--jq '.html_url'`) to confirm it
 expanded before reporting success.
 
+### Images in an issue or a pull request
+
+GitHub's API has no attachment upload, and `gh gist edit -a <file>` refuses a binary file with
+`failed to upload …: binary file not supported`. A rendering therefore goes into the repository's
+gist as a **git** push: clone `https://gist.github.com/<id>.git`, copy the PNG in, commit, push,
+and reference `https://gist.githubusercontent.com/<user>/<id>/raw/<name>.png` in the body. Both
+hosts may be unreachable directly, so export `https_proxy`/`http_proxy` from
+`~/.config/opencode/proxy` for the clone, the push and the check. Verify the raw URL once —
+`curl -sS -o /dev/null -w '%{http_code} %{size_download}\n' <url>` with the proxy — and keep one
+gist per repository, the files named `<repo>-issue<N>-<slug>.png`.
+
 ### Push and pull-request status
 
 After every push, check the result and report it: `gh run list --limit 3`, or `gh run watch <id>`

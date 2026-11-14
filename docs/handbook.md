@@ -239,10 +239,14 @@ learned, and all three are now in the `CTAN releases` section of `repo-rules`.
   lower case, and moving `moduledir` out of `l3build`'s way is impossible, because
   `l3build-variables.lua` assigns it after `build.lua` is read.  So the tds zip keeps
   `doc/latex/LuaCJK/` and `source/latex/LuaCJK/`, accepted rather than fixed.
-- **A TDS zip does not need permission.**  The belief that CTAN rejects `.tds.zip` files unless
-  TeX Live asks for them is wrong: its guidelines prescribe exactly l3build's layout, `pkg/` beside
-  `pkg.tds.zip`, and file the zip under `install/`; `xeCJK` itself ships one.  It is worth creating
-  only for a package that spans more than one `tex/` tree, which LuaCJK does.
+- **A TDS zip does not need permission, and is usually not worth one.**  The belief that CTAN
+  rejects `.tds.zip` files unless TeX Live asks for them is wrong: its guidelines describe exactly
+  l3build's layout, `pkg/` beside `pkg.tds.zip`, filed under `install/`, and `xeCJK` ships one.
+  v0.0.1 shipped one for that reason; v0.0.2 dropped it from the upload and the release, because
+  nothing requires it and the guidelines themselves say its usefulness ends when the package reaches
+  the distributions.  What had to survive is `tdslocations`: `l3build install` and the internal tds
+  build place the files with it, `packtdszip = false` stops only the two copies, and
+  `build/tds/luacjk.tds.zip` is still written on every `l3build ctan`.
 - **`l3build upload --dry-run` is not offline.**  It skips publication but still posts the archive
   to `ctan.org/submit/validate`, so a rehearsal with no network needs a `curl` stand-in on `PATH`
   that saves the `--config` file and exits 0 — which prints every field and the exact form without
@@ -269,3 +273,4 @@ Each line is the user's own wording, and what it settled:
 | `I think just keep module = "LuaCJK", then local pkg is a lowercase warpper of module` | that first split is reversed: `module` keeps the package spelling and the id is derived from it; the tds zip's mixed-case `doc/`/`source/` directories are accepted |
 | `Keep v0.0.1` | a first public release may carry the number the sources already use; no `\changes` rewrite |
 | `Pack and inspect only` | the archives and the form are verified locally, and nothing is sent to `ctan.org` |
+| `CTAN seems no need it longer, so, please remove the tds` | `packtdszip = false`: the tds archive leaves the upload and the release, `tdslocations` stays |

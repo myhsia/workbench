@@ -1067,12 +1067,13 @@ that changes how text is typeset has to keep working with it on and off.
   `tex/` trees in `tdslocations`.  `moduledir`, and with it the `.tds.zip`'s `doc/` and `source/`
   directories, follows `module` and cannot be overridden: `l3build-variables.lua` assigns it
   unconditionally after `build.lua` is read.
-- **A `.tds.zip` sits beside the package directory.**
-  [CTAN's TDS guidelines](https://www.ctan.org/help/TDS-guidelines) ask for the flat `pkg/` tree
-  plus a `pkg.tds.zip` at the top level of the upload, and CTAN files that zip under `install/`.
-  It is worth creating only when the package spans more than one `tex/` tree (`tex/latex/` *and*
-  `tex/luatex/`, say); it is never a substitute for the flat tree, and it does not have to be
-  agreed with the TeX Live team first.
+- **A `.tds.zip` is optional, and usually skipped.**  CTAN's
+  [TDS guidelines](https://www.ctan.org/help/TDS-guidelines) allow a `pkg.tds.zip` at the top level
+  of the upload, beside the flat `pkg/` tree, filed under `install/`; nothing requires one, and the
+  guidelines themselves say its usefulness ends once the package reaches the distributions.  Skip
+  it unless a distribution asks.  What must not be lost is `tdslocations`: `l3build install` and the
+  internal tds build place the files with it, so `packtdszip = false` costs only the two copies of
+  the archive, and `build/tds/<pkg>.tds.zip` is still produced on every `l3build ctan`.
 - **Keep the form in `build.lua`.**  `uploadconfig` holds every field, so nothing is prompted for
   and no field is left to memory: the mandatory ones (`pkg`, `author`, `uploader`, `email`,
   `ctanPath`, `description`, `summary`, `version`, and the archive itself), plus `license`,

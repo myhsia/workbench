@@ -737,6 +737,11 @@ repeating it.
   Lua identifier (dots and underscores) *needs* `[int]`: without it `l3doc` emits a reference to
   a label it never defines.
 - Keep one blank `%` line between two consecutive entries.
+- **In an `environment` entry the prose comes first and `syntax` closes it.**  `\begin{environment}`
+  already opens a paragraph, so a `syntax` block placed directly after it renders with an empty
+  line above; the entry reads description, then the block, then `\end{environment}`.  A
+  `function` entry is the opposite: its `syntax` block follows the name immediately, before the
+  description.
 - Wrap every function and variable in its own `macro` or `variable`, and nest a helper inside the
   object that calls it: a `\foo` that calls `\@@_foo:` is documented with the inner `macro` inside
   the outer one, so the printed structure mirrors the call graph. Several names that share one

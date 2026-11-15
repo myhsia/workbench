@@ -691,6 +691,18 @@ repeating it.
   description line per file and its own `\ProvidesExplPackage` or `\ProvidesExplFile`.  A LaTeX2e
   module keeps `\ProvidesPackage` and repeats the date, version and description in its optional
   argument.  `l3build tag` rewrites the single `$Id$`, so a second copy silently goes stale.
+- **A class freezes the values `\GetIdInfo` gives it.**  The `\ExplFile*` variables are global, so
+  the next package overwrites them — xeCJK turned a class's own `\risversion` into `7023032e` /
+  `2026/08/21`.  Copy version and date into the class's own constants immediately after
+  `\ProvidesExplClass`, before anything loads.  Write the `$Id$` version without a leading `v`,
+  because LaTeX prints one itself (`vv1.0` otherwise), and remember that `\GetIdInfo` stops after
+  the date: the owner field is only read by the line itself, so a copyright is that field plus the
+  file's header comment, never a macro that re-parses the line.
+- **An error path is tested by entering it.**  `\msg_fatal:nnV` carries module and message as the
+  two `n` arguments, so one message argument is `nnV`; `\msg_fatal:nV` does not exist and the
+  mistake stayed invisible for the whole life of the class because the branch only runs on an engine
+  the document is never built with.  Build the sample once with `pdflatex` (or otherwise with the
+  engine the branch rejects) and read the log.
 - **No compatibility packages.**  A format floor of 2020-10 or later puts `\NewDocumentCommand` and
   its siblings in the kernel (`xparse`), and 2022-06 puts `\ProcessKeyOptions` there (`l3keys2e`);
   load neither.

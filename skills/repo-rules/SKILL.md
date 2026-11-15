@@ -963,6 +963,14 @@ than a warning.
   `docinit_hook`: the root copy is what the forge shows, and a second hand-maintained copy drifts.
   The hook also drops trailing whitespace and closes the file with one newline, because DocStrip
   copies a `%`-stripped line verbatim, blank line included.
+- **One README skeleton serves every package.**  Badges, then the title underlined with `=`, the
+  introduction, `Overview` underlined with `-`, `Issues`, `Build status`, and `Copyright and
+  License`.  The last three are the same text in every package but for its name and its links, so
+  they are carried over rather than rewritten; the introduction states what the package provides as
+  a short list, and anything that would open a fourth top-level subject belongs in the manual
+  instead.  Headings are setext rather than `#`; a code sample is a four-space indented block rather
+  than a fence; and the Actions badge names the workflow file, `.github/workflows/<file>.yaml` with
+  `?branch=main`, because a badge built from the workflow's display name breaks when the name does.
 - **The front matter is part of the manual's style.** A package manual carries an author with a
   `\mail` helper defined in the driver (`\newcommand \mail[1] {\href{mailto:#1}{\ttfamily #1}}`),
   the address in the `\thanks` of `\author`, and a `\thanks` on `\title` with the CTAN and the forge

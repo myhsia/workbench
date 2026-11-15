@@ -729,17 +729,18 @@ repeating it.
   `\enlargethispage` left the columns at full height — and check the last baseline against the
   furniture: a shrink small enough to leave room for one more line lets the page builder overfill
   the column rather than break it.
-- **A flat panel with geometric cuts is redrawn, not stretched.**  When a supplied bitmap turns out
-  to be a single flat colour with 45-degree corner cuts (a pale abstract panel, a folded corner),
-  `\includegraphics[width=…, height=…]` sets different x and y scales and the cuts render at
-  `atan(scale_y / scale_x)` — 32.6 degrees instead of 45 on a box three quarters the height of the
-  artwork.  Fill the shape instead: `tcolorbox` with `enhanced, frame hidden, opacityback = 0,
-  boxrule = 0pt, sharp corners, boxsep = 0pt` and an `underlay` that fills the hexagon
-  `(frame.south west) -- ([xshift=-c]frame.south east) -- ([yshift=c]frame.south east) --
-  (frame.north east) -- ([xshift=c]frame.north west) -- ([yshift=-c]frame.north west) -- cycle`
-  in the panel's own colour.  The page then shows through the cuts, the panel takes any height the
-  text needs, and the corner size is the only free parameter (`c`, taken from the artwork at its
-  own scale).
+- **A flat panel with 45-degree corner features is redrawn, not stretched.**  When a supplied
+  bitmap turns out to be one flat colour plus a white band across each of two corners (a pale
+  abstract panel), `\includegraphics[width=…, height=…]` sets different x and y scales, and the
+  bands render at `atan(scale_y / scale_x)` — 32.6 degrees instead of 45 on a box three quarters
+  the height of the artwork.  Read the feature off the bitmap before redrawing it: a 6 px white
+  band with 246 grey *outside* it is a fold line, not a cut-out, so filling a hexagon throws away
+  the flap that belongs in the corner.  Build the panel as a `tcolorbox`
+  (`enhanced, frame hidden, opacityback = 0, boxrule = 0pt, sharp corners, boxsep = 0pt`) whose
+  `underlay` fills the artwork's inset rectangle in its own colour and strokes the two white bands,
+  each from `([yshift=-c]frame.north west)` to `([xshift=c]frame.north west)` and the mirror at the
+  south east: both endpoints move by `c`, so the band is exactly 45 degrees at any box height, and
+  `c`, the band width and the inset are the only free parameters, all measured on the artwork.
 
 ## l3doc source style
 

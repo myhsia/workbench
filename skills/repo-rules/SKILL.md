@@ -846,6 +846,23 @@ repeating it.
 A `dtx` is both the source and the manual. What only the generated files need stays out of the
 documentation, and what only the manual needs stays out of the derived files.
 
+**The local loop is one test; the full build is CI's.**  After a change, the local loop of an
+`l3build` project is `l3build unpack` and `l3build check <name>`, plus `l3build save <name>` when a
+`.tlg` baseline is meant to move, and it takes seconds to a minute.  `l3build check` over the whole
+suite, `l3build doc`, `l3build ctan`, `scripts/ctex-subset.sh` and `l3build upload --dry-run`
+belong to CI, which runs them on the same commit on every push: repeating them locally costs
+minutes and decides nothing the pushed commit would not decide anyway.  The gates that fail in
+about a second stay local — the guide check, `l3build changelog` with its `git diff --exit-code`,
+and the char-class and bilingual scripts — because there the wait is not the cost, while CI's
+failure arrives only after a commit that could have been right.  Two local full runs remain, each
+for a reason: the whole suite before a push that touches the node pipeline, `build.lua`, or more
+than one baseline, since one test cannot see a baseline broken elsewhere; and the release assets,
+where `l3build ctan` runs once because no other step produces the archives and the manual PDF.  A
+manual is built on demand, when the appearance of a demo is the thing under test.  The report then
+separates what was measured here from what CI covers, instead of claiming a check nobody ran, and a
+doc failure is read from the log artifact CI kept (`gh run download`, see `ci-artifacts`), not
+reproduced locally unless the cause is still unclear.
+
 Prove a documentation-only change inert instead of arguing it: unpack the previous commit in a
 worktree, `cmp` `build/unpacked/*` against the current build, and compare the text of the two PDFs
 (`mutool draw -F txt`).  Both being identical is the evidence that only prose moved.

@@ -729,6 +729,17 @@ repeating it.
   `\enlargethispage` left the columns at full height — and check the last baseline against the
   furniture: a shrink small enough to leave room for one more line lets the page builder overfill
   the column rather than break it.
+- **A flat panel with geometric cuts is redrawn, not stretched.**  When a supplied bitmap turns out
+  to be a single flat colour with 45-degree corner cuts (a pale abstract panel, a folded corner),
+  `\includegraphics[width=…, height=…]` sets different x and y scales and the cuts render at
+  `atan(scale_y / scale_x)` — 32.6 degrees instead of 45 on a box three quarters the height of the
+  artwork.  Fill the shape instead: `tcolorbox` with `enhanced, frame hidden, opacityback = 0,
+  boxrule = 0pt, sharp corners, boxsep = 0pt` and an `underlay` that fills the hexagon
+  `(frame.south west) -- ([xshift=-c]frame.south east) -- ([yshift=c]frame.south east) --
+  (frame.north east) -- ([xshift=c]frame.north west) -- ([yshift=-c]frame.north west) -- cycle`
+  in the panel's own colour.  The page then shows through the cuts, the panel takes any height the
+  text needs, and the corner size is the only free parameter (`c`, taken from the artwork at its
+  own scale).
 
 ## l3doc source style
 

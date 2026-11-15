@@ -189,7 +189,11 @@ service agree; the Westlake SPA's `models:` array still shows 3 online chat mode
 three.  Two 2.2.7 breaking items were read and dismissed for this setup: `@opencode/ai`'s
 `ImageResponse.image` removal (our plugins import `@opencode/plugin` alone) and the shorter plugin
 wait (visible only as a partial `agent.list` at start-up).  The `/api/provider/<id>` route that 2.2.6
-dropped answers again.
+dropped answers again.  Re-checked on 2026-11-15 at **v2.3.0** (published 2026-11-13, latest): no
+`Breaking changes` section; CLI, service and `opencode models` agree; oathpass `0.3.1` is the latest
+release; the billing table matches once `douwj` is marked `local_only` (a group-private partition the
+page does not list), and the two documentation pages that moved — `soft/more/ai.html` and
+`soft/more/futureos.html` — changed nothing about partitions, QoS or rates.
 
 ## 7. Lessons
 

@@ -71,13 +71,13 @@
       "title": "Software Environment Management\u00b6"
     },
     "https://hpc.westlake.edu.cn/document/science/en/soft/more/ai.html": {
-      "bytes": 12640,
-      "hash": "8f56d96d7317d1a57638f997bc06491fdf5cbbf840cf05a9ab27107d8691f55b",
+      "bytes": 12638,
+      "hash": "d650109cc0566aee941f0d500c62881780e03d056fb4f4801babef83ed55ba31",
       "title": "How to Use On-campus AI Programming Models on Scientific Engineering Computing Cluster\u00b6"
     },
     "https://hpc.westlake.edu.cn/document/science/en/soft/more/futureos.html": {
-      "bytes": 19475,
-      "hash": "f74fcca50ecb7a162f960c9a5ca02061a91b9e061d11bcf9f33fe520b3fff918",
+      "bytes": 19472,
+      "hash": "7ef62eb07eeeddcc09e9e08fbcea9f77845d7e6b38d260f0049536f160a32558",
       "title": "FutureOS Smart Work Companion\u00b6"
     },
     "https://hpc.westlake.edu.cn/document/science/en/soft/more/jupyter.html": {
@@ -112,5 +112,5 @@
     }
   },
   "source": "https://hpc.westlake.edu.cn/document/science/sitemap.xml",
-  "updated": "2026-11-12"
+  "updated": "2026-11-15"
 }

@@ -41,15 +41,19 @@ OpenCode (international — try direct first, fall back to the proxy from the `n
   (note the three V2 breaking changes: plugins, server API, `cli.json`).
 - Release notes: `https://api.github.com/repos/anomalyco/opencode/releases?per_page=5` (the old
   `sst/opencode` name redirects; the canonical repository is `anomalyco/opencode`). Read the
-  **Breaking changes** section before syncing anything.
+  **Breaking changes** section before syncing anything. The anonymous API is rate-limited from the
+  campus address (`API rate limit exceeded for …` with no headers), so use `gh api` — authenticated —
+  or fall back to the proxy.
 
-Measured on 2026-11-11 at v2.2.7 (latest release): neither breaking item touches this setup —
-`@opencode/ai`'s removal of `ImageResponse.image` hits only direct imports (our plugins import
-`@opencode/plugin` alone, verified by grep), and the shorter plugin wait shows up only as a
-partial `agent.list` at start-up. Two behaviour changes are worth knowing: the app's *export*
-action now writes into the current directory instead of the temp folder (the CLI
-`opencode session export <id>` still streams to stdout and creates no file, measured), and
-generated titles no longer carry the model's commentary.
+Measured on 2026-11-15 at v2.3.0 (published 2026-11-13, latest): the notes carry **no
+`Breaking changes` section**, and the configuration survived unchanged — one provider with
+`activation: "enabled"`, three models, the `title` prompt loaded (`opencode debug agents`, 2 749
+chars), and Plan's `edit * deny` still the first rule.  Two behaviour changes matter here: subagents
+now **always run in the background** and report when they go idle, so a fan-out waits for the report
+instead of for the call to return; and the TUI transcript verbosity defaults to `low` (activity rows
+instead of every step), which changes what a reader sees, not the store.  Still true from 2.2.7: the
+app's *export* action writes into the current directory while `opencode session export <id>` streams
+to stdout and creates no file (measured), and generated titles carry no model commentary.
 
 `oathpass` release (as part of the daily check):
 
@@ -72,6 +76,9 @@ Westlake HPC billing (campus — no proxy), as part of the daily check:
   user's decision; after they agree, `--update` rewrites the rate and cores of
   the known partitions, keeps every `min_cores` (local knowledge that the page
   does not publish), and stamps `updated`.
+- A partition the group holds but the page never lists carries
+  `"local_only": true` (currently `douwj`), so `--check` does not report it as
+  gone; `--update` leaves it untouched.  Add the flag with the entry, not later.
 - Slurm bills allocated cores per started hour, so a rate change moves what
   `hpc-job` recommends. Storage pricing (currently a 50% → 83.3% → 100%
   schedule) is on the same page; mention it if the schedule moves.
@@ -80,7 +87,10 @@ Westlake HPC billing (campus — no proxy), as part of the daily check:
   added, changed and removed pages (exit 0 clean, 1 moved, 2 unreadable). A
   moved page is a prompt to read it and update `skills/hpc-cluster/SKILL.md`,
   then `--update` to accept the new state. Partitions, QoS and storage live
-  there, so a silent page change is how a skill goes stale.
+  there, so a silent page change is how a skill goes stale.  The sitemap also
+  carries non-cluster pages (FutureOS, the AI-model page): a move there is often
+  informational, so read the title before editing the skill — 2026-11-15 had two
+  such pages and neither changed a partition or a rate.
 
 Westlake HPC (campus — no proxy):
 

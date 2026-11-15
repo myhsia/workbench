@@ -100,6 +100,8 @@ def main(argv):
             differences += 1
 
     for name in sorted(set(local["partitions"]) - set(published)):
+        if local["partitions"][name].get("local_only"):
+            continue  # a group-private partition is not on the public page by design
         print(f"  gone       {name} is in the local table but not on the page")
         differences += 1
 

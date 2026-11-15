@@ -69,6 +69,7 @@
       "cores": 64,
       "nodes": 10,
       "min_cores": 1,
+      "local_only": true,
       "unit": "core-hour",
       "qos": [
         "normal",

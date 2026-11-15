@@ -720,6 +720,15 @@ repeating it.
   span instead, so a span covered by one solid rule is emitted as a single rule node of the segment
   width, with the height and depth shifted by the leader box's own translation; only a leader that
   carries a pattern keeps the leaders.
+- **Furniture on the first page belongs to `eso-pic`, not to `shipout/background`.**  In the kernel
+  hook the picture's origin sits one inch below the top-left corner and its `y` axis runs upward
+  from there, which a probe reads as an offset by a whole page: a `\put` that looks right renders
+  off the paper, and its text disappears while its rules survive.  `\AddToShipoutPictureBG*{…}`
+  has the documented origin at the paper's lower left and covers the current page only.  Shorten
+  that page's columns by advancing `\@colht`, `\@colroom` and `\vsize` together — a negative
+  `\enlargethispage` left the columns at full height — and check the last baseline against the
+  furniture: a shrink small enough to leave room for one more line lets the page builder overfill
+  the column rather than break it.
 
 ## l3doc source style
 

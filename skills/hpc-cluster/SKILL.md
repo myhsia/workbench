@@ -128,7 +128,10 @@ per-user job cap, so **it is the default** wherever a partition allows it:
 
 **On `douwj`, always `huge`** — it is the group's own node, shared by several
 people, so the wide cap matters and the priority penalty is only against
-ourselves. `hpc-job` now also **refuses to widen a job on its own**: `-c` is
+ourselves.  This is recorded as `"default_qos": "huge"` on the partition in
+`hpc-rates.json`, not left to the global preference order: `hpc-job -p douwj`
+uses `huge` even if that order changes, and 300 cores on Yungu's node price
+normally at `huge` where `normal` would have refused them. `hpc-job` now also **refuses to widen a job on its own**: `-c` is
 what you ask for, and `--max-cores` is how far it may spread. A 4-core test
 asks for 4 cores, not the whole node (measured: a 640-core request on `douwj`
 died with 0 allocated CPUs, while the same job at 4 cores completed).

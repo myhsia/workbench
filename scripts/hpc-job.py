@@ -373,8 +373,14 @@ def auto_qos(campus, only, cores, hours, efficiency, max_cores):
     """The best QoS that can actually run this job, and why it was picked."""
     candidates = [q for q in QOS_PREFERENCE if q in campus["qos"]]
     if only:
-        allowed = campus["partitions"].get(only, {}).get("qos", [])
+        spec = campus["partitions"].get(only, {})
+        allowed = spec.get("qos", [])
         candidates = [q for q in candidates if q in allowed] or allowed
+        # a partition may name the QoS it is always run at (douwj: huge), so the
+        # choice is recorded in the table rather than inherited from the order
+        pinned = spec.get("default_qos")
+        if pinned and pinned in allowed:
+            candidates = [pinned] + [q for q in candidates if q != pinned]
     for name in candidates:
         try:
             plans = plan_job(campus, cores, hours, efficiency, max_cores, name, only)
@@ -651,6 +657,19 @@ def selftest():
     except SystemExit:
         foreign = True
     check("Yungu refuses a Yunqi partition", foreign, True)
+
+    # douwj names its own QoS, so it survives a change to the global order
+    saved_order = QOS_PREFERENCE
+    try:
+        globals()["QOS_PREFERENCE"] = ("normal", "huge", "fast")
+        picked, _ = auto_qos(yunqi, "douwj", 64, 1.0, 1.0, 64)
+        check("douwj keeps huge when the order changes", picked, "huge")
+        picked, _ = auto_qos(yunqi, None, 64, 1.0, 1.0, 64)
+        check("without a partition the order decides", picked, "normal")
+    finally:
+        globals()["QOS_PREFERENCE"] = saved_order
+    picked, _ = auto_qos(yunqi, "intel-fat", 64, 1.0, 1.0, 64)
+    check("intel-fat still resolves to hmem", picked, "hmem")
 
     # ---- campus selection and the per-campus partition default
     saved = dict(os.environ)

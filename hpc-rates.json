@@ -78,14 +78,14 @@
      "cores": 64,
      "nodes": 10,
      "min_cores": 1,
-     "local_only": true,
      "unit": "core-hour",
      "qos": [
       "normal",
       "huge"
      ],
      "ssd_data": true,
-     "private": true
+     "private": true,
+     "default_qos": "huge"
     },
     "amd-ep2-short": {
      "rate": 0.02,
@@ -267,7 +267,8 @@
       "normal",
       "huge"
      ],
-     "private": true
+     "private": true,
+     "default_qos": "huge"
     },
     "test": {
      "rate": null,

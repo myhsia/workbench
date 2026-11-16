@@ -2,34 +2,39 @@
  "currency": "CNY",
  "profiles": {
   "Yunqi": {
-   "updated": "2026-11-12",
+   "updated": "2026-11-16",
    "source": "https://hpc.westlake.edu.cn/document/science/en/money.html#partition-billing-standards",
    "verified": true,
    "spend_limit": 7.8,
    "mail_domain": "westlake.edu.cn",
    "qos": {
     "normal": {
-     "priority": "high",
+     "priority": 1000,
      "max_cores": 200,
      "max_concurrent": 30,
      "max_total": 1000
     },
     "huge": {
-     "priority": "low",
-     "max_cores": 6400,
-     "max_total": 20000
+     "priority": 950,
+     "max_cores": 6400
+    },
+    "fast": {
+     "priority": 900,
+     "max_cores": 25600,
+     "note": "no partition allows it on Yunqi"
     },
     "hmem": {
-     "priority": "high",
+     "priority": 1000,
+     "max_concurrent": 2,
      "min_mem_gb": 450
     },
     "gpu": {
-     "priority": "high",
+     "priority": 2000,
      "max_gpus": 8,
      "max_concurrent": 2
     },
     "gpu-huge": {
-     "priority": "low",
+     "priority": 1000,
      "max_gpus": 32
     }
    },
@@ -200,7 +205,8 @@
      ],
      "max_hours": 8
     }
-   }
+   },
+   "warn_jobs": 8
   },
   "Yungu": {
    "updated": "2026-11-16",
@@ -210,32 +216,44 @@
    "note": "Scanned on 10.28.1.66 with sinfo/scontrol.  Yungu publishes no billing page, so only douwj (the group's own, free) has a rate; the rest are unpriced and hpc-job refuses to cost them.",
    "qos": {
     "normal": {
-     "priority": "high",
+     "priority": 1000,
      "max_cores": 200,
      "max_concurrent": 30,
      "max_total": 1000
     },
     "huge": {
-     "priority": "low",
-     "max_total": 20000
+     "priority": 950,
+     "max_cores": 1600
     },
     "fast": {
-     "priority": "high"
+     "priority": 950,
+     "max_cores": 8000
     },
     "gpu": {
-     "priority": "high",
+     "priority": 2000,
      "max_gpus": 8,
      "max_concurrent": 2
     },
     "gpu-huge": {
-     "priority": "low",
+     "priority": 1000,
      "max_gpus": 32
     },
     "gpu-l40s": {
-     "priority": "high"
+     "priority": 500,
+     "max_gpus": 24
     },
     "gpu-lpl": {
-     "priority": "high"
+     "priority": 3000,
+     "max_gpus": 32
+    },
+    "gpu-wyd": {
+     "priority": 950,
+     "max_gpus": 8,
+     "max_concurrent": 1
+    },
+    "gpu-wzt": {
+     "priority": 950,
+     "max_gpus": 8
     }
    },
    "partitions": {
@@ -298,7 +316,8 @@
      ],
      "gpus": 48
     }
-   }
+   },
+   "warn_jobs": 8
   }
  }
 }

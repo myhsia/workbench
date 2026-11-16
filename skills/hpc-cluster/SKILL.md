@@ -100,15 +100,42 @@ pass -p PARTITION to use another`.
 
 Consequences that matter:
 
-- **200 cores is a wall.** Wider than that needs `--qos huge`, which is *low*
-  priority: the job may queue far longer than a 64-core `normal` job. `hpc-job`
-  refuses >200 cores without `--qos huge` and keeps the default search inside
-  `normal`.
+- **200 cores is only `normal`'s cap.** `hpc-job` now selects `huge`
+  automatically (see the QoS section below), so a wider job needs no flag.
 - Within one QOS, more resources requested means lower priority.
 - `intel-sc3-32c` pads the request to a multiple of 32; the padding is billed
   but does not make the job faster (the tool models that correctly).
 - `intel-fat` needs `-p intel-fat --qos hmem --mem 450G`; monthly memory
   efficiency below 50 % gets an account downgraded to `hmem_strict`.
+
+## QoS: use the best, which is `huge`
+
+Measured with `sacctmgr show qos` on both clusters (2026-11-16):
+
+| QoS | Yunqi | Yungu |
+|---|---|---|
+| `normal` | prio 1000, **≤200 cores**, 30 concurrent | same |
+| `huge` | prio **950**, ≤6400 cores | prio **950**, ≤1600 cores |
+| `fast` | prio 900, ≤25600 (no Yunqi partition allows it) | prio **950**, ≤8000 (on `test*` only) |
+| `gpu` / `gpu-huge` | 2000 / 1000 | 2000 / 1000 |
+| GPU extras | — | `gpu-l40s` 500, `gpu-lpl` 3000, `gpu-wyd`/`gpu-wzt` 950 |
+
+`huge` trades **five** points of priority for 8–32× the core ceiling and no
+per-user job cap, so **it is the default** wherever a partition allows it:
+`hpc-job` picks it automatically and prints `qos huge (priority 950, cap …)`.
+`--qos normal` is the opt-out; `--qos fast` is worth it on Yungu's `test*`
+(8000 cores at `huge`'s priority) but no `douwj` allows it.
+
+**On `douwj`, always `huge`** — it is the group's own node, shared by several
+people, so the wide cap matters and the priority penalty is only against
+ourselves. `hpc-job` now also **refuses to widen a job on its own**: `-c` is
+what you ask for, and `--max-cores` is how far it may spread. A 4-core test
+asks for 4 cores, not the whole node (measured: a 640-core request on `douwj`
+died with 0 allocated CPUs, while the same job at 4 cores completed).
+
+When your own running jobs on the chosen partition reach `warn_jobs` (8), the
+submit prints a `busy …` line: the partition is shared, and a sweep that fills
+it starves the rest of the group.
 
 ## Jobs and money
 

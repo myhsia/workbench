@@ -34,6 +34,10 @@ RATES = os.path.join(ROOT, "hpc-rates.json")
 DEFAULT_PARTITION_FILE = os.path.join(ROOT, "hpc-default")
 OATHPASS = "oathpass"
 DEFAULT_QOS = "normal"
+# `huge` gives up five points of priority for 8-32x the core ceiling and no
+# per-user job cap, so it is the default wherever a partition allows it.
+QOS_PREFERENCE = ("huge", "normal", "hmem", "fast", "gpu", "gpu-huge",
+                  "gpu-l40s", "gpu-lpl", "gpu-wyd", "gpu-wzt")
 
 
 def die(message):
@@ -224,8 +228,11 @@ def describe(campus, chosen, cheapest, over, limit):
         slower = cheapest.wall - chosen.wall
         print(f"cheaper    {cheapest.name}  {cheapest.cost:.2f}  "
               f"({slower:.1f}h slower, saves {saving:.2f})")
-    if chosen.qos != DEFAULT_QOS:
-        print(f"queue      {chosen.qos} is low priority; a normal plan may start sooner")
+    normal_priority = campus["qos"].get(DEFAULT_QOS, {}).get("priority")
+    priority = campus["qos"].get(chosen.qos, {}).get("priority")
+    if normal_priority is not None and priority is not None and priority <= normal_priority - 100:
+        print(f"queue      {chosen.qos} (priority {priority}) queues below normal "
+              f"({normal_priority}); a normal plan may start sooner")
     if chosen.spec.get("login_node"):
         print(f"login      {chosen.name} is only reachable from {chosen.spec['login_node']}")
     if over:
@@ -263,8 +270,10 @@ def resolve(campus, campus_name, options):
     hours = parse_time(options["--time"])
     efficiency = float(options.get("--efficiency", 1.0))
     limit = float(options.get("--budget", campus["spend_limit"]))
-    max_cores = int(options.get("--max-cores", 1 << 30))
-    qos = options.get("--qos", DEFAULT_QOS)
+    # Scaling is opt-in: `-c` is what you ask for, `--max-cores` is how far the
+    # job may spread.  Without it a 4-core test would occupy the group's node.
+    max_cores = int(options.get("--max-cores", cores))
+    qos = options.get("--qos")
     # Partition choice: an explicit -p wins, then this campus's machine-local
     # default ($HPC_PARTITION, then hpc-default).  --any and --cheap drop the
     # pin, because both state a different intent.
@@ -312,6 +321,19 @@ def print_partition(campus_name, only, source):
         print(f"partition  {only}  (from {source})")
 
 
+def print_qos(campus, qos, source):
+    spec = campus["qos"].get(qos, {})
+    priority = spec.get("priority")
+    cap = spec.get("max_cores")
+    detail = []
+    if priority is not None:
+        detail.append(f"priority {priority}")
+    if cap:
+        detail.append(f"cap {cap} cores")
+    note = ", ".join(detail)
+    print(f"qos        {qos}" + (f"  ({note})" if note else "") + f"  [from {source}]")
+
+
 def warn_unverified(campus_name, campus):
     if not campus.get("verified", True):
         print(f"note       {campus_name}'s partition table comes from its documentation, not a "
@@ -347,6 +369,22 @@ def cmd_default(rates, argv):
     return 0
 
 
+def auto_qos(campus, only, cores, hours, efficiency, max_cores):
+    """The best QoS that can actually run this job, and why it was picked."""
+    candidates = [q for q in QOS_PREFERENCE if q in campus["qos"]]
+    if only:
+        allowed = campus["partitions"].get(only, {}).get("qos", [])
+        candidates = [q for q in candidates if q in allowed] or allowed
+    for name in candidates:
+        try:
+            plans = plan_job(campus, cores, hours, efficiency, max_cores, name, only)
+        except SystemExit:
+            continue
+        if plans:
+            return name, plans
+    die("no QoS on this campus can run the job -- pass --qos")
+
+
 def cmd_cost(rates, argv):
     options, rest = split_options(argv)
     if rest:
@@ -354,10 +392,16 @@ def cmd_cost(rates, argv):
     campus_name, campus = select_campus(rates, options)
     cores, hours, efficiency, limit, max_cores, qos, only, source = resolve(
         campus, campus_name, options)
-    plans = plan_job(campus, cores, hours, efficiency, max_cores, qos, only)
+    if qos:
+        plans = plan_job(campus, cores, hours, efficiency, max_cores, qos, only)
+        qos_source = "--qos"
+    else:
+        qos, plans = auto_qos(campus, only, cores, hours, efficiency, max_cores)
+        qos_source = "best available"
     chosen, cheapest, over = choose(plans, limit, bool(options.get("--cheap")))
-    print(f"job        {cores} cores, up to {hours:.2f}h, efficiency {efficiency:.2f}, qos {qos}\n")
+    print(f"job        {cores} cores, up to {hours:.2f}h, efficiency {efficiency:.2f}\n")
     print_partition(campus_name, only, source)
+    print_qos(campus, qos, qos_source)
     warn_unverified(campus_name, campus)
     print_table(plans, chosen, cheapest)
     return describe(campus, chosen, cheapest, over, limit)
@@ -446,6 +490,22 @@ def cmd_shell(rates, argv):
     return remote(f"{command} bash", campus_name = campus_name).returncode
 
 
+def warn_crowded(campus, campus_name, partition):
+    """A group partition is shared: say so when it is already busy with your jobs."""
+    limit = int(campus.get("warn_jobs", 8))
+    result = remote(f'squeue -u "$USER" -h -t RUNNING -p {partition} | wc -l',
+                    capture = True, campus_name = campus_name)
+    if result.returncode != 0:
+        return
+    try:
+        running = int(result.stdout.strip() or 0)
+    except ValueError:
+        return
+    if running >= limit:
+        print(f"busy       {running} of your jobs are already running on {partition} "
+              f"(warning at {limit}) -- the partition is shared with the rest of the group")
+
+
 def mail_flags(campus, options, campus_name):
     if options.get("--no-mail"):
         return ""
@@ -464,10 +524,15 @@ def cmd_submit(rates, argv):
     campus_name, campus = select_campus(rates, options)
     cores, hours, efficiency, limit, max_cores, qos, only, source = resolve(
         campus, campus_name, options)
-
-    plans = plan_job(campus, cores, hours, efficiency, max_cores, qos, only)
+    if qos:
+        plans = plan_job(campus, cores, hours, efficiency, max_cores, qos, only)
+        qos_source = "--qos"
+    else:
+        qos, plans = auto_qos(campus, only, cores, hours, efficiency, max_cores)
+        qos_source = "best available"
     chosen, cheapest, over = choose(plans, limit, bool(options.get("--cheap")))
     print_partition(campus_name, only, source)
+    print_qos(campus, qos, qos_source)
     warn_unverified(campus_name, campus)
     print_table(plans, chosen, cheapest)
     describe(campus, chosen, cheapest, over, limit)
@@ -494,6 +559,8 @@ def cmd_submit(rates, argv):
         print()
         print(command)
         return 0
+
+    warn_crowded(campus, campus_name, chosen.name)
 
     with open(script, "rb") as handle:
         upload = remote(f"mkdir -p jobs && cat > jobs/{base}", stdin = handle,
@@ -595,6 +662,15 @@ def selftest():
         check("campus: $OATHPASS_PROFILE wins", name, "Yungu")
         name, _ = select_campus(rates, {"--profile": "Yunqi"})
         check("campus: --profile beats the env", name, "Yunqi")
+
+        # scaling is opt-in: resolve() must not widen a job on its own
+        _, _, _, _, scaled, _, _, _ = resolve(yunqi, "Yunqi",
+                                              {"-c": "4", "--time": "01:00:00", "--any": True})
+        check("resolve: no scale-up by default", scaled, 4)
+        _, _, _, _, scaled, _, _, _ = resolve(yunqi, "Yunqi",
+                                              {"-c": "4", "--time": "01:00:00", "--any": True,
+                                               "--max-cores": "640"})
+        check("resolve: --max-cores still widens", scaled, 640)
 
         os.environ["HPC_PARTITION"] = "intel-sc3"
         pinned, source = default_partition("Yunqi")

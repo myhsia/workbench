@@ -32,9 +32,14 @@ credentials, partition sets and prices.  `oathpass` holds one profile per
 
 - `Yunqi` — `hpc.westlake.edu.cn`, the campus this machine already used; its
   partition table was scanned on 2026-11-16 and rates are ¥0.02–0.15/core-hour.
-- `Yungu` — `10.28.0.22:30538`, flat ¥0.045/core-hour, no `douwj` and no
-  `amd-ep5*`; its table comes from the documentation only (`"verified": false`),
-  so `hpc-job` prints a note whenever it prices a job there.
+- `Yungu` — `10.28.1.66`, **scanned 2026-11-16**.  Its partitions are `test`
+  (45 nodes x 192 cores, Slurm's default), `testf` (10 x 192), `test-intel`
+  (20 x 96), `l40s` (6 x 112 + 48 GPUs) and **`douwj`** (5 x 64, group-only,
+  **free**, the default here).  **Yungu publishes no billing page**, so only
+  `douwj` has a rate; the other four are unpriced and `hpc-job` refuses to cost
+  them (`--yes` is needed to submit there, and the cap cannot be enforced).  The
+  documentation reachable inside Yungu describes Yunqi's hardware at different
+  prices — do not price a Yungu job from it.
 
 ```bash
 oathpass --profile Yungu otp        # that campus's code
@@ -50,9 +55,11 @@ name valid on one campus is refused on the other.
 
 ## Partitions and QoS
 
+### Yunqi
+
 | partition | cores | mem | QOS | notes |
 |---|---|---|---|---|
-| **`douwj`** (Yunqi only) | 64 | 250G | normal/huge | **the group's own, free**, 10 nodes, `AllowGroups=douwenjie,hpc` |
+| **`douwj`** | 64 | 250G | normal/huge | **the group's own, free**, 10 nodes, `AllowGroups=douwenjie,hpc` |
 | `intel-sc3` (Slurm default) | 64 | 480G | normal/huge | SSD `/data` |
 | `intel-sc3-32c` | 64 | 480G | normal/huge | **cores must be a multiple of 32** |
 | `amd-ep2`, `amd-ep2-short`, `amdepyc` | 64 | 480G | normal/huge | `/data`; `amd-ep2-short` and `amdepyc` are in the rates file but **absent from `scontrol show partition`** |
@@ -60,7 +67,17 @@ name valid on one campus is refused on the other.
 | `intel-fat` | 96 | 3T | `hmem` only | min memory 450G, 30-day limit |
 | GPU partitions | 28–64 | — | gpu/gpu-huge | min 1 GPU; `rt-2080ti-short` 8 h |
 
-**On Yunqi, `douwj` is the partition to use.** It is the group's private server (10 nodes × 64 cores, 640
+### Yungu
+
+| partition | cores/node | nodes | QOS | notes |
+|---|---|---|---|---|
+| **`douwj`** | 64 | 5 | normal/huge | **the group's own, free**, `AllowGroups=hpc,douwenjie` |
+| `test` | 192 | 45 | normal/huge/fast | Slurm's default; `fast` is a QOS with no probed cap |
+| `testf` | 192 | 10 | normal/huge/fast | |
+| `test-intel` | 96 | 20 | normal/huge/fast | |
+| `l40s` | 112 | 6 | gpu/gpu-huge/gpu-l40s/gpu-lpl | 48 GPUs |
+
+**On both campuses, `douwj` is the partition to use.** It is the group's private server (10 nodes × 64 cores, 640
 CPUs) and it is **not billed**, so `hpc-rates.json` carries it at `rate: 0.0` (a 64-core hour on
 `intel-sc3`/`amd-ep2` is ¥1.28). The *choice* of default is machine-local, not part of the rates
 table: `~/.config/opencode/hpc-default` (untracked, mode 600) holds a partition name, currently

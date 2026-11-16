@@ -158,7 +158,9 @@ def plan_job(campus, cores, hours, efficiency, max_cores, qos_name, only = None)
                 continue
         wall = hours * cores / useful / efficiency
         billed = max(1, math.ceil(wall - 1e-9))
-        plans.append(Plan(name, spec, request, wall, billed, spec["rate"] * request * billed, qos_name))
+        rate = spec.get("rate")
+        cost = None if rate is None else rate * request * billed
+        plans.append(Plan(name, spec, request, wall, billed, cost, qos_name))
     if not plans:
         if only:
             spec = campus["partitions"].get(only)
@@ -174,10 +176,15 @@ def plan_job(campus, cores, hours, efficiency, max_cores, qos_name, only = None)
 
 
 def choose(plans, limit, cheap):
-    cheapest = min(plans, key = lambda plan: plan.cost)
+    # a partition without a published rate has no cost to compare: it can be
+    # chosen by name, never by price
+    priced = [plan for plan in plans if plan.cost is not None]
+    if not priced:
+        return plans[0], plans[0], False
+    cheapest = min(priced, key = lambda plan: plan.cost)
     if cheap:
         return cheapest, cheapest, False
-    within = [plan for plan in plans if plan.cost <= limit + 1e-9]
+    within = [plan for plan in priced if plan.cost <= limit + 1e-9]
     if not within:
         return cheapest, cheapest, True
     fastest = min(within, key = lambda plan: (plan.wall, plan.cost))
@@ -192,8 +199,11 @@ def print_table(plans, chosen, cheapest):
             marks += "  <-"
         if plan is cheapest and plan is not chosen:
             marks += " (cheapest)"
-        print(f"{plan.name:<16}{plan.cores:>7}{plan.spec['rate']:>9.3f}{plan.wall_text():>9}"
-              f"{plan.billed:>7}h{plan.cost:>10.2f}  {plan.qos}{marks}")
+        rate = plan.spec.get("rate")
+        cost = "unknown" if plan.cost is None else f"{plan.cost:.2f}"
+        rate_text = f"{rate:.3f}" if rate is not None else "-"
+        print(f"{plan.name:<16}{plan.cores:>7}{rate_text:>9}{plan.wall_text():>9}"
+              f"{plan.billed:>7}h{cost:>10}  {plan.qos}{marks}")
 
 
 def describe(campus, chosen, cheapest, over, limit):
@@ -201,9 +211,15 @@ def describe(campus, chosen, cheapest, over, limit):
     currency = "CNY"
     priority = campus["qos"][chosen.qos].get("priority", "?")
     tag = "  (over the cap)" if over else ""
+    if chosen.cost is None:
+        print(f"plan       {chosen.name}  {chosen.cores} cores  cost unknown"
+              f"  qos {chosen.qos} ({priority} priority)")
+        print(f"unpriced   {chosen.name} has no published rate, so the {limit:.2f} {currency} "
+              "cap cannot be enforced")
+        return 0
     print(f"plan       {chosen.name}  {chosen.cores} cores  {chosen.cost:.2f} {currency}"
           f"  qos {chosen.qos} ({priority} priority){tag}")
-    if chosen is not cheapest:
+    if chosen is not cheapest and cheapest.cost is not None:
         saving = chosen.cost - cheapest.cost
         slower = cheapest.wall - chosen.wall
         print(f"cheaper    {cheapest.name}  {cheapest.cost:.2f}  "
@@ -455,6 +471,9 @@ def cmd_submit(rates, argv):
     warn_unverified(campus_name, campus)
     print_table(plans, chosen, cheapest)
     describe(campus, chosen, cheapest, over, limit)
+    if chosen.cost is None and not options.get("--yes"):
+        die(f"{chosen.name} has no published rate on this campus -- pass --yes to submit "
+            "without a cost estimate")
     if over and not options.get("--yes"):
         die(f"{chosen.cost:.2f} is above the {limit:.2f} cap -- pass --yes to accept it")
 
@@ -492,6 +511,10 @@ def cmd_submit(rates, argv):
         die(f"sbatch did not return a job id (got {result.stdout.strip()!r})")
 
     print(f"submitted  job {job_id}  on {chosen.name}, {chosen.cores} cores, wall {wall}")
+    if chosen.cost is None:
+        print("cost       unknown (no published rate for this partition)")
+    else:
+        print(f"cost       {chosen.cost:.2f}")
     if campus.get("mail_domain") and not options.get("--no-mail"):
         print(f"notify     {login_name(campus_name)}@{campus['mail_domain']}  "
               f"({options.get('--mail-type', 'END,FAIL,TIME_LIMIT_80')})")
@@ -505,17 +528,21 @@ def selftest():
     failures = []
 
     def check(label, got, want):
-        good = abs(got - want) < 1e-6 if isinstance(want, float) else got == want
-        print(f"  {label:<46}{got}   {'OK' if good else 'MISMATCH, want ' + str(want)}")
+        if isinstance(want, float) and isinstance(got, (int, float)) and got is not None:
+            good = abs(got - want) < 1e-6
+        else:
+            good = got == want
+        print(f"  {label:<48}{got}   {'OK' if good else 'MISMATCH, want ' + str(want)}")
         if not good:
             failures.append(label)
 
     check("two campuses in the table", sorted(rates["profiles"]), ["Yungu", "Yunqi"])
     yunqi, yungu = rates["profiles"]["Yunqi"], rates["profiles"]["Yungu"]
     check("Yunqi is marked scanned", yunqi.get("verified"), True)
-    check("Yungu is marked docs-only", yungu.get("verified"), False)
+    check("Yungu is marked scanned", yungu.get("verified"), True)
+    check("Yungu has no billing page", yungu.get("source"), None)
 
-    # ---- Yunqi: the numbers verified against the live cluster on 2026-11-16
+    # ---- Yunqi: numbers verified against the live cluster on 2026-11-16
     plans = plan_job(yunqi, 64, 4.0, 1.0, 1 << 30, "normal")
     by_name = {plan.name: plan for plan in plans}
     check("Yunqi 64c/4h: intel-sc3-32c cost", by_name["intel-sc3-32c"].cost, 5.12)
@@ -527,9 +554,6 @@ def selftest():
     check("Yunqi 33c, no scaling: 32c rounds to 64", rounded.get("intel-sc3-32c"), 64)
     check("Yunqi 33c, no scaling: intel-sc3 stays 33", rounded.get("intel-sc3"), 33)
 
-    huge = plan_job(yunqi, 256, 4.0, 1.0, 1 << 30, "huge")
-    check("Yunqi 256c: amd-ep5-first cost", {p.name: p.cost for p in huge}["amd-ep5-first"], 30.72)
-
     try:
         plan_job(yunqi, 201, 1.0, 1.0, 1 << 30, "normal")
         over_core = False
@@ -537,24 +561,29 @@ def selftest():
         over_core = True
     check("Yunqi 201c: refused under normal", over_core, True)
 
-    # douwj is free and 10 nodes wide
     wide = plan_job(yunqi, 128, 2.0, 1.0, 1 << 30, "normal", "douwj")
     check("Yunqi 128c on douwj: feasible", len(wide), 1)
     check("Yunqi 128c on douwj: costs nothing", wide[0].cost, 0.0)
     check("Yunqi douwj: capacity 10 x 64", wide[0].cores, 640)
 
-    # ---- Yungu: flat 0.045 and a different partition set
-    yungu_plans = plan_job(yungu, 64, 4.0, 1.0, 1 << 30, "normal")
-    yungu_cost = {plan.name: plan.cost for plan in yungu_plans}
-    check("Yungu 64c/4h: intel-sc3 cost", yungu_cost.get("intel-sc3"), 11.52)
-    check("Yungu has no douwj", "douwj" in yungu_cost, False)
-    check("Yungu has no amd-ep5", "amd-ep5" in yungu_cost, False)
+    # ---- Yungu: scanned 2026-11-16, unpriced except douwj
+    check("Yungu has the five scanned partitions", sorted(yungu["partitions"]),
+          ["douwj", "l40s", "test", "test-intel", "testf"])
+    check("Yungu has no Yunqi partition", "amd-ep5-first" in yungu["partitions"], False)
+    dy = plan_job(yungu, 64, 2.0, 1.0, 1 << 30, "normal", "douwj")
+    check("Yungu douwj: costs nothing", dy[0].cost, 0.0)
+    check("Yungu douwj: capacity 5 x 64", dy[0].cores, 320)
+    test_plan = plan_job(yungu, 64, 2.0, 1.0, 1 << 30, "normal", "test")
+    check("Yungu test: unpriced", test_plan[0].cost, None)
+    unpriced = plan_job(yungu, 64, 2.0, 1.0, 1 << 30, "normal")
+    chosen, cheapest, over = choose(unpriced, 7.8, False)
+    check("Yungu: choose() skips unpriced plans", chosen.cost, 0.0)
     try:
-        plan_job(yungu, 64, 1.0, 1.0, 1 << 30, "huge", "douwj")
-        yungu_bad = False
+        plan_job(yungu, 64, 1.0, 1.0, 1 << 30, "huge", "amd-ep5-first")
+        foreign = False
     except SystemExit:
-        yungu_bad = True
-    check("Yungu refuses a Yunqi-only partition", yungu_bad, True)
+        foreign = True
+    check("Yungu refuses a Yunqi partition", foreign, True)
 
     # ---- campus selection and the per-campus partition default
     saved = dict(os.environ)
@@ -579,7 +608,7 @@ def selftest():
                                              {"-c": "8", "--time": "01:00:00", "--any": True})
         check("partition default: --any ignores it", pinned, None)
         try:
-            resolve(yungu, "Yungu", {"-c": "8", "--time": "01:00:00", "-p": "douwj"})
+            resolve(yungu, "Yungu", {"-c": "8", "--time": "01:00:00", "-p": "amd-ep5-first"})
             campus_bad = False
         except SystemExit:
             campus_bad = True

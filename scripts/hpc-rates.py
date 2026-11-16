@@ -70,8 +70,10 @@ def check_profile(name, local, update):
     """Compare one campus with its page; returns (differences, unreadable)."""
     page = local.get("source")
     if not page:
-        print(f"{name}: no source page recorded", file = sys.stderr)
-        return 0, True
+        # Yungu publishes no billing page; its partitions were scanned instead
+        print(f"  {name}: no billing page -- not checked (table from the scan, "
+              f"updated {local.get('updated')})")
+        return 0, False
     try:
         published = parse(fetch(page))
     except SystemExit:

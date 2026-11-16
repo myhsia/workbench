@@ -30,10 +30,9 @@ import urllib.request
 HERE = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.dirname(HERE)
 MANIFEST = os.path.join(ROOT, "hpc-docs.json")
-SITEMAPS = {
-    "Yunqi": "https://hpc.westlake.edu.cn/document/science/sitemap.xml",
-    "Yungu": "http://10.28.0.22:30538/sitemap.xml",
-}
+# Yungu has no documentation of its own: the only site there mirrors Yunqi's
+# pages with different prices, so watching it would only raise false alarms.
+SITEMAPS = {"Yunqi": "https://hpc.westlake.edu.cn/document/science/sitemap.xml"}
 BROKEN_HOST = "http://0.0.0.0:8000"
 REAL_HOST = "https://hpc.westlake.edu.cn"
 YUNGU_HOST = "http://10.28.0.22:30538"

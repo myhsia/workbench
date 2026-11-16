@@ -493,12 +493,26 @@ READMEs, and the changelog; code comments and docstrings; and commit messages.
   (`width = 0, stretch = 0, shrink = 0`) and the kinsoku or penalty pass can still forbid the break
   it would otherwise allow.  Deleting the spacer outright is the wrong fix whenever the same
   boundary also carries a break rule.
-- Floats always use `[htbp]`, never `[tbp]`; full-width floats are a `figure` environment inside
-  `\onecolumngrid`/`\twocolumngrid` (RevTeX), never `figure*`.  A figure may be stubbed with the
-  TeX Live demo `example-image.pdf`.
+- Floats always use `[htbp]`, never `[tbp]`.  A figure may be stubbed with the TeX Live demo
+  `example-image.pdf`.
+- **A full-width float is `figure*`, not a `figure` inside `\onecolumngrid`/`\twocolumngrid`.**
+  Measured on 2026-11-16 with `revtex4-2[aip,jcp]` and five full-width floats: the grid switch
+  places each figure correctly while the float queue is short (one float on an otherwise empty
+  page renders fine), but once two tall floats queue up it issues `A float is stuck` and ships the
+  second at roughly 1.5 times the column width, clipped at the page edge, with its caption printed
+  over the artwork.  Replacing the five `\onecolumngrid … \twocolumngrid` blocks by `figure*`
+  removed every `stuck` warning and placed all five at the correct width.  The grid switch is
+  therefore for wide *text* (a `\begin{widetext}`-style block), not for floats.
 
 ## LaTeX source style
 
+- **RevTeX's AIP emulation drops two front-matter items the real class prints.** In `reprint` mode
+  `aip4-2.rtx` empties `\refname` in its `\setup@hook`, so `\bibliography` emits no heading; set
+  `\renewcommand{\refname}{References}` immediately before it to recover the printed `REFERENCES`.
+  A publisher note under the affiliations ("This paper is part of the … Special Collection") has no
+  field at all: `\thanks`/`\footnote` on the title page is rejected, and `\preprint` and
+  `\affiliation[]{…}` both misplace it above the title, so it stays a source comment rather than a
+  typeset line.
 - Spacing (cosmetic but kept uniform): spaces around relations and binary operators
   (`a = b`, `a + b`, `a - b`), space before operator-like macros and before `\d`
   (`\lambda\omega_C \int ... \d x`), and align continuation lines under the leading expression;

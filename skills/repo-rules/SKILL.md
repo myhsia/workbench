@@ -140,6 +140,18 @@ warning and lets the commit through.  `--no-verify` is the deliberate bypass.
   `np.arange(0, tf + dt, dt)` calls define a paired x/y.  Built in different units (rescaled and
   not) they can differ by one sample, and the mismatch then surfaces at plot time as
   `x and y must have same first dimension`, far from the cause.
+- **A rational reconstruction is judged by the object that is shipped.**  When one denominator is
+  shared across many elements, that denominator may come from a *relaxed* fit (a free numerator per
+  element) for the sake of conditioning, but the degree rule and every accuracy claim must read the
+  misfit of the shipped object: a free numerator reproduced the samples at `1e-13` while the
+  moment-derived numerator missed them by `1e11`, and a degree chosen on the relaxed residual is the
+  wrong degree.
+- **Take a shared pole set from a well-conditioned fit, never from inverting a Pade system.**  The
+  tail equations of a decaying moment sequence are ill conditioned by construction (`|q|` reaches
+  `1e15`, `rcond` `1e-24`), and a minimum-norm solve returns a different, much worse approximant
+  (`0.73 %` against `40.9 %` on the same data).  A common denominator also has to be the *long*
+  polynomial: with a shorter denominator the numerator has to cancel tens of digits at the window
+  end, and the reconstruction fills with poles.
 
 ### Verification
 

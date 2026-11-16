@@ -5,11 +5,14 @@ The rates in ``hpc-rates.json`` are what ``hpc-job`` prices jobs with.  They
 come from the HPC centre's page and can change, so the daily upkeep runs this
 and compares rather than trusting a copy:
 
-    hpc-rates.py --check     # report a difference, change nothing
-    hpc-rates.py --update    # rewrite the rate and cores of known partitions
+    hpc-rates.py --check                    # every campus, change nothing
+    hpc-rates.py --check --profile Yungu    # one campus
+    hpc-rates.py --update [--profile NAME]  # rewrite rates/cores of known partitions
 
-``min_cores`` is not published anywhere; it is local knowledge (this cluster's
-intel-sc3-32c cancels jobs under 32 cores) and is preserved across updates.
+Each campus in ``hpc-rates.json`` carries its own ``source`` page (the two
+campuses bill differently: flat ¥0.045/core-hour at Yungu against
+¥0.02--0.15 at Yunqi).  ``min_cores`` is local knowledge the page does not
+publish, and is preserved across updates.
 """
 
 import datetime
@@ -22,10 +25,7 @@ import urllib.request
 HERE = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.dirname(HERE)
 RATES = os.path.join(ROOT, "hpc-rates.json")
-PAGE = "https://hpc.westlake.edu.cn/document/science/en/money.html#partition-billing-standards"
-
-
-def fetch(url = PAGE):
+def fetch(url):
     request = urllib.request.Request(url, headers = {"User-Agent": "hpc-rates/1"})
     try:
         with urllib.request.urlopen(request, timeout = 25) as response:
@@ -66,6 +66,59 @@ def parse(html):
     return found
 
 
+def check_profile(name, local, update):
+    """Compare one campus with its page; returns (differences, unreadable)."""
+    page = local.get("source")
+    if not page:
+        print(f"{name}: no source page recorded", file = sys.stderr)
+        return 0, True
+    try:
+        published = parse(fetch(page))
+    except SystemExit:
+        return 0, True
+    if not published:
+        print(f"{name}: {page} parsed to nothing -- its layout probably changed", file = sys.stderr)
+        return 0, True
+
+    differences = 0
+    partitions = local.get("partitions", {})
+    for part_name, spec in sorted(published.items()):
+        have = partitions.get(part_name)
+        if have is None:
+            print(f"  {name}: new        {part_name}  ¥{spec['rate']}/{spec['unit']}  "
+                  f"({spec['cores']} cores)")
+            differences += 1
+            continue
+        if abs(have["rate"] - spec["rate"]) > 1e-9:
+            print(f"  {name}: rate       {part_name}: {have['rate']} -> {spec['rate']} "
+                  f"¥/{spec['unit']}")
+            differences += 1
+        if spec["unit"] == "core-hour" and spec["cores"] and have.get("cores") != spec["cores"]:
+            print(f"  {name}: cores      {part_name}: {have.get('cores')} -> {spec['cores']}")
+            differences += 1
+
+    for part_name in sorted(set(partitions) - set(published)):
+        # a group-private partition (douwj) is deliberately absent from the
+        # published page, so it is not a difference
+        if partitions[part_name].get("private"):
+            continue
+        print(f"  {name}: gone       {part_name} is local but not on {page}")
+        differences += 1
+
+    if differences and update:
+        for part_name, spec in published.items():
+            entry = partitions.setdefault(part_name, {"min_cores": 1})
+            entry["rate"] = spec["rate"]
+            if spec["cores"]:
+                entry["cores"] = spec["cores"]
+            entry.setdefault("unit", spec["unit"])
+        local["updated"] = datetime.date.today().isoformat()
+        print(f"  {name}: updated ({len(published)} partitions from {page})")
+    elif not differences:
+        print(f"  {name}: {len(published)} partitions match (updated {local.get('updated')})")
+    return differences, False
+
+
 def main(argv):
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(__doc__.strip())
@@ -74,55 +127,37 @@ def main(argv):
     if not update and "--check" not in argv:
         print(__doc__.strip())
         return 0
+    only = None
+    for i, item in enumerate(argv):
+        if item == "--profile" and i + 1 < len(argv):
+            only = argv[i + 1]
+        elif item.startswith("--profile="):
+            only = item.split("=", 1)[1]
 
     with open(RATES, encoding = "utf-8") as handle:
-        local = json.load(handle)
-
-    published = parse(fetch())
-    if not published:
-        print("hpc-rates: the page parsed to nothing -- its layout probably changed", file = sys.stderr)
+        document = json.load(handle)
+    profiles = document.get("profiles") or {"default": document}
+    if only and only not in profiles:
+        print(f"hpc-rates: no campus '{only}' -- have: " + ", ".join(profiles), file = sys.stderr)
         return 2
 
-    differences = 0
-    for name, spec in sorted(published.items()):
-        have = local["partitions"].get(name)
-        if have is None:
-            print(f"  new        {name}  ¥{spec['rate']}/{spec['unit']}  ({spec['cores']} cores)")
-            differences += 1
+    total, unreadable = 0, False
+    for name, local in profiles.items():
+        if only and name != only:
             continue
-        if abs(have["rate"] - spec["rate"]) > 1e-9:
-            print(f"  rate       {name}: {have['rate']} -> {spec['rate']} ¥/{spec['unit']}")
-            differences += 1
-        # For card-hour partitions the page's core count describes the node,
-        # not something this model prices, so it is not compared.
-        if spec["unit"] == "core-hour" and spec["cores"] and have.get("cores") != spec["cores"]:
-            print(f"  cores      {name}: {have.get('cores')} -> {spec['cores']}")
-            differences += 1
+        differences, failed = check_profile(name, local, update)
+        total += differences
+        unreadable = unreadable or failed
 
-    for name in sorted(set(local["partitions"]) - set(published)):
-        if local["partitions"][name].get("local_only"):
-            continue  # a group-private partition is not on the public page by design
-        print(f"  gone       {name} is in the local table but not on the page")
-        differences += 1
-
-    if not differences:
-        print(f"hpc-rates: {len(published)} partitions match {RATES} (updated {local.get('updated')})")
-        return 0
-
-    if not update:
-        print(f"\nhpc-rates: {differences} difference(s); rerun with --update to accept them")
+    if total and not update:
+        print(f"\nhpc-rates: {total} difference(s); rerun with --update to accept them")
         return 1
-
-    for name, spec in published.items():
-        entry = local["partitions"].setdefault(name, {"min_cores": 1})
-        entry["rate"] = spec["rate"]
-        if spec["cores"]:
-            entry["cores"] = spec["cores"]
-    local["updated"] = datetime.date.today().isoformat()
-    with open(RATES, "w", encoding = "utf-8") as handle:
-        json.dump(local, handle, indent = 2)
-        handle.write("\n")
-    print(f"hpc-rates: {RATES} updated")
+    if unreadable and not total:
+        return 2
+    if update and total:
+        with open(RATES, "w", encoding = "utf-8") as handle:
+            json.dump(document, handle, indent = 1)
+            handle.write("\n")
     return 0
 
 

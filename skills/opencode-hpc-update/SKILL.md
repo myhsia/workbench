@@ -67,7 +67,9 @@ to stdout and creates no file (measured), and generated titles carry no model co
 - Never rebuild it with `make`; the installed binary always comes from a release.
 
 Westlake HPC billing (campus — no proxy), as part of the daily check:
-- `python3 ~/.config/opencode/scripts/hpc-rates.py --check` fetches
+- `python3 ~/.config/opencode/scripts/hpc-rates.py --check` covers **both campuses**
+  (each has its own `source` page; Yungu's is the internal `10.28.0.22:30538`, so it
+  needs the campus network). `--profile NAME` narrows it. It fetches
   <https://hpc.westlake.edu.cn/document/science/en/money.html#partition-billing-standards>
   and compares it with `~/.config/opencode/hpc-rates.json`. It exits 0 when
   everything matches, 1 on a difference, 2 when the page cannot be read or no
@@ -83,7 +85,7 @@ Westlake HPC billing (campus — no proxy), as part of the daily check:
   `hpc-job` recommends. Storage pricing (currently a 50% → 83.3% → 100%
   schedule) is on the same page; mention it if the schedule moves.
 - `python3 ~/.config/opencode/scripts/hpc-docs.py --check` covers the rest of
-  the documentation: it hashes every English page in the sitemap and reports
+  the documentation for both campuses (Yunqi's site and Yungu's internal one): it hashes every English page in the sitemap and reports
   added, changed and removed pages (exit 0 clean, 1 moved, 2 unreadable). A
   moved page is a prompt to read it and update `skills/hpc-cluster/SKILL.md`,
   then `--update` to accept the new state. Partitions, QoS and storage live

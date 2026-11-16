@@ -24,11 +24,35 @@ so the seed never appears on screen -- validates the URI, writes the file, and
 prints the current code for comparison with the authenticator. Without a
 terminal it prints the guide and exits 1 rather than blocking on a prompt.
 
+## Two campuses
+
+Westlake runs two clusters, and they are separate machines with separate
+credentials, partition sets and prices.  `oathpass` holds one profile per
+(cluster, user) pair, and `hpc-job` reads the same selection:
+
+- `Yunqi` — `hpc.westlake.edu.cn`, the campus this machine already used; its
+  partition table was scanned on 2026-11-16 and rates are ¥0.02–0.15/core-hour.
+- `Yungu` — `10.28.0.22:30538`, flat ¥0.045/core-hour, no `douwj` and no
+  `amd-ep5*`; its table comes from the documentation only (`"verified": false`),
+  so `hpc-job` prints a note whenever it prices a job there.
+
+```bash
+oathpass --profile Yungu otp        # that campus's code
+oathpass --profile Yungu run ls     # that campus's session
+oathpass profiles                   # what exists, and which is the default
+hpc-job cost --profile Yungu -c 64 --time 02:00:00
+```
+
+Selection order is `--profile`, then `$OATHPASS_PROFILE`, then the config's
+`default`.  Each profile has its own master socket and its own default
+partition (`~/.config/opencode/hpc-default`, keyed by profile).  A partition
+name valid on one campus is refused on the other.
+
 ## Partitions and QoS
 
 | partition | cores | mem | QOS | notes |
 |---|---|---|---|---|
-| **`douwj`** | 64 | 250G | normal/huge | **the group's own, free**, 10 nodes, `AllowGroups=douwenjie,hpc` |
+| **`douwj`** (Yunqi only) | 64 | 250G | normal/huge | **the group's own, free**, 10 nodes, `AllowGroups=douwenjie,hpc` |
 | `intel-sc3` (Slurm default) | 64 | 480G | normal/huge | SSD `/data` |
 | `intel-sc3-32c` | 64 | 480G | normal/huge | **cores must be a multiple of 32** |
 | `amd-ep2`, `amd-ep2-short`, `amdepyc` | 64 | 480G | normal/huge | `/data`; `amd-ep2-short` and `amdepyc` are in the rates file but **absent from `scontrol show partition`** |
@@ -36,7 +60,7 @@ terminal it prints the guide and exits 1 rather than blocking on a prompt.
 | `intel-fat` | 96 | 3T | `hmem` only | min memory 450G, 30-day limit |
 | GPU partitions | 28–64 | — | gpu/gpu-huge | min 1 GPU; `rt-2080ti-short` 8 h |
 
-**`douwj` is the partition to use.** It is the group's private server (10 nodes × 64 cores, 640
+**On Yunqi, `douwj` is the partition to use.** It is the group's private server (10 nodes × 64 cores, 640
 CPUs) and it is **not billed**, so `hpc-rates.json` carries it at `rate: 0.0` (a 64-core hour on
 `intel-sc3`/`amd-ep2` is ¥1.28). The *choice* of default is machine-local, not part of the rates
 table: `~/.config/opencode/hpc-default` (untracked, mode 600) holds a partition name, currently

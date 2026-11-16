@@ -1,116 +1,226 @@
 {
-  "pages": {
-    "https://hpc.westlake.edu.cn/document/science/en/bio_db.html": {
-      "bytes": 4885,
-      "hash": "dd38257601fdaae2584ea0eceda783685e840f109cb761d5bd8582f2e9e95d2f",
-      "title": "Biological Information Resource Databases\u00b6"
+  "profiles": {
+    "Yungu": {
+      "pages": {
+        "http://10.28.0.22:30538/en/faq.html": {
+          "bytes": 14677,
+          "hash": "fe00fdc0abcbbc582196431734452ee725d89d4f6090a82eec86521600d2455a",
+          "title": "Frequently Asked Questions (FAQ)\u00b6"
+        },
+        "http://10.28.0.22:30538/en/index.html": {
+          "bytes": 2503,
+          "hash": "a4d056055932594483695521f2c6fe00bb95bcef780a020e468109cdc1246a7b",
+          "title": "TL;DR\u00b6"
+        },
+        "http://10.28.0.22:30538/en/jobs/cli.html": {
+          "bytes": 8891,
+          "hash": "9735eace5f55dccadac715224530bbe35ef6976d6c457f638cf38466ff4cc38f",
+          "title": "Submitting Slurm Computing Jobs via Cluster Command Line\u00b6"
+        },
+        "http://10.28.0.22:30538/en/jobs/galaxy.html": {
+          "bytes": 1228,
+          "hash": "c42158e6bfc17f631f3525dda9dc06bc4f0523f6cd695734930ad3024825751b",
+          "title": "Galaxy Web Application Platform\u00b6"
+        },
+        "http://10.28.0.22:30538/en/jobs/resources.html": {
+          "bytes": 3000,
+          "hash": "c939d5f7002fc40be5c83e3dd5671341aa070fe9fa62ba685d9f4c458b98b429",
+          "title": "Computing Resources\u00b6"
+        },
+        "http://10.28.0.22:30538/en/jobs/scow.html": {
+          "bytes": 1988,
+          "hash": "0e7b97d162b8f0f139507f78ce64a1798c206d1ed0340942c539ab27b03e7511",
+          "title": "SCOW Web Job Management System\u00b6"
+        },
+        "http://10.28.0.22:30538/en/login/data_transfer.html": {
+          "bytes": 3387,
+          "hash": "ab7bc7333cc3ea889888dad9d8354fb397c98afc86ccfa32ce209b08d2eea645",
+          "title": "Data Transfer\u00b6"
+        },
+        "http://10.28.0.22:30538/en/login/login.html": {
+          "bytes": 2074,
+          "hash": "c1d275be30cb1ae7a88343795ec10904fa7747e7658abe08a043fedfc4b4d82c",
+          "title": "Cluster Login\u00b6"
+        },
+        "http://10.28.0.22:30538/en/mirror.html": {
+          "bytes": 1539,
+          "hash": "b09b725d632afaa386138495ea7df2073fe5b29ec967c2c458d2fb29315153e9",
+          "title": "Westlake University Open Source Software Mirror Site\u00b6"
+        },
+        "http://10.28.0.22:30538/en/money.html": {
+          "bytes": 1444,
+          "hash": "0990d9487dfa15e8b167334af1793fcdc06f6260c0b6edc1b2741283bcedf079",
+          "title": "Cluster Billing Rules\u00b6"
+        },
+        "http://10.28.0.22:30538/en/soft/bio.html": {
+          "bytes": 11013,
+          "hash": "ea205e913f29767e4141d0c66b46f69b0bea5bf6c6a9eb2f87bd4f13e2d3ef02",
+          "title": "Bioinformatics Tools\u00b6"
+        },
+        "http://10.28.0.22:30538/en/soft/dev.html": {
+          "bytes": 1555,
+          "hash": "1c0926d9f36be32756ce684fde4030ffba70d60b33bcef08ff22fb47a0e4eb7e",
+          "title": "Programming Languages and Development Tools\u00b6"
+        },
+        "http://10.28.0.22:30538/en/soft/env.html": {
+          "bytes": 6805,
+          "hash": "c3a56d4b6d9b1f12696f270fcf31dba702d2504bf21bc013ffc1f232644bde95",
+          "title": "Software Environment Management\u00b6"
+        },
+        "http://10.28.0.22:30538/en/soft/more/ai.html": {
+          "bytes": 1264,
+          "hash": "4640e7426fd46a1f42f66be4e9b686d00b9e049f9661b009fbae47d5eef64fcc",
+          "title": "How to Use On-campus AI Programming Models on Scientific Engineering Computing Cluster\u00b6"
+        },
+        "http://10.28.0.22:30538/en/soft/more/jupyter.html": {
+          "bytes": 2797,
+          "hash": "89babfc542d32b780a022494bd746d3c3fcaa2450fe25abf76c704c0b1026295",
+          "title": "Jupyter Notebook User Guide\u00b6"
+        },
+        "http://10.28.0.22:30538/en/soft/more/vscode.html": {
+          "bytes": 2874,
+          "hash": "c73d1f23414b658f0bb65ade8ff54fdca1196d6de17dbcef12e8d58e6b05e3d9",
+          "title": "VSCode Remote Development Guide\u00b6"
+        },
+        "http://10.28.0.22:30538/en/soft/philosophy.html": {
+          "bytes": 7518,
+          "hash": "f790f753f46aa79453ed2975ad958a71c2433b029cf719e9d90c78208007afc1",
+          "title": "Physics and Chemistry Computing Tools\u00b6"
+        },
+        "http://10.28.0.22:30538/en/structure.html": {
+          "bytes": 852,
+          "hash": "6e0b7b506599bc67b98a73ae21b89bf9d75673d2df6ed6547ad9c7421fa8629f",
+          "title": "Cluster Networking Architecture\u00b6"
+        },
+        "http://10.28.0.22:30538/en/update.html": {
+          "bytes": 96,
+          "hash": "5951c5199608b0e3a8948fddcbb3d479aa50813f338535ec9c2e2306956fc544",
+          "title": "Update Log\u00b6"
+        },
+        "http://10.28.0.22:30538/en/userspace.html": {
+          "bytes": 1697,
+          "hash": "c1b6abaaa524a64720e91ff49ff7dfea2e7e14a2bc03800ae17178c99d46df23",
+          "title": "User Storage Space\u00b6"
+        }
+      },
+      "sitemap": "http://10.28.0.22:30538/sitemap.xml",
+      "updated": "2026-11-16"
     },
-    "https://hpc.westlake.edu.cn/document/science/en/faq.html": {
-      "bytes": 15913,
-      "hash": "e9aaafcfa034b8aae9e541ba254a1f8a281b470efec4050de3b3c021546c7697",
-      "title": "Frequently Asked Questions (FAQ)\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/index.html": {
-      "bytes": 3342,
-      "hash": "5e0bc87907d1b35e5bfb52722cf9ade9fe14eb231f6ef02176e3a1e5a2e66d0c",
-      "title": "TL;DR\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/jobs/cli.html": {
-      "bytes": 10225,
-      "hash": "82021af9cfb18a2ed04e3f013da8e17c38a6fcd3059f1d1a21881f305189f5a0",
-      "title": "Submitting Slurm Computing Jobs via Cluster Command Line\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/jobs/galaxy.html": {
-      "bytes": 1228,
-      "hash": "c42158e6bfc17f631f3525dda9dc06bc4f0523f6cd695734930ad3024825751b",
-      "title": "Galaxy Web Application Platform\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/jobs/resources.html": {
-      "bytes": 3089,
-      "hash": "e5abfb70c22c35f3ece20cdd151309154a98a7490148d344d083838f94d0bb33",
-      "title": "Computing Resources\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/jobs/scow.html": {
-      "bytes": 2138,
-      "hash": "89af2be116c8e236a64bbc26577b867e1ca74d28ac38c38d32f5758f72bfb7cc",
-      "title": "SCOW Web Job Management System\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/login/data_transfer.html": {
-      "bytes": 3235,
-      "hash": "123b4a68e100b0e3075882377c5486587fbe7cf3db484fe9c23ff8ef1b2b2912",
-      "title": "Data Transfer\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/login/login.html": {
-      "bytes": 2074,
-      "hash": "3c6f696784e8a532a07243628d9f32ed499c8f9ea4edbe9b884fe007c918c966",
-      "title": "Cluster Login\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/mirror.html": {
-      "bytes": 1496,
-      "hash": "750b9dccfa97d8456c088c7322f00e563497c3e4691a4f0472cb270fe0d5e4d4",
-      "title": "Westlake University Open Source Software Mirror Site\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/money.html": {
-      "bytes": 2098,
-      "hash": "95113fceef94e5c6c240d1f9c021ff4c17048a9a996b726da5e6fa38493e4d66",
-      "title": "Cluster Billing Rules\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/soft/bio.html": {
-      "bytes": 22080,
-      "hash": "de30e59f864cded24c1df21246c0e3cc4636fad8f7fb470b0f1e558f9c3afe71",
-      "title": "Bioinformatics Tools\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/soft/dev.html": {
-      "bytes": 1577,
-      "hash": "20b0d413d5dd2bedd4ef8147e0a39f61bc42def814d9639f8d9b0fcecfe7f72b",
-      "title": "Programming Languages and Development Tools\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/soft/env.html": {
-      "bytes": 6661,
-      "hash": "d0ee8b056ed5279826f481ffa1b8c28ee02f07dbcf3787088a5ff23e74585714",
-      "title": "Software Environment Management\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/soft/more/ai.html": {
-      "bytes": 12638,
-      "hash": "d650109cc0566aee941f0d500c62881780e03d056fb4f4801babef83ed55ba31",
-      "title": "How to Use On-campus AI Programming Models on Scientific Engineering Computing Cluster\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/soft/more/futureos.html": {
-      "bytes": 19472,
-      "hash": "7ef62eb07eeeddcc09e9e08fbcea9f77845d7e6b38d260f0049536f160a32558",
-      "title": "FutureOS Smart Work Companion\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/soft/more/jupyter.html": {
-      "bytes": 3138,
-      "hash": "650cb635d7fad6ecec3a97ec15afedc6cf54b78082dd3037b43f373530a40424",
-      "title": "Jupyter Notebook User Guide\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/soft/more/vscode.html": {
-      "bytes": 3288,
-      "hash": "2e775be04cc3060b3121f30e2a62438e03b6a5d99012bbc193e19a7786aa934c",
-      "title": "VSCode Remote Development Guide\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/soft/philosophy.html": {
-      "bytes": 7884,
-      "hash": "06dc422bc2ca37b509f0a550da833229bd764eb56f5b6b25de412bea0274affb",
-      "title": "Physics and Chemistry Computing Tools\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/structure.html": {
-      "bytes": 1036,
-      "hash": "bfb5a18047969137c6c18817f0e0ca2beee84c9fbbaa3776f9a4051e4a107ad7",
-      "title": "Cluster Networking Architecture\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/update.html": {
-      "bytes": 322,
-      "hash": "8658bc2c32102623199d6d562932065c5d83695bf43e7fba79b55554e11c09b8",
-      "title": "Update Log\u00b6"
-    },
-    "https://hpc.westlake.edu.cn/document/science/en/userspace.html": {
-      "bytes": 1898,
-      "hash": "86dfea2a792f6401980988cb8171ae35bceaff14ddbda8b973efc3aba1142a3b",
-      "title": "User Storage Space\u00b6"
+    "Yunqi": {
+      "pages": {
+        "https://hpc.westlake.edu.cn/document/science/en/bio_db.html": {
+          "bytes": 4885,
+          "hash": "dd38257601fdaae2584ea0eceda783685e840f109cb761d5bd8582f2e9e95d2f",
+          "title": "Biological Information Resource Databases\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/faq.html": {
+          "bytes": 15913,
+          "hash": "e9aaafcfa034b8aae9e541ba254a1f8a281b470efec4050de3b3c021546c7697",
+          "title": "Frequently Asked Questions (FAQ)\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/index.html": {
+          "bytes": 3342,
+          "hash": "5e0bc87907d1b35e5bfb52722cf9ade9fe14eb231f6ef02176e3a1e5a2e66d0c",
+          "title": "TL;DR\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/jobs/cli.html": {
+          "bytes": 10225,
+          "hash": "82021af9cfb18a2ed04e3f013da8e17c38a6fcd3059f1d1a21881f305189f5a0",
+          "title": "Submitting Slurm Computing Jobs via Cluster Command Line\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/jobs/galaxy.html": {
+          "bytes": 1228,
+          "hash": "c42158e6bfc17f631f3525dda9dc06bc4f0523f6cd695734930ad3024825751b",
+          "title": "Galaxy Web Application Platform\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/jobs/resources.html": {
+          "bytes": 3089,
+          "hash": "e5abfb70c22c35f3ece20cdd151309154a98a7490148d344d083838f94d0bb33",
+          "title": "Computing Resources\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/jobs/scow.html": {
+          "bytes": 2138,
+          "hash": "89af2be116c8e236a64bbc26577b867e1ca74d28ac38c38d32f5758f72bfb7cc",
+          "title": "SCOW Web Job Management System\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/login/data_transfer.html": {
+          "bytes": 3235,
+          "hash": "123b4a68e100b0e3075882377c5486587fbe7cf3db484fe9c23ff8ef1b2b2912",
+          "title": "Data Transfer\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/login/login.html": {
+          "bytes": 2074,
+          "hash": "3c6f696784e8a532a07243628d9f32ed499c8f9ea4edbe9b884fe007c918c966",
+          "title": "Cluster Login\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/mirror.html": {
+          "bytes": 1496,
+          "hash": "750b9dccfa97d8456c088c7322f00e563497c3e4691a4f0472cb270fe0d5e4d4",
+          "title": "Westlake University Open Source Software Mirror Site\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/money.html": {
+          "bytes": 2098,
+          "hash": "95113fceef94e5c6c240d1f9c021ff4c17048a9a996b726da5e6fa38493e4d66",
+          "title": "Cluster Billing Rules\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/soft/bio.html": {
+          "bytes": 22080,
+          "hash": "de30e59f864cded24c1df21246c0e3cc4636fad8f7fb470b0f1e558f9c3afe71",
+          "title": "Bioinformatics Tools\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/soft/dev.html": {
+          "bytes": 1577,
+          "hash": "20b0d413d5dd2bedd4ef8147e0a39f61bc42def814d9639f8d9b0fcecfe7f72b",
+          "title": "Programming Languages and Development Tools\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/soft/env.html": {
+          "bytes": 6661,
+          "hash": "d0ee8b056ed5279826f481ffa1b8c28ee02f07dbcf3787088a5ff23e74585714",
+          "title": "Software Environment Management\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/soft/more/ai.html": {
+          "bytes": 12638,
+          "hash": "d650109cc0566aee941f0d500c62881780e03d056fb4f4801babef83ed55ba31",
+          "title": "How to Use On-campus AI Programming Models on Scientific Engineering Computing Cluster\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/soft/more/futureos.html": {
+          "bytes": 19472,
+          "hash": "7ef62eb07eeeddcc09e9e08fbcea9f77845d7e6b38d260f0049536f160a32558",
+          "title": "FutureOS Smart Work Companion\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/soft/more/jupyter.html": {
+          "bytes": 3138,
+          "hash": "650cb635d7fad6ecec3a97ec15afedc6cf54b78082dd3037b43f373530a40424",
+          "title": "Jupyter Notebook User Guide\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/soft/more/vscode.html": {
+          "bytes": 3288,
+          "hash": "2e775be04cc3060b3121f30e2a62438e03b6a5d99012bbc193e19a7786aa934c",
+          "title": "VSCode Remote Development Guide\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/soft/philosophy.html": {
+          "bytes": 7884,
+          "hash": "06dc422bc2ca37b509f0a550da833229bd764eb56f5b6b25de412bea0274affb",
+          "title": "Physics and Chemistry Computing Tools\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/structure.html": {
+          "bytes": 1036,
+          "hash": "bfb5a18047969137c6c18817f0e0ca2beee84c9fbbaa3776f9a4051e4a107ad7",
+          "title": "Cluster Networking Architecture\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/update.html": {
+          "bytes": 322,
+          "hash": "8658bc2c32102623199d6d562932065c5d83695bf43e7fba79b55554e11c09b8",
+          "title": "Update Log\u00b6"
+        },
+        "https://hpc.westlake.edu.cn/document/science/en/userspace.html": {
+          "bytes": 1898,
+          "hash": "86dfea2a792f6401980988cb8171ae35bceaff14ddbda8b973efc3aba1142a3b",
+          "title": "User Storage Space\u00b6"
+        }
+      },
+      "sitemap": "https://hpc.westlake.edu.cn/document/science/sitemap.xml",
+      "updated": "2026-11-15"
     }
-  },
-  "source": "https://hpc.westlake.edu.cn/document/science/sitemap.xml",
-  "updated": "2026-11-15"
+  }
 }

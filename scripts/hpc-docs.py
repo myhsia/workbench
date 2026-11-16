@@ -4,8 +4,13 @@
 The skill's tables are only as good as the page they came from, so the daily
 upkeep hashes every English documentation page and reports what moved:
 
-    hpc-docs.py --check     # report added / changed / removed pages
-    hpc-docs.py --update    # accept the current state into hpc-docs.json
+    hpc-docs.py --check                    # every campus
+    hpc-docs.py --check --profile Yungu    # one campus
+    hpc-docs.py --update [--profile NAME]  # accept the current state
+
+Each campus has its own documentation site, recorded as ``docs[NAME].sitemap``
+in ``hpc-docs.json``; Yungu's is an internal address, so its check fails without
+the campus network or the VPN (exit 2) rather than reporting a change.
 
 Exit codes follow the other session checks: 0 nothing changed, 1 something
 changed, 2 the site could not be read.  A changed page is a prompt to read it
@@ -25,9 +30,13 @@ import urllib.request
 HERE = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.dirname(HERE)
 MANIFEST = os.path.join(ROOT, "hpc-docs.json")
-SITEMAP = "https://hpc.westlake.edu.cn/document/science/sitemap.xml"
+SITEMAPS = {
+    "Yunqi": "https://hpc.westlake.edu.cn/document/science/sitemap.xml",
+    "Yungu": "http://10.28.0.22:30538/sitemap.xml",
+}
 BROKEN_HOST = "http://0.0.0.0:8000"
 REAL_HOST = "https://hpc.westlake.edu.cn"
+YUNGU_HOST = "http://10.28.0.22:30538"
 DELAY = 0.2
 
 
@@ -37,12 +46,13 @@ def fetch(url, timeout = 25):
         return response.read().decode("utf-8", errors = "replace")
 
 
-def page_list(html):
+def page_list(html, real_host = REAL_HOST):
+    """English page URLs, with the sitemap's placeholder host rewritten."""
     urls = []
     for loc in re.findall(r"<loc>([^<]+)</loc>", html):
         if "/en/" not in loc:
             continue
-        urls.append(loc.replace(BROKEN_HOST, REAL_HOST))
+        urls.append(loc.replace(BROKEN_HOST, real_host))
     return sorted(set(urls))
 
 
@@ -84,6 +94,71 @@ def load_manifest():
         return json.load(handle)
 
 
+def migrate_flat_manifest(manifest):
+    """A pre-campus manifest becomes the Yunqi entry."""
+    if "profiles" in manifest:
+        return
+    pages = manifest.get("pages")
+    if not pages:
+        return
+    manifest["profiles"] = {"Yunqi": {"sitemap": SITEMAPS["Yunqi"],
+                                      "updated": manifest.get("updated"),
+                                      "pages": pages}}
+    manifest.pop("pages", None)
+    manifest.pop("source", None)
+    manifest.pop("updated", None)
+
+
+def check_campus(name, sitemap, manifest, update):
+    """Compare one campus's site with its recorded hashes."""
+    try:
+        real_host = YUNGU_HOST if sitemap.startswith(YUNGU_HOST) else REAL_HOST
+        urls = page_list(fetch(sitemap), real_host)
+    except Exception as error:  # noqa: BLE001 - any failure means "cannot read it"
+        print(f"hpc-docs: {name}: cannot fetch {sitemap}: {error}", file = sys.stderr)
+        print("hpc-docs: this is a campus site -- connect to the network or the VPN",
+              file = sys.stderr)
+        return 0, True
+    if not urls:
+        print(f"hpc-docs: {name}: the sitemap listed no English pages", file = sys.stderr)
+        return 0, True
+
+    try:
+        current = snapshot(urls)
+    except Exception as error:  # noqa: BLE001
+        print(f"hpc-docs: {name}: cannot read a page: {error}", file = sys.stderr)
+        return 0, True
+
+    # a manifest written before campuses were separate holds one flat "pages"
+    migrate_flat_manifest(manifest)
+    previous = (manifest.get("profiles", {}).get(name, {}) or {}).get("pages", {})
+    changes = 0
+    for url in sorted(current):
+        label = url.replace(REAL_HOST + "/document/science/en/", "").replace(
+            YUNGU_HOST + "/en/", "")
+        if url not in previous:
+            print(f"  {name}: new        {label}  ({current[url]['title']})")
+            changes += 1
+        elif previous[url]["hash"] != current[url]["hash"]:
+            print(f"  {name}: changed    {label}  ({current[url]['title']})")
+            changes += 1
+    for url in sorted(set(previous) - set(current)):
+        print(f"  {name}: gone       {url}")
+        changes += 1
+
+    if not changes:
+        print(f"  {name}: {len(current)} pages match (updated "
+              f"{(manifest.get('profiles', {}).get(name, {}) or {}).get('updated')})")
+    elif update:
+        manifest.setdefault("profiles", {})[name] = {
+            "sitemap": sitemap,
+            "updated": datetime.date.today().isoformat(),
+            "pages": current,
+        }
+        print(f"  {name}: recorded {len(current)} pages")
+    return changes, False
+
+
 def main(argv):
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(__doc__.strip())
@@ -92,52 +167,36 @@ def main(argv):
     if not update and "--check" not in argv:
         print(__doc__.strip())
         return 0
+    only = None
+    for i, item in enumerate(argv):
+        if item == "--profile" and i + 1 < len(argv):
+            only = argv[i + 1]
+        elif item.startswith("--profile="):
+            only = item.split("=", 1)[1]
 
-    try:
-        urls = page_list(fetch(SITEMAP))
-    except Exception as error:  # noqa: BLE001 - any failure means "cannot read it"
-        print(f"hpc-docs: cannot fetch the sitemap: {error}", file = sys.stderr)
-        print("hpc-docs: this is a campus site -- connect to the network or the VPN", file = sys.stderr)
-        return 2
-    if not urls:
-        print("hpc-docs: the sitemap listed no English pages", file = sys.stderr)
-        return 2
-
-    try:
-        current = snapshot(urls)
-    except Exception as error:  # noqa: BLE001
-        print(f"hpc-docs: cannot read a page: {error}", file = sys.stderr)
+    manifest = load_manifest()
+    if only and only not in SITEMAPS:
+        print(f"hpc-docs: no campus '{only}' -- have: " + ", ".join(SITEMAPS), file = sys.stderr)
         return 2
 
-    previous = load_manifest().get("pages", {})
-    changes = 0
-    for url in sorted(current):
-        name = url.replace(REAL_HOST + "/document/science/en/", "")
-        if url not in previous:
-            print(f"  new        {name}  ({current[url]['title']})")
-            changes += 1
-        elif previous[url]["hash"] != current[url]["hash"]:
-            print(f"  changed    {name}  ({current[url]['title']})")
-            changes += 1
-    for url in sorted(set(previous) - set(current)):
-        print(f"  gone       {url.replace(REAL_HOST + '/document/science/en/', '')}")
-        changes += 1
+    total, unreadable = 0, False
+    for name, sitemap in SITEMAPS.items():
+        if only and name != only:
+            continue
+        changes, failed = check_campus(name, sitemap, manifest, update)
+        total += changes
+        unreadable = unreadable or failed
 
-    if not changes:
-        print(f"hpc-docs: {len(current)} pages match {MANIFEST} (updated {load_manifest().get('updated')})")
+    if update and total:
+        with open(MANIFEST, "w", encoding = "utf-8") as handle:
+            json.dump(manifest, handle, indent = 2, sort_keys = True)
+            handle.write("\n")
         return 0
-
-    if not update:
-        print(f"\nhpc-docs: {changes} page(s) moved; read them and update the hpc-cluster skill,")
+    if total:
+        print(f"\nhpc-docs: {total} page(s) moved; read them and update the hpc-cluster skill,")
         print("          then accept the new state with --update")
         return 1
-
-    with open(MANIFEST, "w", encoding = "utf-8") as handle:
-        json.dump({"updated": datetime.date.today().isoformat(), "source": SITEMAP, "pages": current},
-                  handle, indent = 2, sort_keys = True)
-        handle.write("\n")
-    print(f"hpc-docs: {MANIFEST} updated with {len(current)} pages")
-    return 0
+    return 2 if unreadable else 0
 
 
 if __name__ == "__main__":

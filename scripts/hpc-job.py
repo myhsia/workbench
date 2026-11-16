@@ -44,9 +44,41 @@ def die(message):
 def load_rates(path = RATES):
     with open(path, encoding = "utf-8") as handle:
         data = json.load(handle)
-    if not data.get("partitions"):
-        die(f"{path} has no partitions")
+    if "profiles" not in data:
+        # a file written before campuses were separate: one unnamed profile
+        data = {"currency": data.get("currency", "CNY"), "profiles": {"default": data}}
     return data
+
+
+def oathpass_default_profile():
+    """The campus default oathpass would use, read straight from its config."""
+    path = os.path.expanduser("~/.config/oathpass/config.json")
+    try:
+        with open(path, encoding = "utf-8") as handle:
+            doc = json.load(handle).get("oathpass", {})
+    except (OSError, ValueError):
+        return None
+    name = doc.get("default")
+    if name:
+        return name
+    profiles = doc.get("profiles")
+    if isinstance(profiles, dict) and len(profiles) == 1:
+        return next(iter(profiles))
+    return None
+
+
+def select_campus(rates, options):
+    """--profile, then $OATHPASS_PROFILE, then oathpass's own default."""
+    profiles = rates["profiles"]
+    wanted = options.get("--profile") or os.environ.get("OATHPASS_PROFILE") \
+        or oathpass_default_profile()
+    if wanted is None and len(profiles) == 1:
+        wanted = next(iter(profiles))
+    if wanted is None:
+        die("no campus chosen -- pass --profile NAME (have: " + ", ".join(profiles) + ")")
+    if wanted not in profiles:
+        die(f"no campus '{wanted}' in {RATES} -- have: " + ", ".join(profiles))
+    return wanted, profiles[wanted]
 
 
 def parse_time(text):
@@ -89,10 +121,10 @@ def round_up(value, step):
     return step * math.ceil(value / step) if step > 1 else value
 
 
-def plan_job(rates, cores, hours, efficiency, max_cores, qos_name, only = None):
+def plan_job(campus, cores, hours, efficiency, max_cores, qos_name, only = None):
     """Plans for one QoS.  `cores` is the job width, `max_cores` how far it may
     scale, `only` restricts the plans to one named partition."""
-    qos = rates["qos"].get(qos_name)
+    qos = campus["qos"].get(qos_name)
     if qos is None:
         die(f"unknown QoS '{qos_name}'")
     limit = qos.get("max_cores")
@@ -101,7 +133,7 @@ def plan_job(rates, cores, hours, efficiency, max_cores, qos_name, only = None):
         die(f"{cores} cores exceed the {qos_name} QoS limit of {limit}{hint}")
 
     plans = []
-    for name, spec in rates["partitions"].items():
+    for name, spec in campus["partitions"].items():
         if spec.get("unit", "core-hour") != "core-hour":
             continue  # GPU partitions bill per card-hour; not modelled here
         if qos_name not in spec.get("qos", []):
@@ -129,7 +161,10 @@ def plan_job(rates, cores, hours, efficiency, max_cores, qos_name, only = None):
         plans.append(Plan(name, spec, request, wall, billed, spec["rate"] * request * billed, qos_name))
     if not plans:
         if only:
-            spec = rates["partitions"][only]
+            spec = campus["partitions"].get(only)
+            if spec is None:
+                die(f"{only} is not a partition on this campus -- have: "
+                    + ", ".join(campus["partitions"]))
             capacity = int(spec.get("cores", 0)) * int(spec.get("nodes", 1))
             die(f"{only} holds {capacity} cores ({spec.get('cores', 0)} x "
                 f"{spec.get('nodes', 1)} nodes), {cores} requested "
@@ -161,10 +196,10 @@ def print_table(plans, chosen, cheapest):
               f"{plan.billed:>7}h{plan.cost:>10.2f}  {plan.qos}{marks}")
 
 
-def describe(rates, chosen, cheapest, over, limit):
+def describe(campus, chosen, cheapest, over, limit):
     print()
-    currency = rates.get("currency", "")
-    priority = rates["qos"][chosen.qos].get("priority", "?")
+    currency = "CNY"
+    priority = campus["qos"][chosen.qos].get("priority", "?")
     tag = "  (over the cap)" if over else ""
     print(f"plan       {chosen.name}  {chosen.cores} cores  {chosen.cost:.2f} {currency}"
           f"  qos {chosen.qos} ({priority} priority){tag}")
@@ -187,8 +222,8 @@ def split_options(argv):
     index = 0
     while index < len(argv):
         item = argv[index]
-        if item in ("-c", "--time", "-p", "-q", "--mem", "--efficiency", "--max-cores", "--budget",
-                    "--qos", "--mail-type"):
+        if item in ("-c", "--time", "-p", "--partition", "-q", "--mem", "--efficiency",
+                    "--max-cores", "--budget", "--qos", "--mail-type", "--profile"):
             if index + 1 >= len(argv):
                 die(f"{item} needs a value")
             options[item] = argv[index + 1]
@@ -203,7 +238,7 @@ def split_options(argv):
     return options, rest
 
 
-def resolve(rates, options):
+def resolve(campus, campus_name, options):
     if "-c" not in options:
         die("-c N is required")
     if "--time" not in options:
@@ -211,55 +246,85 @@ def resolve(rates, options):
     cores = int(options["-c"])
     hours = parse_time(options["--time"])
     efficiency = float(options.get("--efficiency", 1.0))
-    limit = float(options.get("--budget", rates["spend_limit"]))
+    limit = float(options.get("--budget", campus["spend_limit"]))
     max_cores = int(options.get("--max-cores", 1 << 30))
     qos = options.get("--qos", DEFAULT_QOS)
-    # Partition choice: an explicit -p wins, then the machine-local default
-    # ($HPC_PARTITION, then ~/.config/opencode/hpc-default).  --any and --cheap
-    # ignore the local default, because both state a different intent.
+    # Partition choice: an explicit -p wins, then this campus's machine-local
+    # default ($HPC_PARTITION, then hpc-default).  --any and --cheap drop the
+    # pin, because both state a different intent.
     only, source = (options.get("-p") or options.get("--partition")), "-p"
     if not only and not options.get("--any") and not options.get("--cheap"):
-        only, source = default_partition()
-    if only and only not in rates["partitions"]:
-        die(f"unknown partition '{only}' (see hpc-rates.json)")
+        only, source = default_partition(campus_name)
+    if only and only not in campus["partitions"]:
+        die(f"'{only}' is not a partition on {campus_name} -- have: "
+            + ", ".join(campus["partitions"]))
     return cores, hours, efficiency, limit, max_cores, qos, only, source
 
 
-def default_partition():
-    """The machine-local default partition, and where it came from."""
+def read_partition_defaults():
+    """{profile: partition}; a bare word is accepted as the default for all."""
+    try:
+        with open(DEFAULT_PARTITION_FILE, encoding = "utf-8") as handle:
+            text = handle.read().strip()
+    except FileNotFoundError:
+        return {}
+    if not text:
+        return {}
+    if text.startswith("{"):
+        try:
+            loaded = json.loads(text)
+        except ValueError:
+            die(f"{DEFAULT_PARTITION_FILE} is not valid JSON")
+        return loaded if isinstance(loaded, dict) else {}
+    return {"*": text}
+
+
+def default_partition(campus_name):
+    """The machine-local default partition for this campus, and where from."""
     env = os.environ.get("HPC_PARTITION")
     if env and env.strip():
         return env.strip(), "HPC_PARTITION"
-    try:
-        with open(DEFAULT_PARTITION_FILE) as handle:
-            name = handle.read().strip()
-    except FileNotFoundError:
-        return None, None
+    defaults = read_partition_defaults()
+    name = defaults.get(campus_name) or defaults.get("*")
     return (name, DEFAULT_PARTITION_FILE) if name else (None, None)
 
 
-def print_partition(only, source):
-    """One line stating which partition the job is pinned to, and why."""
+def print_partition(campus_name, only, source):
+    """Which campus, and which partition it is pinned to, and why."""
+    print(f"campus     {campus_name}")
     if only:
         print(f"partition  {only}  (from {source})")
 
 
+def warn_unverified(campus_name, campus):
+    if not campus.get("verified", True):
+        print(f"note       {campus_name}'s partition table comes from its documentation, not a "
+              "scan; run the scan once logged in")
+
+
 def cmd_default(rates, argv):
-    """Show or set the machine-local default partition."""
-    if not argv:
-        only, source = default_partition()
+    """Show or set the machine-local default partition, per campus."""
+    options, rest = split_options(argv)
+    campus_name, campus = select_campus(rates, options)
+    if not rest:
+        only, source = default_partition(campus_name)
+        print(f"campus     {campus_name}")
         if only:
-            print(f"{only}  (from {source})")
+            print(f"default    {only}  (from {source})")
         else:
-            print("none  (the planner takes the fastest plan inside the cap; "
-                  f"set one with: hpc-job default NAME)")
+            print("default    none  (set one with: hpc-job default NAME)")
         return 0
-    name = argv[0]
-    if name not in rates["partitions"]:
-        die(f"unknown partition '{name}' (see hpc-rates.json)")
-    spec = rates["partitions"][name]
-    with open(DEFAULT_PARTITION_FILE, "w") as handle:
-        handle.write(name + "\n")
+    name = rest[0]
+    if name not in campus["partitions"]:
+        die(f"unknown partition '{name}' on {campus_name} -- have: "
+            + ", ".join(campus["partitions"]))
+    spec = campus["partitions"][name]
+    defaults = read_partition_defaults()
+    defaults.pop("*", None)
+    defaults[campus_name] = name
+    with open(DEFAULT_PARTITION_FILE, "w", encoding = "utf-8") as handle:
+        json.dump(defaults, handle, indent = 2, sort_keys = True)
+        handle.write("\n")
     os.chmod(DEFAULT_PARTITION_FILE, 0o600)
     print(f"default    {name}  ({DEFAULT_PARTITION_FILE})")
     print(f"           {spec['cores']} cores, rate {spec['rate']} per {spec.get('unit', 'core-hour')}")
@@ -270,18 +335,22 @@ def cmd_cost(rates, argv):
     options, rest = split_options(argv)
     if rest:
         die(f"unexpected argument '{rest[0]}'")
-    cores, hours, efficiency, limit, max_cores, qos, only, source = resolve(rates, options)
-    plans = plan_job(rates, cores, hours, efficiency, max_cores, qos, only)
+    campus_name, campus = select_campus(rates, options)
+    cores, hours, efficiency, limit, max_cores, qos, only, source = resolve(
+        campus, campus_name, options)
+    plans = plan_job(campus, cores, hours, efficiency, max_cores, qos, only)
     chosen, cheapest, over = choose(plans, limit, bool(options.get("--cheap")))
     print(f"job        {cores} cores, up to {hours:.2f}h, efficiency {efficiency:.2f}, qos {qos}\n")
-    print_partition(only, source)
+    print_partition(campus_name, only, source)
+    warn_unverified(campus_name, campus)
     print_table(plans, chosen, cheapest)
-    return describe(rates, chosen, cheapest, over, limit)
+    return describe(campus, chosen, cheapest, over, limit)
 
 
-def login_name():
+def login_name(campus_name = None):
     """The cluster login name, read from oathpass's own config."""
-    result = subprocess.run([OATHPASS, "target"], capture_output = True, text = True)
+    argv = [OATHPASS] + (["--profile", campus_name] if campus_name else []) + ["target"]
+    result = subprocess.run(argv, capture_output = True, text = True)
     if result.returncode != 0:
         die("oathpass target failed -- is the config in place?")
     target = result.stdout.strip()
@@ -290,7 +359,7 @@ def login_name():
     return target.split("@", 1)[0]
 
 
-def remote(command, stdin = None, capture = False):
+def remote(command, stdin = None, capture = False, campus_name = None):
     """Run a command on the login node through the master connection.
 
     oathpass passes the string to ssh, which hands it to the remote shell; the
@@ -300,7 +369,8 @@ def remote(command, stdin = None, capture = False):
     """
     if "'" in command:
         die("internal: a remote command may not contain a single quote")
-    argv = [OATHPASS, f"bash -lc '{command}'"]
+    argv = [OATHPASS] + (["--profile", campus_name] if campus_name else []) \
+        + [f"bash -lc '{command}'"]
     if capture:
         return subprocess.run(argv, stdin = stdin, capture_output = True, text = True)
     return subprocess.run(argv, stdin = stdin)
@@ -311,30 +381,41 @@ def job_id_ok(value):
 
 
 def cmd_list(rates, argv):
-    return remote('squeue -u "$USER" -o "%.8i %.20j %.9T %.11M %.5D %R"').returncode
+    options, _rest = split_options(argv)
+    campus_name, _campus = select_campus(rates, options)
+    return remote('squeue -u "$USER" -o "%.8i %.20j %.9T %.11M %.5D %R"',
+                  campus_name = campus_name).returncode
 
 
-def cmd_show(argv):
-    if not argv or not job_id_ok(argv[0]):
+def cmd_show(rates, argv):
+    options, rest = split_options(argv)
+    campus_name, _campus = select_campus(rates, options)
+    if not rest or not job_id_ok(rest[0]):
         die("show needs a numeric job id")
-    command = (f"sacct -j {argv[0]} --noheader --format=JobID%20,JobName%24,State%12,"
+    command = (f"sacct -j {rest[0]} --noheader --format=JobID%20,JobName%24,State%12,"
                "Elapsed%12,AllocCPUS%10,ReqMem%10,MaxRSS%12,ExitCode%10")
-    return subprocess.run([OATHPASS, f"bash -lc '{command}'"]).returncode
+    return remote(command, campus_name = campus_name).returncode
 
 
-def cmd_log(argv):
-    if not argv or not job_id_ok(argv[0]):
+def cmd_log(rates, argv):
+    options, rest = split_options(argv)
+    campus_name, _campus = select_campus(rates, options)
+    if not rest or not job_id_ok(rest[0]):
         die("log needs a numeric job id")
-    return remote(f"cat jobs/slurm-{argv[0]}.out").returncode
+    return remote(f"cat jobs/slurm-{rest[0]}.out", campus_name = campus_name).returncode
 
 
-def cmd_cancel(argv):
-    if not argv or not job_id_ok(argv[0]):
+def cmd_cancel(rates, argv):
+    options, rest = split_options(argv)
+    campus_name, _campus = select_campus(rates, options)
+    if not rest or not job_id_ok(rest[0]):
         die("cancel needs a numeric job id")
-    return remote(f"scancel {argv[0]}").returncode
+    return remote(f"scancel {rest[0]}", campus_name = campus_name).returncode
 
 
 def cmd_shell(rates, argv):
+    options, _rest = split_options(argv)
+    campus_name, _campus = select_campus(rates, options)
     options, rest = split_options(argv)
     if "--time" not in options:
         die("--time is required: no interactive session without a wall-clock limit")
@@ -346,17 +427,17 @@ def cmd_shell(rates, argv):
     command = f"srun --pty --time={wall} -c {cores} -p {options['-p']}"
     if "-q" in options:
         command += f" -q {options['-q']}"
-    return remote(f"{command} bash").returncode
+    return remote(f"{command} bash", campus_name = campus_name).returncode
 
 
-def mail_flags(rates, options):
+def mail_flags(campus, options, campus_name):
     if options.get("--no-mail"):
         return ""
-    domain = rates.get("mail_domain")
+    domain = campus.get("mail_domain")
     if not domain:
         return ""
     triggers = options.get("--mail-type", "END,FAIL,TIME_LIMIT_80")
-    return f" --mail-user={login_name()}@{domain} --mail-type={triggers}"
+    return f" --mail-user={login_name(campus_name)}@{domain} --mail-type={triggers}"
 
 
 def cmd_submit(rates, argv):
@@ -364,13 +445,16 @@ def cmd_submit(rates, argv):
     if not rest:
         die("submit needs a script")
     script = rest[0]
-    cores, hours, efficiency, limit, max_cores, qos, only, source = resolve(rates, options)
+    campus_name, campus = select_campus(rates, options)
+    cores, hours, efficiency, limit, max_cores, qos, only, source = resolve(
+        campus, campus_name, options)
 
-    plans = plan_job(rates, cores, hours, efficiency, max_cores, qos, only)
+    plans = plan_job(campus, cores, hours, efficiency, max_cores, qos, only)
     chosen, cheapest, over = choose(plans, limit, bool(options.get("--cheap")))
-    print_partition(only, source)
+    print_partition(campus_name, only, source)
+    warn_unverified(campus_name, campus)
     print_table(plans, chosen, cheapest)
-    describe(rates, chosen, cheapest, over, limit)
+    describe(campus, chosen, cheapest, over, limit)
     if over and not options.get("--yes"):
         die(f"{chosen.cost:.2f} is above the {limit:.2f} cap -- pass --yes to accept it")
 
@@ -384,7 +468,7 @@ def cmd_submit(rates, argv):
                f"-c {chosen.cores} -t {wall} -q {qos}")
     if "--mem" in options:
         command += f" --mem={options['--mem']}"
-    command += mail_flags(rates, options)
+    command += mail_flags(campus, options, campus_name)
     command += f" jobs/{base}"
 
     if options.get("--dry-run"):
@@ -393,12 +477,13 @@ def cmd_submit(rates, argv):
         return 0
 
     with open(script, "rb") as handle:
-        upload = remote(f"mkdir -p jobs && cat > jobs/{base}", stdin = handle)
+        upload = remote(f"mkdir -p jobs && cat > jobs/{base}", stdin = handle,
+                        campus_name = campus_name)
     if upload.returncode != 0:
         return upload.returncode
 
     print()
-    result = remote(command, capture = True)
+    result = remote(command, capture = True, campus_name = campus_name)
     if result.returncode != 0:
         sys.stderr.write(result.stderr)
         return result.returncode
@@ -407,8 +492,8 @@ def cmd_submit(rates, argv):
         die(f"sbatch did not return a job id (got {result.stdout.strip()!r})")
 
     print(f"submitted  job {job_id}  on {chosen.name}, {chosen.cores} cores, wall {wall}")
-    if rates.get("mail_domain") and not options.get("--no-mail"):
-        print(f"notify     {login_name()}@{rates['mail_domain']}  "
+    if campus.get("mail_domain") and not options.get("--no-mail"):
+        print(f"notify     {login_name(campus_name)}@{campus['mail_domain']}  "
               f"({options.get('--mail-type', 'END,FAIL,TIME_LIMIT_80')})")
     print(f"watch      hpc-job show {job_id}   /   hpc-job log {job_id}")
     print(f"cancel     hpc-job cancel {job_id}")
@@ -425,62 +510,83 @@ def selftest():
         if not good:
             failures.append(label)
 
-    plans = plan_job(rates, 64, 4.0, 1.0, 1 << 30, "normal")
+    check("two campuses in the table", sorted(rates["profiles"]), ["Yungu", "Yunqi"])
+    yunqi, yungu = rates["profiles"]["Yunqi"], rates["profiles"]["Yungu"]
+    check("Yunqi is marked scanned", yunqi.get("verified"), True)
+    check("Yungu is marked docs-only", yungu.get("verified"), False)
+
+    # ---- Yunqi: the numbers verified against the live cluster on 2026-11-16
+    plans = plan_job(yunqi, 64, 4.0, 1.0, 1 << 30, "normal")
     by_name = {plan.name: plan for plan in plans}
-    check("64c/4h normal: intel-sc3-32c cost", by_name["intel-sc3-32c"].cost, 5.12)
-    check("64c/4h normal: amd-ep5-first cost", by_name["amd-ep5-first"].cost, 7.68)
-    check("64c/4h normal: amd-ep5-first wall", by_name["amd-ep5-first"].wall, 1.0)
-    check("64c/4h normal: 256 cores allowed (<=200? no)", 256 <= 200, False)
+    check("Yunqi 64c/4h: intel-sc3-32c cost", by_name["intel-sc3-32c"].cost, 5.12)
+    check("Yunqi 64c/4h: amd-ep5-first cost", by_name["amd-ep5-first"].cost, 7.68)
+    check("Yunqi 64c/4h: amd-ep5-first wall", by_name["amd-ep5-first"].wall, 1.0)
 
-    planned = plan_job(rates, 33, 2.0, 1.0, 33, "normal")
+    planned = plan_job(yunqi, 33, 2.0, 1.0, 33, "normal")
     rounded = {plan.name: plan.cores for plan in planned}
-    check("33 cores, no scaling: 32c rounds to 64", rounded.get("intel-sc3-32c"), 64)
-    check("33 cores, no scaling: intel-sc3 stays 33", rounded.get("intel-sc3"), 33)
+    check("Yunqi 33c, no scaling: 32c rounds to 64", rounded.get("intel-sc3-32c"), 64)
+    check("Yunqi 33c, no scaling: intel-sc3 stays 33", rounded.get("intel-sc3"), 33)
 
-    huge = plan_job(rates, 256, 4.0, 1.0, 1 << 30, "huge")
-    check("256 cores: huge plans exist", len(huge) > 0, True)
-    check("256 cores: amd-ep5-first cost", {p.name: p.cost for p in huge}["amd-ep5-first"], 30.72)
+    huge = plan_job(yunqi, 256, 4.0, 1.0, 1 << 30, "huge")
+    check("Yunqi 256c: amd-ep5-first cost", {p.name: p.cost for p in huge}["amd-ep5-first"], 30.72)
 
     try:
-        plan_job(rates, 201, 1.0, 1.0, 1 << 30, "normal")
+        plan_job(yunqi, 201, 1.0, 1.0, 1 << 30, "normal")
         over_core = False
     except SystemExit:
         over_core = True
-    check("201 cores: refused under normal", over_core, True)
+    check("Yunqi 201c: refused under normal", over_core, True)
 
-    small = plan_job(rates, 1, 0.5, 1.0, 1, "normal")
-    widths = {plan.name: plan.cores for plan in small}
-    check("1 core: 32c partition requests 32", widths.get("intel-sc3-32c"), 32)
-    check("1 core: intel-sc3 requests 1", widths.get("intel-sc3"), 1)
-    check("1 core: no intel-fat", "intel-fat" in widths, False)
-    check("1 core: billed one hour", small[0].billed, 1)
-    chosen, _, _ = choose(small, 7.8, False)
-    check("1 core: cheapest plan is a 1-core request", chosen.cores, 1)
+    # douwj is free and 10 nodes wide
+    wide = plan_job(yunqi, 128, 2.0, 1.0, 1 << 30, "normal", "douwj")
+    check("Yunqi 128c on douwj: feasible", len(wide), 1)
+    check("Yunqi 128c on douwj: costs nothing", wide[0].cost, 0.0)
+    check("Yunqi douwj: capacity 10 x 64", wide[0].cores, 640)
 
-    # partition choice: -p wins, --any ignores the local default, and the
-    # default file (or $HPC_PARTITION) pins the plans when neither is given
-    os.environ["HPC_PARTITION"] = "intel-sc3"
-    name, source = default_partition()
-    check("default: $HPC_PARTITION wins", (name, source), ("intel-sc3", "HPC_PARTITION"))
-    _, _, _, _, _, _, pinned, src = resolve(rates, {"-c": "8", "--time": "01:00:00"})
-    check("default: no -p uses the default", (pinned, src), ("intel-sc3", "HPC_PARTITION"))
-    _, _, _, _, _, _, pinned, src = resolve(rates, {"-c": "8", "--time": "01:00:00", "-p": "amd-ep2"})
-    check("default: -p beats the default", (pinned, src), ("amd-ep2", "-p"))
-    _, _, _, _, _, _, pinned, _ = resolve(rates, {"-c": "8", "--time": "01:00:00", "--any": True})
-    check("default: --any ignores it", pinned, None)
+    # ---- Yungu: flat 0.045 and a different partition set
+    yungu_plans = plan_job(yungu, 64, 4.0, 1.0, 1 << 30, "normal")
+    yungu_cost = {plan.name: plan.cost for plan in yungu_plans}
+    check("Yungu 64c/4h: intel-sc3 cost", yungu_cost.get("intel-sc3"), 11.52)
+    check("Yungu has no douwj", "douwj" in yungu_cost, False)
+    check("Yungu has no amd-ep5", "amd-ep5" in yungu_cost, False)
     try:
-        plan_job(rates, 641, 1.0, 1.0, 1 << 30, "huge", "douwj")
-        strict = False
+        plan_job(yungu, 64, 1.0, 1.0, 1 << 30, "huge", "douwj")
+        yungu_bad = False
     except SystemExit:
-        strict = True
-    check("default: a job beyond the pin is refused", strict, True)
+        yungu_bad = True
+    check("Yungu refuses a Yunqi-only partition", yungu_bad, True)
 
-    # douwj is 10 nodes x 64 cores: a 128-core job fits the partition, not one node
-    wide = plan_job(rates, 128, 2.0, 1.0, 1 << 30, "normal", "douwj")
-    check("128 cores on douwj: feasible", len(wide), 1)
-    check("128 cores on douwj: costs nothing", wide[0].cost, 0.0)
-    check("128 cores on douwj: capacity is 10 x 64", wide[0].cores, 640)
-    del os.environ["HPC_PARTITION"]
+    # ---- campus selection and the per-campus partition default
+    saved = dict(os.environ)
+    try:
+        os.environ.pop("OATHPASS_PROFILE", None)
+        os.environ.pop("HPC_PARTITION", None)
+        os.environ["OATHPASS_PROFILE"] = "Yungu"
+        name, _ = select_campus(rates, {})
+        check("campus: $OATHPASS_PROFILE wins", name, "Yungu")
+        name, _ = select_campus(rates, {"--profile": "Yunqi"})
+        check("campus: --profile beats the env", name, "Yunqi")
+
+        os.environ["HPC_PARTITION"] = "intel-sc3"
+        pinned, source = default_partition("Yunqi")
+        check("partition default: $HPC_PARTITION", (pinned, source), ("intel-sc3", "HPC_PARTITION"))
+        _, _, _, _, _, _, pinned, _ = resolve(yunqi, "Yunqi", {"-c": "8", "--time": "01:00:00"})
+        check("partition default: applied", pinned, "intel-sc3")
+        _, _, _, _, _, _, pinned, src = resolve(yunqi, "Yunqi",
+                                                {"-c": "8", "--time": "01:00:00", "-p": "amd-ep2"})
+        check("partition default: -p beats it", (pinned, src), ("amd-ep2", "-p"))
+        _, _, _, _, _, _, pinned, _ = resolve(yunqi, "Yunqi",
+                                             {"-c": "8", "--time": "01:00:00", "--any": True})
+        check("partition default: --any ignores it", pinned, None)
+        try:
+            resolve(yungu, "Yungu", {"-c": "8", "--time": "01:00:00", "-p": "douwj"})
+            campus_bad = False
+        except SystemExit:
+            campus_bad = True
+        check("partition: a foreign partition is refused", campus_bad, True)
+    finally:
+        os.environ.clear()
+        os.environ.update(saved)
 
     print("selftest passed" if not failures else "selftest FAILED")
     return 0 if not failures else 1
@@ -503,11 +609,11 @@ def main(argv):
     if command == "list":
         return cmd_list(rates, argv[1:])
     if command == "show":
-        return cmd_show(argv[1:])
+        return cmd_show(rates, argv[1:])
     if command == "log":
-        return cmd_log(argv[1:])
+        return cmd_log(rates, argv[1:])
     if command == "cancel":
-        return cmd_cancel(argv[1:])
+        return cmd_cancel(rates, argv[1:])
     if command == "shell":
         return cmd_shell(rates, argv[1:])
     die(f"unknown command '{argv[0]}'")

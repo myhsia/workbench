@@ -1,200 +1,367 @@
 {
-  "currency": "CNY",
-  "updated": "2026-11-12",
-  "source": "https://hpc.westlake.edu.cn/document/science/en/money.html#partition-billing-standards",
-  "spend_limit": 7.8,
-  "qos": {
+ "currency": "CNY",
+ "profiles": {
+  "Yunqi": {
+   "updated": "2026-11-12",
+   "source": "https://hpc.westlake.edu.cn/document/science/en/money.html#partition-billing-standards",
+   "verified": true,
+   "spend_limit": 7.8,
+   "mail_domain": "westlake.edu.cn",
+   "qos": {
     "normal": {
-      "priority": "high",
-      "max_cores": 200,
-      "max_concurrent": 30,
-      "max_total": 1000
+     "priority": "high",
+     "max_cores": 200,
+     "max_concurrent": 30,
+     "max_total": 1000
     },
     "huge": {
-      "priority": "low",
-      "max_cores": 6400,
-      "max_total": 20000
+     "priority": "low",
+     "max_cores": 6400,
+     "max_total": 20000
     },
     "hmem": {
-      "priority": "high",
-      "min_mem_gb": 450
+     "priority": "high",
+     "min_mem_gb": 450
     },
     "gpu": {
-      "priority": "high",
-      "max_gpus": 8,
-      "max_concurrent": 2
+     "priority": "high",
+     "max_gpus": 8,
+     "max_concurrent": 2
     },
     "gpu-huge": {
-      "priority": "low",
-      "max_gpus": 32
+     "priority": "low",
+     "max_gpus": 32
     }
-  },
-  "partitions": {
+   },
+   "partitions": {
     "intel-sc3": {
-      "rate": 0.02,
-      "cores": 64,
-      "min_cores": 1,
-      "unit": "core-hour",
-      "qos": [
-        "normal",
-        "huge"
-      ],
-      "ssd_data": true
+     "rate": 0.02,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "core-hour",
+     "qos": [
+      "normal",
+      "huge"
+     ],
+     "ssd_data": true
     },
     "intel-sc3-32c": {
-      "rate": 0.02,
-      "cores": 64,
-      "min_cores": 1,
-      "multiple_of": 32,
-      "unit": "core-hour",
-      "qos": [
-        "normal",
-        "huge"
-      ],
-      "ssd_data": true
+     "rate": 0.02,
+     "cores": 64,
+     "min_cores": 1,
+     "multiple_of": 32,
+     "unit": "core-hour",
+     "qos": [
+      "normal",
+      "huge"
+     ],
+     "ssd_data": true
     },
     "amd-ep2": {
-      "rate": 0.02,
-      "cores": 64,
-      "min_cores": 1,
-      "unit": "core-hour",
-      "qos": [
-        "normal",
-        "huge"
-      ],
-      "ssd_data": true
+     "rate": 0.02,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "core-hour",
+     "qos": [
+      "normal",
+      "huge"
+     ],
+     "ssd_data": true
     },
     "douwj": {
-      "rate": 0.0,
-      "cores": 64,
-      "nodes": 10,
-      "min_cores": 1,
-      "local_only": true,
-      "unit": "core-hour",
-      "qos": [
-        "normal",
-        "huge"
-      ],
-      "ssd_data": true
+     "rate": 0.0,
+     "cores": 64,
+     "nodes": 10,
+     "min_cores": 1,
+     "local_only": true,
+     "unit": "core-hour",
+     "qos": [
+      "normal",
+      "huge"
+     ],
+     "ssd_data": true,
+     "private": true
     },
     "amd-ep2-short": {
-      "rate": 0.02,
-      "cores": 64,
-      "min_cores": 1,
-      "unit": "core-hour",
-      "qos": [
-        "normal",
-        "huge"
-      ],
-      "ssd_data": true
+     "rate": 0.02,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "core-hour",
+     "qos": [
+      "normal",
+      "huge"
+     ],
+     "ssd_data": true
     },
     "amdepyc": {
-      "rate": 0.02,
-      "cores": 64,
-      "min_cores": 1,
-      "unit": "core-hour",
-      "qos": [
-        "normal",
-        "huge"
-      ],
-      "ssd_data": true
+     "rate": 0.02,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "core-hour",
+     "qos": [
+      "normal",
+      "huge"
+     ],
+     "ssd_data": true
     },
     "amd-ep5": {
-      "rate": 0.03,
-      "cores": 256,
-      "min_cores": 1,
-      "unit": "core-hour",
-      "qos": [
-        "normal",
-        "huge"
-      ],
-      "login_node": "login05",
-      "ssd_data": true
+     "rate": 0.03,
+     "cores": 256,
+     "min_cores": 1,
+     "unit": "core-hour",
+     "qos": [
+      "normal",
+      "huge"
+     ],
+     "login_node": "login05",
+     "ssd_data": true
     },
     "amd-ep5-first": {
-      "rate": 0.03,
-      "cores": 256,
-      "min_cores": 1,
-      "unit": "core-hour",
-      "qos": [
-        "normal",
-        "huge"
-      ],
-      "login_node": "login05",
-      "ssd_data": true
+     "rate": 0.03,
+     "cores": 256,
+     "min_cores": 1,
+     "unit": "core-hour",
+     "qos": [
+      "normal",
+      "huge"
+     ],
+     "login_node": "login05",
+     "ssd_data": true
     },
     "intel-fat": {
-      "rate": 0.15,
-      "cores": 96,
-      "min_cores": 1,
-      "unit": "core-hour",
-      "qos": [
-        "hmem"
-      ],
-      "min_mem_gb": 450,
-      "max_hours": 720
+     "rate": 0.15,
+     "cores": 96,
+     "min_cores": 1,
+     "unit": "core-hour",
+     "qos": [
+      "hmem"
+     ],
+     "min_mem_gb": 450,
+     "max_hours": 720
     },
     "v100": {
-      "rate": 2.0,
-      "cores": 36,
-      "min_cores": 1,
-      "unit": "card-hour",
-      "qos": [
-        "gpu",
-        "gpu-huge"
-      ]
+     "rate": 2.0,
+     "cores": 36,
+     "min_cores": 1,
+     "unit": "card-hour",
+     "qos": [
+      "gpu",
+      "gpu-huge"
+     ]
     },
     "v100-af": {
-      "rate": 2.0,
-      "cores": 28,
-      "min_cores": 1,
-      "unit": "card-hour",
-      "qos": [
-        "gpu",
-        "gpu-huge"
-      ]
+     "rate": 2.0,
+     "cores": 28,
+     "min_cores": 1,
+     "unit": "card-hour",
+     "qos": [
+      "gpu",
+      "gpu-huge"
+     ]
     },
     "a40-quad": {
-      "rate": 2.0,
-      "cores": 64,
-      "min_cores": 1,
-      "unit": "card-hour",
-      "qos": [
-        "gpu",
-        "gpu-huge"
-      ]
+     "rate": 2.0,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "card-hour",
+     "qos": [
+      "gpu",
+      "gpu-huge"
+     ]
     },
     "a40-tmp": {
-      "rate": 2.0,
-      "cores": 64,
-      "min_cores": 1,
-      "unit": "card-hour",
-      "qos": [
-        "gpu",
-        "gpu-huge"
-      ]
+     "rate": 2.0,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "card-hour",
+     "qos": [
+      "gpu",
+      "gpu-huge"
+     ]
     },
     "a100-40g": {
-      "rate": 3.0,
-      "cores": 64,
-      "min_cores": 1,
-      "unit": "card-hour",
-      "qos": [
-        "gpu",
-        "gpu-huge"
-      ]
+     "rate": 3.0,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "card-hour",
+     "qos": [
+      "gpu",
+      "gpu-huge"
+     ]
     },
     "rt-2080ti-short": {
-      "rate": 0.5,
-      "cores": 40,
-      "min_cores": 1,
-      "unit": "card-hour",
-      "qos": [
-        "gpu",
-        "gpu-huge"
-      ],
-      "max_hours": 8
+     "rate": 0.5,
+     "cores": 40,
+     "min_cores": 1,
+     "unit": "card-hour",
+     "qos": [
+      "gpu",
+      "gpu-huge"
+     ],
+     "max_hours": 8
     }
+   }
   },
-  "mail_domain": "westlake.edu.cn"
+  "Yungu": {
+   "updated": "2026-11-16",
+   "source": "http://10.28.0.22:30538/en/money.html",
+   "verified": false,
+   "spend_limit": 7.8,
+   "mail_domain": "westlake.edu.cn",
+   "note": "From Yungu's published pages, not a live scan: node counts are not published, so a job wider than one node cannot be priced until the scan.",
+   "qos": {
+    "normal": {
+     "priority": "high",
+     "max_cores": 200,
+     "max_concurrent": 30,
+     "max_total": 1000
+    },
+    "huge": {
+     "priority": "low",
+     "max_cores": 1600,
+     "max_total": 20000
+    },
+    "gpu": {
+     "priority": "high",
+     "max_gpus": 8,
+     "max_concurrent": 2
+    },
+    "gpu-huge": {
+     "priority": "low",
+     "max_gpus": 32
+    }
+   },
+   "partitions": {
+    "intel-sc3": {
+     "rate": 0.045,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "core-hour",
+     "qos": [
+      "normal",
+      "huge"
+     ],
+     "ssd_data": true
+    },
+    "intel-sc3-32c": {
+     "rate": 0.045,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "core-hour",
+     "qos": [
+      "normal",
+      "huge"
+     ],
+     "multiple_of": 32,
+     "ssd_data": true
+    },
+    "amd-ep2": {
+     "rate": 0.045,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "core-hour",
+     "qos": [
+      "normal",
+      "huge"
+     ],
+     "ssd_data": true
+    },
+    "amd-ep2-short": {
+     "rate": 0.045,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "core-hour",
+     "qos": [
+      "normal",
+      "huge"
+     ],
+     "max_hours": 24,
+     "ssd_data": true
+    },
+    "amdepyc": {
+     "rate": 0.045,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "core-hour",
+     "qos": [
+      "normal",
+      "huge"
+     ],
+     "ssd_data": true
+    },
+    "intel-fat": {
+     "rate": 0.045,
+     "cores": 96,
+     "min_cores": 1,
+     "unit": "core-hour",
+     "qos": [
+      "hmem"
+     ],
+     "min_mem_gb": 450,
+     "max_hours": 720
+    },
+    "v100": {
+     "rate": 2.0,
+     "cores": 36,
+     "min_cores": 1,
+     "unit": "card-hour",
+     "qos": [
+      "gpu",
+      "gpu-huge"
+     ]
+    },
+    "v100-af": {
+     "rate": 2.0,
+     "cores": 28,
+     "min_cores": 1,
+     "unit": "card-hour",
+     "qos": [
+      "gpu",
+      "gpu-huge"
+     ]
+    },
+    "rt-2080ti-short": {
+     "rate": 0.5,
+     "cores": 40,
+     "min_cores": 1,
+     "unit": "card-hour",
+     "qos": [
+      "gpu",
+      "gpu-huge"
+     ],
+     "max_hours": 8
+    },
+    "a40-quad": {
+     "rate": 2.0,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "card-hour",
+     "qos": [
+      "gpu",
+      "gpu-huge"
+     ]
+    },
+    "a40-tmp": {
+     "rate": 2.0,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "card-hour",
+     "qos": [
+      "gpu",
+      "gpu-huge"
+     ]
+    },
+    "a100-40g": {
+     "rate": 3.0,
+     "cores": 64,
+     "min_cores": 1,
+     "unit": "card-hour",
+     "qos": [
+      "gpu",
+      "gpu-huge"
+     ]
+    }
+   }
+  }
+ }
 }

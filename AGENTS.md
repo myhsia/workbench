@@ -57,6 +57,12 @@ Every session title is `type(thing): short subject`, with `type` among `feat`, `
 needs a look, not that an agent forgot to rename; a session titled before the prompt existed is
 renamed in passing. The detail is in the `session-hygiene` skill.
 
+One exception is recorded: an administrative session — an annual report, a slide deck, a personal
+submission — carries `admin(scope): subject`.  The six types describe work on code and prose and
+none of them fits a filled-in form; `admin` is still a fixed type with a scope in parentheses, not
+a free-form label.  The title agent is not asked to produce it, so such a session is renamed by
+hand during the hygiene pass.
+
 ## Plan mode
 
 Plan mode is enforced by the permission rules, not by the prompt that announces it.  The rule is

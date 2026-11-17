@@ -270,6 +270,11 @@ merge, …), build **thematic sessions** rather than one chronological blob.
 `type(things): short sentence covering all items (several words)`, `type` ∈
 `feat|fix|tune|refactor|docs|chore`. Rename via the session-rename tool; keep the id stable.
 
+The one recorded exception is an administrative session — an annual report, a slide deck, a personal
+submission — titled `admin(scope): subject`, because none of the six types fits a filled-in form.
+`admin` is a fixed type with a scope in parentheses, not a free-form label, and the title agent does
+not know to produce it: rename those by hand.  Keep the title when such a session is rebuilt.
+
 The auto-title comes from the hidden `title` agent, and its system prompt is the only instruction it
 ever sees — it does not read `AGENTS.md` or this skill. That prompt is ours: `prompts/title.txt`,
 wired in `opencode.json` as `agent.title.prompt = "{file:./prompts/title.txt}"`, and it asks for

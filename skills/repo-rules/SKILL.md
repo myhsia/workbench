@@ -454,6 +454,10 @@ READMEs, and the changelog; code comments and docstrings; and commit messages.
   (key names, the differences between two implementations), not for narrative, and a long list
   opens with a sentence that says what it enumerates.
 - Define each acronym once at first body use (the abstract defines only those it reuses).
+- Write the TeX dimension as `glue`, never as the Chinese character 胶: "the interline glue
+  above a display", 「行间 glue」in Chinese prose.  The character reads as a noun of its own and
+  hides which TeX quantity is meant; `glue` also matches `\lineskip`, `\baselineskip` and the
+  rest of the register names the text cites.
 - Macros: `\kbproj0`/`\kbproj1` for same-label outer products and `\ketbra|a><b|` for cross
   products; `\iu` (imaginary), `\upe^{}` (exponential), `\d` (differential; never `\,`/`\!`
   or `\, \mathrm d`), `\ab(...)` delimiters (not `\left/\right`), and `\mathord\cdot`

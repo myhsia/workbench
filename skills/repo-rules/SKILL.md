@@ -1169,11 +1169,18 @@ that changes how text is typeset has to keep working with it on and off.
 - **Keep the form in `build.lua`.**  `uploadconfig` holds every field, so nothing is prompted for
   and no field is left to memory: the mandatory ones (`pkg`, `author`, `uploader`, `email`,
   `ctanPath`, `description`, `summary`, `version`, and the archive itself), plus `license`,
-  `repository`, `home`, `support`, `bugtracker`, `topic` (ids from
+  `repository` and `bugtracker`, `topic` (ids from
   `https://ctan.org/json/2.0/topics`, where tagged PDF is split into `tagged-pdf`,
   `tagged-pdf-partially`, `tagged-pdf-unsupported` and `tagged-pdf-incompatible`, one id each),
-  and `update` (`false` only for a first release).  `version` is the tag's version as written, a
-  leading `v` included, and `ctanPath` is the part after `/tex-archive`, with a leading slash.
+  and `update` (`false` only for a first release).  `version` is the tag's version as written
+  followed by the release date — `v0.0.2 2026-11-15` — taken from the same field the `\changes`
+  entries and the `$Id$` line carry; CTAN drops the leading `v` when displaying the record and its
+  maintainers ask that the date found in the package files be repeated there.  `ctanPath` is the
+  part after `/tex-archive`, with a leading slash.
+- **Give each contact URL once.**  A CTAN upload manager omits the repeated ones, and the catalogue
+  page lists a URL per field, so a `home` or a `support` that merely repeats `repository` and its
+  `/issues` is noise: "there is no need to fill in every single field".  Fill the distinct ones —
+  an owner or developers page that no other field names — and leave the rest out.
 - **Read the prose fields, do not type them.**  The announcement belongs to the release notes:
   generate it from the newest section of the changelog — a subject line, then that release's
   bullets — and cap it at 8 192 characters by dropping whole bullets and saying how many were left

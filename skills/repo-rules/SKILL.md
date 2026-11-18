@@ -1382,6 +1382,18 @@ or one TeX Live now pulls in transitively, is **dropped** rather than left behin
 names a package nothing uses, and the next reader treats it as a real requirement.  Removing an
 entry is a change to CI, so it carries the guide review that adding one carries.
 
+**A `.tlg` comparison cannot see a TeX error.**  `l3build` compares the log between its `\START`
+and `\END` markers, and it runs the engine in `nonstopmode`: an `! Undefined control sequence`
+skips the token and the rest of the run continues as though it had not happened, so the `.tlg`
+matches and the job is green while the code path behind the error was never executed.  A green
+suite therefore proves nothing about the lines a run did not reach, and a test that passes both
+before and after a fix in such a path is no evidence of anything.  Check the test logs
+themselves — one `file:line:text` record per `^!` line, with an explicit allowlist for the errors
+a test provokes on purpose and a comment giving each one's reason — in a step after
+`l3build check`; and judge a new test by running it against the code before the fix, so that it
+is seen to fail for the reported reason.  LuaCJK's `scripts/check-test-logs.sh` is the worked
+example.
+
 **No gate is switched off silently.**  When a job or a step is temporarily off, record beside it
 and in the repository's guide why it cannot pass, who re-enables it, and when — the release,
 version or dependency that makes it pass again.  An `if: false` with no owner and no condition to

@@ -161,8 +161,7 @@ questions were answered — several of those answers then arrived as four more t
 
 What was done: those sessions were closed in build with `Residue: none` (LuaCJK commits `999dac7`,
 `dc311cb` for the eight answers), the audit exchanges were removed in place — **478 whole messages
-across 30 sessions**, one transaction each, after a `.backup` to
-`~/.local/share/opencode/session-backups/opencode-2026-11-11-preprune.db` and a
+across 30 sessions**, one transaction each, after a whole-database `.backup` (since deleted) and a
 `PRAGMA integrity_check`, with every remaining row `json_valid` and ids and titles unchanged — and
 three kept replies lost their trailing offers.  The lesson is now a rule in `AGENTS.md`
 §Orchestrating other sessions: **an audit's questions are answered by the orchestrator, a session
@@ -179,8 +178,9 @@ ends in build with `Residue: none`, and the finding stays inside the title**.
 - `plugins/shell-guard` — the Plan/Explore shell write guard described above.
 - Westlake: `deepseek-flash`, `glm-flash`, `Qwen` online; `Qwen_claude` ignored on purpose
   (`.models-ignore`); the embedding/reranker ids are not chat models.
-- Backups live under `~/.local/share/opencode/session-backups/` (three files, 7.3 MB on 2026-11-11)
-  and are deleted only on explicit agreement, with their references cleaned in the same task.
+- Backups live under `~/.local/share/opencode/session-backups/` and are emptied once every rebuild is
+  verified: a snapshot exists only while its rebuild is unverified, and it goes on explicit
+  agreement, with its references in this handbook cleaned in the same task.
 
 Measured on 2026-11-10 at v2.2.6: CLI and service both that build, the latest release, and the model
 list unchanged.  Re-checked on 2026-11-11 at **v2.2.7** (latest, published 2026-11-10): CLI and

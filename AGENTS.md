@@ -184,7 +184,9 @@ not the obstacle -- measured on windows-latest with Win32-OpenSSH 9.5p2, a helpe
   lands and predicts the scope of the commit that closes the issue.  A session that finds an open
   issue without one labels it before the task it was asked to do, and a repository that automates the
   report declares the triage script in its session check rather than adding a second one, because a
-  repository may declare one check.
+  repository may declare one check.  Where a forge can label an issue as it opens, a repository may
+  also run that script with its "apply" mode from a workflow; the session check stays as the net for
+  the issues the rule cannot place, since a guess is worse than no label.
 - **Never put secrets or addresses in commits.**  Machine endpoints, proxy addresses, API keys,
   cluster IPs and the cluster's OTP seed stay in untracked files or environment variables.  The
   seed lives in `~/.config/oathpass/config.json`, which is the only place the `oathpass` tool (its

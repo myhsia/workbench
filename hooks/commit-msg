@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 # commit-msg (machine-wide, via core.hooksPath=~/.config/opencode/hooks):
 # a commit that changes code, configuration, CI or output must either carry a
-# guide change in the same commit or say why none was needed.
+# guide change in the same commit or say why none was needed,
 #
 #   Guides-Reviewed: unchanged, because ...
 #
-# Docs-only commits pass.  A repository without AGENTS.md and a skill is not
-# checked.  --no-verify is the deliberate bypass.
+# and a commit that changes a manuscript must carry the talk that presents it,
+#
+#   Talk-Reviewed: unchanged, because ...
+#
+# Docs-only commits pass the guide gate.  A repository without AGENTS.md and a
+# skill is not checked; one without a context/<name>.tex and <name>-talk.tex
+# pair is not checked for the talk.  --no-verify is the deliberate bypass.
 set -u
 
 msg_file="${1:-}"
@@ -59,6 +64,51 @@ EOF
   else
     echo "commit-msg: python3 not found; skipping the style check." >&2
   fi
+fi
+
+# A manuscript and its talk move together.  Where a staged context/<name>.tex has
+# a sibling <name>-talk.tex, the commit must also stage a *-talk.tex in that
+# directory -- or say in a trailer why the talk needs no change.  Checked before
+# the guide gate, because a Guides-Reviewed: trailer must not bypass it.
+missing_talk=""
+while IFS= read -r f; do
+  case "$f" in
+    *-talk.tex) continue ;;
+  esac
+  dir="$(dirname "$f")"
+  case "$(basename "$f")" in
+    *.tex) ;;
+    *) continue ;;
+  esac
+  base="$(basename "$f" .tex)"
+  [ -f "$dir/$base-talk.tex" ] || continue
+  git diff --cached --name-only --diff-filter=ACMR -- "$dir" \
+    | grep -qE '(^|/)[^/]+-talk\.tex$' && continue
+  missing_talk="$f"
+  break
+done < <(git diff --cached --name-only --diff-filter=ACMR -- \
+           ':(glob)**/context/*.tex' 'context/*.tex')
+
+if [ -n "$missing_talk" ] && ! grep -qi '^Talk-Reviewed:' "$msg_file"; then
+  cat >&2 <<EOF
+commit-msg: the manuscript and its talk move together.
+
+This commit stages
+
+    $missing_talk
+
+without any *-talk.tex beside it, and the message carries no trailer.  Either
+
+  * carry the change into the deck and its transcript in this commit, or
+  * add a trailer saying why the talk needs no change:
+
+      Talk-Reviewed: unchanged, because ...
+
+The talk quotes the manuscript and introduces no result of its own, so a number,
+a figure, a page map or a claim that changes in the text changes on the slides
+too.  --no-verify bypasses this check deliberately.
+EOF
+  exit 1
 fi
 
 # Opt-in: only repositories that keep a guide and a skill are checked.

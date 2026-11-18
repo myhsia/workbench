@@ -133,6 +133,14 @@ without a guide pass, and `--no-verify` is the deliberate bypass.  The same hook
 keyword-`=` spacing at commit time (merge/revert commits skipped, fails open when the interpreter
 or script is missing).
 
+The hook also holds a manuscript and the talk that presents it together, generically: where a staged
+`context/<name>.tex` has a sibling `context/<name>-talk.tex`, the commit must stage some `*-talk.tex`
+in that directory — the deck or its transcript — or carry `Talk-Reviewed: unchanged, because …`.
+Repositories without such a pair are not checked, so the clause costs nothing elsewhere; it runs
+before the guide gate, because a `Guides-Reviewed:` trailer must never hide a stale talk.  A
+repository that keeps a pair also reports the same state at session start through its session
+check, so a state left behind by `--no-verify` is in front of the next session.
+
 ## No unobserved results (MUST)
 
 Never report a measurement you did not run.  Every claimed check, benchmark, error figure or

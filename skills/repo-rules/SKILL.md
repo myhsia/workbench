@@ -657,6 +657,11 @@ repeating it.
   load time, where the current file still is the module.  `\AtBeginDocument` is exactly
   `\hook_gput_code:nnn { begindocument } { … }`; `begindocument` runs after the `aux` is read but
   still during initialization, `begindocument/end` at the start of the body.
+- **A math family is built at `\glb@currsize`, never at `\f@size`.**  The three style fonts of a
+  family take the size \LaTeX\ has installed the math fonts for, and `\f@size` is not it: `\text`
+  runs a `\mathchoice` whose discarded branches set `\f@size` to the script and scriptscript size,
+  so a family built from `\f@size` keeps 5pt for the rest of the document and `\check@mathfonts`
+  never restores it, because `\f@size` equals `\glb@currsize` again by the time it looks.
 - **Alignment.**  One space between arguments.  A multi-line argument list opens with its brace on
   its own line, one entry per line, padded *inside* the group so the closing braces line up:
   `{ CJK         }`, not `{ CJK }        `.  A run of two or more similar lines aligns the column

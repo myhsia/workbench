@@ -260,6 +260,21 @@ learned, and all three are now in the `CTAN releases` section of `repo-rules`.
   casualty: `LuaCJK-ctan.zip` and `luacjk-ctan.zip` are one file on APFS, so cleaning up the old
   spelling deleted the new archives, and `l3build ctan` had to be run a second time.
 
+The v0.0.2 upload (accepted 2026-11-15) brought two corrections from the CTAN maintainers, and
+both are now in the same section of `repo-rules`.
+
+- **The version field carries the date.**  The record read `v0.0.2` with no date, and a maintainer
+  added the one they found in the package files, asking that later uploads do the same.  So the
+  field is `version .. " " .. date`, the tag's version and the release date, and CTAN prints
+  `0.0.2 2026-11-15`: it drops a leading `v` on its own.  The date is `build.lua`'s `date`, the same
+  one the newest `\changes` entry and the `$Id$` line carry, so `check-docs.sh` already keeps the
+  record from drifting.  One consequence to remember: the date is part of the version string, so a
+  re-upload of the same version on a later day is a new version to CTAN's duplicate check.
+- **One contact URL per field, not one per field that exists.**  `home` and `support` were
+  byte-identical to `repository` and to its `/issues`, so the maintainers omitted them and said
+  there is no need to fill in every field.  What remains is `repository`, `bugtracker`, and a
+  `development` that names the owner's page rather than the checkout.
+
 ## Decisions, verbatim
 
 Each line is the user's own wording, and what it settled:
@@ -280,3 +295,4 @@ Each line is the user's own wording, and what it settled:
 | `Keep v0.0.1` | a first public release may carry the number the sources already use; no `\changes` rewrite |
 | `Pack and inspect only` | the archives and the form are verified locally, and nothing is sent to `ctan.org` |
 | `CTAN seems no need it longer, so, please remove the tds` | `packtdszip = false`: the tds archive leaves the upload and the release, `tdslocations` stays |
+| `Keep it` | `development` points at the owner's page rather than being dropped with the other repeated URLs |

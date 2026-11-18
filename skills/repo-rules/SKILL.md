@@ -387,9 +387,11 @@ time the working tree is what is about to land.
   every `docs(context):` commit report `STALE` for ever.  The judgement stays with the author, via
   the `Guides-Reviewed:` trailer.  A listed path may be a file as well as a directory: `README.md`
   is excluded for the same reason, because a README-only commit made the gate report `STALE` for
-  ever (measured 2026-11-09).  Add another prose path to the `prose` list in the script rather than
-  working around the gate, and keep that list short: a path that holds code must never appear in
-  it.
+  ever (measured 2026-11-09).  `docs/` joined the list on 2026-11-18: the handbook lives there, and
+  a handbook-only commit (`docs(handbook): …`) reported `STALE` while the commit-msg hook accepted
+  it as docs-only — the two halves of the gate disagreed.  Add another prose path to the `prose`
+  list in the script rather than working around the gate, and keep that list short: a path that
+  holds code must never appear in it.
 
 ## Project guide standard
 

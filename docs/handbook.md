@@ -70,8 +70,10 @@ docs-only diffs, and repositories without a guide.  `--no-verify` is the deliber
 
 `scripts/guides-due.sh` answers "has the guide moved since the code": `--committed` judges history,
 `--staged` judges the index (what the hook runs).  The history branch ignores commits carrying the
-trailer, because the trailer is the gate's own escape hatch.  A prose tree (`context/`) and a prose
-file (`README.md`) are excluded — a README-only commit otherwise reported STALE for ever.
+trailer, because the trailer is the gate's own escape hatch.  A prose tree (`context/`, `docs/`) and a
+prose file (`README.md`) are excluded — a README-only or handbook-only commit otherwise reported
+STALE for ever, and `docs/` was added on 2026-11-18 when the hook and the freshness check disagreed
+about a handbook commit.
 
 The gate compares commit order, not content: it cannot see a convention that was never written
 down.  That is why the review line matters more than the STALE/OK verdict.

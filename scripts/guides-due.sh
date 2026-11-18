@@ -68,7 +68,7 @@ check_repo() {
   # and a README-only commit would otherwise report STALE for ever too.
   local prose_excl=()
   local p
-  for p in context README.md; do
+  for p in context docs README.md; do
     { [ -d "$repo/$p" ] || [ -f "$repo/$p" ]; } && prose_excl+=(":(exclude)$p")
   done
 

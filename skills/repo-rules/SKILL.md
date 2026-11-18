@@ -302,6 +302,40 @@ never commit secrets or `output/` artifacts (gitignored).  Never restage the use
 GitHub endpoints).  Local history operations (`git add`/`commit`/`push`) still use `git`; its remote
 auth is backed by `gh` (run `gh auth setup-git` if push auth ever fails).
 
+### Fixing an issue
+
+One branch, one pull request, one verified reply per issue; group the issues that one root cause
+explains into a single pull request rather than opening four.
+
+1. `git switch -c fix/<scope>-<topic> origin/<default>`, where `scope` is the subsystem label of
+   the issue, so the branch name predicts the commit scope.  A finding outside the title gets its
+   own branch and its own PR.
+2. Put each closing keyword on its own line in the PR body (`Fixes #19`, or `Closes #21, #22`).
+   That is what closes an issue on merge, it acts only into the default branch, and it does nothing
+   inside a sentence: "this should fix #19" closes nothing.
+3. Stacked PRs are merged in order, and **a base branch is deleted only after its dependants have
+   been retargeted**: deleting it while a PR based on it is open closes that PR, and it cannot be
+   reopened ("Could not open the pull request"), which costs the PR number and every link to it.
+   Rebase the next branch onto the default branch, `gh pr edit <n> --base main`, then merge; or do
+   not stack at all.
+4. Verify before replying: the tests the change touches, the sub-second checks, then CI for the
+   full suite and the manual.  Reproduce the report's MWE on the merge base and on the merged tree
+   and keep both outputs, so the numbers in the reply are measured rather than remembered.
+5. Reply by **editing the issue's first reply**, addressed by comment id:
+   `gh api -X PATCH repos/<owner>/<repo>/issues/comments/<id> -F body=@file.md`.  Never
+   `gh issue comment --edit-last`: it resolves to the newest comment on the account, so once the
+   reporter or the user has commented after you it posts a duplicate instead of editing.  List the
+   ids first with `gh api repos/<o>/<r>/issues/<n>/comments --jq '.[] | "\(.id) \(.user.login)"'`.
+6. The reply states the measured effect, and carries an image when the change can be rendered: a
+   `before` rendered from the merge base, an `after` from the merged tree, above the numbers.  A
+   change that cannot be rendered (a build error, an API addition) gets the numbers and one line
+   saying why there is no picture.  Host the images as "Images in an issue or a pull request"
+   describes.
+7. After the merge, confirm the closure (`gh issue view <n> --json state`) and the CI run of the
+   merged commit.  A comment's revision history can be purged only in the web UI — `edited` →
+   `Options` → `Delete revision from history` — because the API exposes it read-only, so a reply
+   that was wrong once stays visible to maintainers unless someone clicks that.
+
 ### `gh api` request bodies
 
 `-f`/`--raw-field` sends the value **literally**, so `-f body=@file.md` posts the 16-byte string
@@ -312,14 +346,17 @@ expanded before reporting success.
 
 ### Images in an issue or a pull request
 
-GitHub's API has no attachment upload, and `gh gist edit -a <file>` refuses a binary file with
-`failed to upload …: binary file not supported`. A rendering therefore goes into the repository's
-gist as a **git** push: clone `https://gist.github.com/<id>.git`, copy the PNG in, commit, push,
+GitHub's API has no attachment upload, and neither `gh gist create` nor `gh gist edit -a <file>`
+accepts a binary: both fail with `failed to upload …: binary file not supported`. A rendering
+therefore goes into the repository's gist as a **git** push: clone
+`https://gist.github.com/<id>.git`, copy the PNG in, commit, push,
 and reference `https://gist.githubusercontent.com/<user>/<id>/raw/<name>.png` in the body. Both
 hosts may be unreachable directly, so export `https_proxy`/`http_proxy` from
 `~/.config/opencode/proxy` for the clone, the push and the check. Verify the raw URL once —
 `curl -sS -o /dev/null -w '%{http_code} %{size_download}\n' <url>` with the proxy — and keep one
-gist per repository, the files named `<repo>-issue<N>-<slug>.png`.
+gist per repository, the files named `<repo>-issue<N>-<slug>.png`.  A branch in the repository that
+is never merged (`docs/screenshots/<scope>/…`) serves the same purpose when no gist is at hand, at
+the cost of a stray branch that the next reader has to recognise as deliberate.
 
 ### Push and pull-request status
 

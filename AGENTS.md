@@ -187,6 +187,15 @@ not the obstacle -- measured on windows-latest with Win32-OpenSSH 9.5p2, a helpe
   repository may declare one check.  Where a forge can label an issue as it opens, a repository may
   also run that script with its "apply" mode from a workflow; the session check stays as the net for
   the issues the rule cannot place, since a guess is worse than no label.
+- **Fixing an issue is one branch, one PR, one verified reply.**  Branch from the default branch,
+  group the issues that one root cause explains into a single pull request, and put a closing
+  keyword on its own line in the PR body (`Fixes #12`): that is what closes an issue on merge, it
+  acts only into the default branch, and it does nothing inside a sentence.  Never delete a base
+  branch that a stacked PR still needs — GitHub closes the stacked PR instead of retargeting it.
+  Reproduce the report's MWE before and after, run the tests the change touches, then edit the
+  issue's first reply into the measured effect plus a before/after image; a change that cannot be
+  rendered gets the numbers and one line saying why there is no picture.  The reply is an edit
+  addressed by comment id, never a second post.
 - **Never put secrets or addresses in commits.**  Machine endpoints, proxy addresses, API keys,
   cluster IPs and the cluster's OTP seed stay in untracked files or environment variables.  The
   seed lives in `~/.config/oathpass/config.json`, which is the only place the `oathpass` tool (its

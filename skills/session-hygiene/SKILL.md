@@ -275,6 +275,13 @@ submission — titled `admin(scope): subject`, because none of the six types fit
 `admin` is a fixed type with a scope in parentheses, not a free-form label, and the title agent does
 not know to produce it: rename those by hand.  Keep the title when such a session is rebuilt.
 
+An issue-fix session uses the `issue` scope and leads the subject with the number:
+`fix(issue): #9 a discretionary inside \LuaCJKnobreak`, or `fix(issue): #1, #2, and #8 font
+selection and baseline` when one PR closes several.  The number never sits inside the scope
+(`fix(issue #9)` is wrong), `session` is never the scope of an issue fix, and the subsystem that
+changed belongs in the commit scope rather than the title.  Measured 2026-11-18: seven sessions had
+drifted across those three shapes; all now read `fix(issue): #N …`.
+
 The auto-title comes from the hidden `title` agent, and its system prompt is the only instruction it
 ever sees — it does not read `AGENTS.md` or this skill. That prompt is ours: `prompts/title.txt`,
 wired in `opencode.json` as `agent.title.prompt = "{file:./prompts/title.txt}"`, and it asks for

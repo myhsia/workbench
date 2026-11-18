@@ -63,6 +63,12 @@ none of them fits a filled-in form; `admin` is still a fixed type with a scope i
 a free-form label.  The title agent is not asked to produce it, so such a session is renamed by
 hand during the hygiene pass.
 
+An issue-fix session uses the `issue` scope and leads the subject with the number:
+`fix(issue): #9 a discretionary inside \LuaCJKnobreak`, several numbers as
+`fix(issue): #1, #2, and #8 font selection and baseline`.  The number never goes inside the scope
+(`fix(issue #9)` and `fix(session): issue #10` are both wrong), and the subsystem that changed
+belongs in the commit scope, not the title.
+
 ## Plan mode
 
 Plan mode is enforced by the permission rules, not by the prompt that announces it.  The rule is

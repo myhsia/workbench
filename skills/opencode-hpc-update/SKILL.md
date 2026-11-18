@@ -45,15 +45,25 @@ OpenCode (international — try direct first, fall back to the proxy from the `n
   campus address (`API rate limit exceeded for …` with no headers), so use `gh api` — authenticated —
   or fall back to the proxy.
 
-Measured on 2026-11-15 at v2.3.0 (published 2026-11-13, latest): the notes carry **no
-`Breaking changes` section**, and the configuration survived unchanged — one provider with
-`activation: "enabled"`, three models, the `title` prompt loaded (`opencode debug agents`, 2 749
-chars), and Plan's `edit * deny` still the first rule.  Two behaviour changes matter here: subagents
-now **always run in the background** and report when they go idle, so a fan-out waits for the report
-instead of for the call to return; and the TUI transcript verbosity defaults to `low` (activity rows
-instead of every step), which changes what a reader sees, not the store.  Still true from 2.2.7: the
-app's *export* action writes into the current directory while `opencode session export <id>` streams
-to stdout and creates no file (measured), and generated titles carry no model commentary.
+Measured on 2026-11-18 at v2.3.2 (published 2026-11-18, latest; v2.3.1 the same day, v2.3.2
+only a GPT-6.2 prompt-caching fix): neither release carries a `Breaking changes` section, and the
+configuration survived unchanged — one provider with `activation: "enabled"`, three models, the
+`title` prompt loaded (`opencode debug agents`, 2 749 chars), and Plan's `edit * deny` still the
+first rule.  The changes that could have touched this setup, and why they do not:
+
+- **Background compaction is on by default** from 2.3.1, and `experimental.background_compaction` is
+  gone.  This config sets `compaction.auto: false`, so no summary is written either way; keep it.
+- Shell commands whose timeout expires now move to the background instead of being killed, and the
+  `shell_timeout_background` flag no longer exists — neither it nor a foreground `timeout: 0` is set
+  here.
+- `CLAUDE.md` is read again wherever no `AGENTS.md` exists; every repository here carries one, so the
+  fallback never fires.
+- The app's *export* dialog can now save to the system temp directory as well as the project folder,
+  which supersedes the 2.2.7 note that it always wrote into the current directory; the CLI
+  `opencode session export <id>` still streams to stdout and creates no file (measured).
+
+Still true from 2.3.0: subagents always run in the background and report when idle, and the TUI
+transcript verbosity defaults to `low`.  Generated titles still carry no model commentary.
 
 `oathpass` release (as part of the daily check):
 

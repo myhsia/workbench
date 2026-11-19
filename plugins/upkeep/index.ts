@@ -15,6 +15,7 @@ const run = promisify(execFile)
 const configDir = join(homedir(), ".config", "opencode")
 const configPath = join(configDir, "opencode.json")
 const modelMarker = join(configDir, ".models-check")
+const releaseState = join(configDir, ".release-state")
 const ignorePath = join(configDir, ".models-ignore")
 const modelList = "https://hpc-api.westlake.edu.cn/v1/models"
 
@@ -65,6 +66,42 @@ const runCheck = async (script: string, args: string[]) => {
 }
 
 const upkeepDue = async () => (await runCheck("update-due.sh", [])) === 0
+
+// Run a script and keep its output, for the checks whose one line is the point.
+const runCapture = async (script: string, args: string[]) => {
+  try {
+    const { stdout } = await run("bash", [join(configDir, "scripts", script), ...args], {
+      timeout: 180_000,
+    })
+    return { code: 0, out: String(stdout).trim() }
+  } catch (error) {
+    const { code, stdout, stderr } = error as {
+      code?: unknown
+      stdout?: unknown
+      stderr?: unknown
+    }
+    const out = String(stdout ?? "").trim() || String(stderr ?? "").trim()
+    return { code: typeof code === "number" ? code : 1, out }
+  }
+}
+
+const releaseCheckedToday = async () =>
+  (await readText(releaseState))?.includes(`"checked": "${today()}"`) ?? false
+
+// The Mac runs the released binary, never a local build: this reinstalls when
+// the installed bytes are not the release's, and reports the one line the
+// script prints.  Offline (exit 2) is silence, retried on the next session.
+const refreshRelease = async () => {
+  const { code, out } = await runCapture("release-check.sh", ["--apply"])
+  // the installer prints its own progress; the script's verdict is the last
+  // line that starts with "oathpass:"
+  const verdict = out
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("oathpass"))
+    .slice(-1)[0]
+  return verdict ? [verdict] : []
+}
 
 const guidesDue = async (dir: string) => {
   const code = await runCheck("guides-due.sh", ["--committed", dir])
@@ -249,6 +286,11 @@ export default Plugin.define({
         if (session) seen.set(session, { day, dir })
 
         const lines = []
+
+        if (!(await releaseCheckedToday())) {
+          const notes = await refreshRelease()
+          if (notes.length > 0) lines.push(notes.join(" "))
+        }
 
         if (!(await modelsCheckedToday())) {
           const notes = await refreshModels()

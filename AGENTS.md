@@ -30,6 +30,9 @@ bash ~/.config/opencode/scripts/guides-due.sh --committed .  # exit 0 = STALE
   `opencode-hpc-update`, refresh the config, and stamp the day with `update-due.sh --mark`.
   There is **no 17:00 rule** — the day rolls over at 00:00 Asia/Shanghai, and a skipped day is due
   on the next first message, any hour.  Otherwise say nothing about it.
+- A third check runs without being asked: `scripts/release-check.sh --apply` keeps the released
+  binaries current once per calendar day (see *Binaries are released*).  It is plugin-driven like
+  the model refresh, so the two checks above remain the only ones a session runs itself.
 - `guides-due.sh` in the current repository printing `STALE` or `MISSING` means the guides are part
   of this task, not a follow-up. Report the answer with the status at the end; see the commit gate
   in `repo-rules`.  The `--committed` form judges the history only: a repository being edited is
@@ -166,6 +169,16 @@ CI builds every supported target on a tag; each target must have *run* its selft
 compiled; the release publishes a `SHA256SUMS` beside the assets; and the installer verifies that
 sum and restores the previous binary if the new one fails.  `make install` is a development
 shortcut, never the way a tool gets onto a machine.
+
+**This Mac runs releases, never local builds.**  `~/.local/bin/oathpass` is always an asset
+downloaded from a release, and the daily check reinstalls it when the installed bytes are not that
+asset -- including when a locally built binary happens to carry the same version number.  The check
+is automatic: `scripts/release-check.sh --apply` runs once per calendar day from the `upkeep` plugin
+(the same stamp-and-report shape as the model refresh below), so no session has to remember it, and
+agents must not gate it behind a question or run `make install` in its place.  A failed update
+prints one line -- `oathpass: update to vX failed (<reason>); the previous binary is unchanged` --
+and is retried the next day; offline (exit 2) is silence.  `hpc-job`, `hpc-rates` and `hpc-docs`
+are scripts in this repository, updated by `git`, and are *not* part of the release check.
 
 `oathpass` follows it this way.  CI builds five architectures -- `macos-arm64`, `macos-amd64`,
 `linux-arm64`, `linux-amd64`, `windows-amd64` -- with the ARM Linux one running under

@@ -17,6 +17,10 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
   `--selftest` on the target), and `install.sh` downloads this machine's asset, verifies
   `SHA256SUMS`, installs atomically and restores the previous binary if the selftest fails. Never
   `make install` for use -- that is a development shortcut. `hpc-cluster` carries the session rules.
+- `scripts/release-check.sh` — keeps the released binaries current: `--check` reports, `--apply`
+  installs the latest release when the installed bytes are not that release (verified against its
+  `SHA256SUMS`, one line of verdict, previous binary restored on failure). The `upkeep` plugin runs
+  it once a day; state in `.release-state` (untracked).
 - `hpc-rates.json` + `scripts/hpc-job.py` + `scripts/hpc-rates.py` — the cluster's economics,
   kept local: the per-partition rates, a `cost`/`submit` wrapper that enforces the per-job spend
   cap and picks the fastest plan inside it, and a daily check that compares the table with the
@@ -45,7 +49,7 @@ Machine-global OpenCode configuration for this Mac, checked out at `~/.config/op
   `AGENTS.md`, and `templates/repo-topic/SKILL.md` to `.opencode/skills/<name>/SKILL.md`.
 
 Secrets and machine-local state — `proxy`, `service.json` (service password and `env`), `cli.json`,
-`.update-check`, `.models-check`, `opencode.json.bak` — are untracked. `oathpass` keeps its own
+`.update-check`, `.release-state`, `.models-check`, `opencode.json.bak` — are untracked. `oathpass` keeps its own
 config, and its seed, in `~/.config/oathpass/config.json` (mode 600, outside this repository).
 
 Project-specific configuration stays in the project: each repository has its own `AGENTS.md` and

@@ -65,16 +65,19 @@ first rule.  The changes that could have touched this setup, and why they do not
 Still true from 2.3.0: subagents always run in the background and report when idle, and the TUI
 transcript verbosity defaults to `low`.  Generated titles still carry no model commentary.
 
-`oathpass` release (as part of the daily check):
+`oathpass` release — **done by the plugin, not by hand**:
 
-- Compare what is installed with the latest release and move forward:
-  `oathpass --version` against `gh release view --repo myhsia/oathpass --json tagName -q .tagName`.
-  When the release is newer, run
-  `sh ~/GitHub/oathpass/install.sh` (or the raw URL, which needs no checkout), which downloads this
-  machine's asset, verifies `SHA256SUMS`, replaces the binary atomically and restores the previous
-  one if its `--selftest` fails.  Report the transition as `oathpass 0.3.0 -> 0.3.1`; never say
-  "updated" without the selftest line.
-- Never rebuild it with `make`; the installed binary always comes from a release.
+- `scripts/release-check.sh --apply` runs once per calendar day from the `upkeep` plugin, and is the
+  only thing that installs an `oathpass` here.  It compares the installed bytes with the release's
+  `SHA256SUMS` (not just the version string), so a locally built binary is replaced even when it
+  carries the same number, then prints one line: `oathpass 0.4.3 -> 0.4.4 (v0.4.4, selftest passed)`
+  or `oathpass: re-installed …`.  State lives in `~/.config/opencode/.release-state` (untracked).
+- If that line appears in a session's context, report it as given; do not re-run the check and do
+  not "verify" it with `--version` alone.
+- Never rebuild it with `make`, never `make install`, and never bypass the script by fetching an
+  asset by hand: the checksum gate and the rollback live there.
+- A failure line is information, not an error to fix in passing: the previous binary is still in
+  place, and the next day retries.
 
 Westlake HPC billing (campus — no proxy), as part of the daily check:
 - `python3 ~/.config/opencode/scripts/hpc-rates.py --check` covers **both campuses**

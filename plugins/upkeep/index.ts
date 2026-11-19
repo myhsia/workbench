@@ -15,6 +15,7 @@ const run = promisify(execFile)
 const configDir = join(homedir(), ".config", "opencode")
 const configPath = join(configDir, "opencode.json")
 const modelMarker = join(configDir, ".models-check")
+const syncMarker = join(configDir, ".config-sync")
 const releaseState = join(configDir, ".release-state")
 const ignorePath = join(configDir, ".models-ignore")
 const modelList = "https://hpc-api.westlake.edu.cn/v1/models"
@@ -87,6 +88,19 @@ const runCapture = async (script: string, args: string[]) => {
 
 const releaseCheckedToday = async () =>
   (await readText(releaseState))?.includes(`"checked": "${today()}"`) ?? false
+
+// The configuration is `myhsia/workbench` so another machine can start from the
+// same guides, plugins and scripts.  Once a day: fetch, then fast-forward only
+// when the branch is strictly behind and the tree is clean; a dirty or diverged
+// tree is reported, never merged.  Exit 2 (offline, or not a repository) is
+// silence and is retried on the next session.
+const syncCheckedToday = async () =>
+  (await readText(syncMarker))?.trim() === today()
+
+const syncConfig = async () => {
+  const { code, out } = await runCapture("config-sync.sh", [])
+  return code === 2 || !out ? [] : [out.split("\n")[0].trim()]
+}
 
 // The Mac runs the released binary, never a local build: this reinstalls when
 // the installed bytes are not the release's, and reports the one line the
@@ -286,6 +300,15 @@ export default Plugin.define({
         if (session) seen.set(session, { day, dir })
 
         const lines = []
+
+        // First: a fast-forward replaces the scripts, so every check below runs
+        // against the synced tree.  The running plugin keeps its own copy until
+        // the next start.
+        if (!(await syncCheckedToday())) {
+          const notes = await syncConfig()
+          await writeFile(syncMarker, `${today()}\n`)
+          if (notes.length > 0) lines.push(notes.join(" "))
+        }
 
         if (!(await releaseCheckedToday())) {
           const notes = await refreshRelease()

@@ -11,6 +11,7 @@ cli.json
 .release-state
 hpc-default
 .models-check
+.config-sync
 opencode.json.bak
 *.tmp
 

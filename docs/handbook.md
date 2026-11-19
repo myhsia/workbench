@@ -183,6 +183,9 @@ ends in build with `Residue: none`, and the finding stays inside the title**.
 - Backups live under `~/.local/share/opencode/session-backups/` and are emptied once every rebuild is
   verified: a snapshot exists only while its rebuild is unverified, and it goes on explicit
   agreement, with its references in this handbook cleaned in the same task.
+- `scripts/config-sync.sh` keeps this repository level with `origin/main` for a second machine: the
+  `upkeep` plugin runs it daily, it fast-forwards only when strictly behind with a clean tree, and
+  it reports rather than merges when dirty or diverged.  Exit 2 (offline) is silence.
 
 Measured on 2026-11-10 at v2.2.6: CLI and service both that build, the latest release, and the model
 list unchanged.  Re-checked on 2026-11-11 at **v2.2.7** (latest, published 2026-11-10): CLI and

@@ -29,6 +29,15 @@ cluster seed is kept outside `service.json`, in `~/.config/oathpass/config.json`
 cluster's only factor by design, so it never leaves this machine and is never copied into
 `opencode.json` or a tracked guide.
 
+This configuration is the repository `myhsia/workbench`, so a second machine can start from the
+same guides, plugins and scripts.  `scripts/config-sync.sh` runs once a calendar day from the
+`upkeep` plugin and reports `config: synced N commit(s) from origin/main` when it fast-forwards a
+strictly-behind branch with a clean tree; a dirty or diverged tree is reported and never merged,
+and an unreachable origin is exit 2, silence, retried tomorrow.  A fast-forward replaces
+`plugins/`, `scripts/` and `AGENTS.md` before the next start, which is the point — but it also
+means remote code runs automatically, so the guard is that it merges only when nothing local can
+be lost.
+
 ## Check upstream
 
 OpenCode (international — try direct first, fall back to the proxy from the `network-access` skill,

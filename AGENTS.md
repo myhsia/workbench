@@ -30,9 +30,12 @@ bash ~/.config/opencode/scripts/guides-due.sh --committed .  # exit 0 = STALE
   `opencode-hpc-update`, refresh the config, and stamp the day with `update-due.sh --mark`.
   There is **no 17:00 rule** — the day rolls over at 00:00 Asia/Shanghai, and a skipped day is due
   on the next first message, any hour.  Otherwise say nothing about it.
-- A third check runs without being asked: `scripts/release-check.sh --apply` keeps the released
-  binaries current once per calendar day (see *Binaries are released*).  It is plugin-driven like
-  the model refresh, so the two checks above remain the only ones a session runs itself.
+- Two more checks run without being asked, both once per calendar day from the `upkeep` plugin:
+  `scripts/config-sync.sh` fast-forwards this repository to `origin/main` when it is strictly
+  behind and the tree is clean — a dirty or diverged tree is reported, never merged — and
+  `scripts/release-check.sh --apply` keeps the released binaries current (see *Binaries are
+  released*).  Both are plugin-driven like the model refresh, so the two checks above remain the
+  only ones a session runs itself.
 - `guides-due.sh` in the current repository printing `STALE` or `MISSING` means the guides are part
   of this task, not a follow-up. Report the answer with the status at the end; see the commit gate
   in `repo-rules`.  The `--committed` form judges the history only: a repository being edited is

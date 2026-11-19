@@ -153,6 +153,11 @@ instead of implying it was.
   silently removed attempt reads as if it never existed.
 - State an approximation with its regime and residual; never let a clean-looking plot stand in for
   a tolerance.
+- **A green run is not evidence that it did anything.** A job that treats "nothing to do" as
+  success — an issue triage that leaves a title it cannot classify unlabelled, an `--apply` whose
+  filter matches no row — exits 0 with every check ticked. Read the log line that says what it
+  did (or that it did nothing) before reporting the outcome; "the workflow succeeded" and "the
+  label was added" are two different measurements, and only the second is worth stating.
 
 ## Binaries are released, never hand-built
 

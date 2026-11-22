@@ -302,6 +302,14 @@ never commit secrets or `output/` artifacts (gitignored).  Never restage the use
 GitHub endpoints).  Local history operations (`git add`/`commit`/`push`) still use `git`; its remote
 auth is backed by `gh` (run `gh auth setup-git` if push auth ever fails).
 
+**A non-interactive shell never lets git open an editor.**  `git rebase --continue` after a
+conflict, `git commit --amend`, and `rebase -i` open an editor; a shell with no terminal has none,
+so the process blocks until it is killed.  Pass `GIT_EDITOR=true` (and `GIT_SEQUENCE_EDITOR=true`
+for `rebase -i`) or `--no-edit`, and resolve a conflicted rebase in the foreground.  A rebase left
+blocked this way is an orphan: finish it from another shell, then kill the old process chain, and
+check `git status` — the orphan's commit fails harmlessly once the rebase state is gone, but the
+shell record stays "running" in the TUI until it is killed.
+
 ### Fixing an issue
 
 One branch, one pull request, one verified reply per issue; group the issues that one root cause

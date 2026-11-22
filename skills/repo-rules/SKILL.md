@@ -802,6 +802,14 @@ repeating it.
   to nothing and the mistake shows up as a zero value or an empty argument, far from its cause.
   A number that goes *into* Lua crosses as a TeX token list in parentheses, which keeps it a
   number and needs no parsing: `( \the \tex_attribute:D \c_@@_…_int )`.
+- **A TeX attribute obeys grouping.**  `\attribute<n> = <value>` is an assignment like any other,
+  so an attribute assigned inside a group is taken back when the group ends, while the nodes that
+  were already created keep the value they were given.  That is what makes an attribute the right
+  carrier for a per-character setting that must not leak out of its group, and it means the value
+  has to be computed inside the group that establishes the state it depends on — the font, and so
+  the `em` — and assigned after `\group_end:`, crossing the boundary in a variable declared
+  `\g_`.  Carry the number itself rather than a key into a Lua table: the value is read when the
+  list is shaped, long after the table's entry would have been overwritten by the next selection.
 - **A drawing is a box with a stroke around the path.** `l3draw` sizes its box by the bounding box
   of the stroked path, one stroke width wider than the path, and it shifts the drawing so that the
   bottom of that box sits on the baseline, which lifts a path that goes below the baseline. To tile

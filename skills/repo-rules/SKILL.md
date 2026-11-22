@@ -652,6 +652,10 @@ repeating it.
   variant instead of wrapping the general form: `\iow_open:NV \l_@@_iow \l_@@_path_tl`, not
   `\exp_args:NNV \iow_open:Nn \l_@@_iow \l_@@_path_tl`.  A module that patches a LaTeX2e package (a
   `listings` hook, for instance) stays LaTeX2e, and its `\@…`, `\def` and `\newif` are left alone.
+- **A cache key carries the resolved value, never the name that produces it.**  A key built
+  from a tl holding a colour name, a font name, or a file name keeps the entry the first call
+  built when the document redefines that name, and nothing reports the stale hit; a key built
+  from what the name resolves to at call time gets its own entry.  Resolve first, then key.
 - **Hooks go through `\hook_gput_code:nnn`.**  `\hook_gput_code:nnn { hook } { Package } { code }`,
   labeled with the package name so the chunk is deterministic; `.` resolves to the module only at
   load time, where the current file still is the module.  `\AtBeginDocument` is exactly

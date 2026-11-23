@@ -54,6 +54,19 @@ OpenCode (international — try direct first, fall back to the proxy from the `n
   campus address (`API rate limit exceeded for …` with no headers), so use `gh api` — authenticated —
   or fall back to the proxy.
 
+Measured on 2026-11-24: v2.4.0 and v2.4.1 (both 2026-11-23) are the newest, while the CLI and
+the service here still ran v2.3.2 — an upgrade plus `opencode service restart` is the user's to do,
+because the restart ends the session.  The v2.4.0 upgrade notes that touch this setup and why they
+do not: the image tool is now `generate_image` (no permission rule names it, so nothing to remap);
+a plugin that follows a version updates itself (every plugin here is a local directory, and
+`opencode.json` names none); MCP servers negotiate the newest protocol first (none is configured;
+`client-mcp` in `cli.json` is the TUI's own client setting); Code Mode session tool paths are now
+`tools.opencode.session.rename` and `.move`, while the direct tool names are unchanged, so a guide
+that says `session_move` is still right; automations are new and on by default (`"automations":
+false` turns them off) and are left at the default; and the `opencode` theme now means the new one,
+`new-designs` having become the default.  The v2.4.1 release fixes the config-only-provider picker
+(see Pitfalls).
+
 Measured on 2026-11-18 at v2.3.2 (published 2026-11-18, latest; v2.3.1 the same day, v2.3.2
 only a GPT-6.2 prompt-caching fix): neither release carries a `Breaking changes` section, and the
 configuration survived unchanged — one provider with `activation: "enabled"`, three models, the
@@ -165,7 +178,9 @@ Westlake HPC (campus — no proxy):
   #49309). With `experimental.new-designs: true` in `~/.config/opencode/cli.json`, the new picker
   counts only **saved integration connections** (`/connect`) as connected; a provider declared only
   in `opencode.json` is treated as disconnected, so the dialog falls back to the free-models list and
-  shows **no items** — even though the provider works and the session keeps its model. Diagnosis and
+  shows **no items** — even though the provider works and the session keeps its model.  **Fixed in
+  v2.4.1** (2026-11-23, #65793): a config-only provider lists its models without a `/connect` login,
+  so the trap and the steps below apply to a service older than that. Diagnosis and
   fix (status at 2.2.7: the release notes never mention #60587 and `new-designs` is still `true`
   here, so the trap is presumed live but was **not** re-tested in the TUI this round):
   1. `opencode api get /api/model --header x-opencode-directory:<project>` — if the models are listed

@@ -371,6 +371,10 @@ the cost of a stray branch that the next reader has to recognise as deliberate.
 After every push, check the result and report it: `gh run list --limit 3`, or `gh run watch <id>`
 for the run just triggered, and `gh pr checks <n>` when a PR is open.
 
+`gh pr create` on this machine can print a `gh event listen` help block instead of the new pull
+request's URL, while the pull request is created all the same; confirm with
+`gh pr list --head <branch> --json number,url` before reporting it.
+
 Triage pull requests:
 
 - **Dependabot version updates** (the `conda` and `github-actions` ecosystems): once the checks

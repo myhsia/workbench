@@ -46,6 +46,20 @@ OpenCode (international — try direct first, fall back to the proxy from the `n
 - `opencode --version` (CLI) and `opencode api get /api/info` (the running service) — they can differ
   after an upgrade; the service must be restarted by the user (`opencode service restart`) to pick up
   a new build, and that restart ends any running session, so never do it yourself.
+- **The campus Homebrew mirror can 403 a bottle.**  `~/.zprofile` points `HOMEBREW_API_DOMAIN` and
+  `HOMEBREW_BOTTLE_DOMAIN` at `mirrors.cernet.edu.cn/homebrew-bottles`; on 2026-11-24 that mirror
+  redirected the 2.4.0 bottle to `chinanet.mirrors.ustc.edu.cn`, which answered `403`, and Homebrew
+  died with `rb_file_s_rename … .incomplete → .json` after a 1.9 MB partial — not a formula problem.
+  Diagnose with `curl -sL -o /dev/null -w '%{http_code} %{size_download}'` on the bottle URL, then
+  bypass the mirror for one command without editing the profile:
+
+  ```sh
+  PROXY=$(cat ~/.config/opencode/proxy)
+  env -u HOMEBREW_API_DOMAIN -u HOMEBREW_BOTTLE_DOMAIN \
+    https_proxy="$PROXY" http_proxy="$PROXY" HOMEBREW_NO_AUTO_UPDATE=1 brew upgrade opencode
+  ```
+
+  The upgrade replaces the Cellar; the service keeps its old build until the user restarts it.
 - Docs <https://opencode.ai/v2/docs/> and migration guide <https://opencode.ai/v2/docs/migrate-v1>
   (note the three V2 breaking changes: plugins, server API, `cli.json`).
 - Release notes: `https://api.github.com/repos/anomalyco/opencode/releases?per_page=5` (the old
@@ -54,18 +68,18 @@ OpenCode (international — try direct first, fall back to the proxy from the `n
   campus address (`API rate limit exceeded for …` with no headers), so use `gh api` — authenticated —
   or fall back to the proxy.
 
-Measured on 2026-11-24: v2.4.0 and v2.4.1 (both 2026-11-23) are the newest, while the CLI and
-the service here still ran v2.3.2 — an upgrade plus `opencode service restart` is the user's to do,
-because the restart ends the session.  The v2.4.0 upgrade notes that touch this setup and why they
-do not: the image tool is now `generate_image` (no permission rule names it, so nothing to remap);
-a plugin that follows a version updates itself (every plugin here is a local directory, and
-`opencode.json` names none); MCP servers negotiate the newest protocol first (none is configured;
-`client-mcp` in `cli.json` is the TUI's own client setting); Code Mode session tool paths are now
-`tools.opencode.session.rename` and `.move`, while the direct tool names are unchanged, so a guide
-that says `session_move` is still right; automations are new and on by default (`"automations":
-false` turns them off) and are left at the default; and the `opencode` theme now means the new one,
-`new-designs` having become the default.  The v2.4.1 release fixes the config-only-provider picker
-(see Pitfalls).
+Measured on 2026-11-24: v2.4.0 and v2.4.1 (both 2026-11-23) are the newest.  The CLI was upgraded to
+**2.4.0** that morning with `brew upgrade opencode`; the **service still runs 2.3.2** until the user
+runs `opencode service restart`, because that restart ends the session.  The v2.4.0 upgrade notes
+that touch this setup and why they do not: the image tool is now `generate_image` (no permission rule
+names it, so nothing to remap); a plugin that follows a version updates itself (every plugin here is
+a local directory, and `opencode.json` names none); MCP servers negotiate the newest protocol first
+(none is configured; `client-mcp` in `cli.json` is the TUI's own client setting); Code Mode session
+tool paths are now `tools.opencode.session.rename` and `.move`, while the direct tool names are
+unchanged, so a guide that says `session_move` is still right; automations are new and on by default
+(`"automations": false` turns them off) and are left at the default; and the `opencode` theme now
+means the new one, `new-designs` having become the default.  The v2.4.1 release fixes the
+config-only-provider picker (see Pitfalls).
 
 Measured on 2026-11-18 at v2.3.2 (published 2026-11-18, latest; v2.3.1 the same day, v2.3.2
 only a GPT-6.2 prompt-caching fix): neither release carries a `Breaking changes` section, and the

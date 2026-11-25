@@ -155,6 +155,14 @@ warning and lets the commit through.  `--no-verify` is the deliberate bypass.
 
 ### Verification
 
+- **A rejected method leaves a `REJECTED.md`, not a directory.**  A negative result is recorded
+  once, in the repository's `REJECTED.md`: what was tried, the mechanism of failure, the measured
+  numbers, and how to find or regenerate them.  **Deleting its code needs the user's explicit
+  call**: propose it in the task report, wait, and only then delete — keeping is the default, and an
+  agent that tidies a tree on its own initiative has done an unauthorised deletion.  Never delete a
+  pre-existing negative result (a documented dead end in another package) on the strength of someone
+  else's failure.  The rule exists because an unrecorded deletion makes a wrong claim
+  unfalsifiable: removing the code that proves a verdict was wrong restores the wrong verdict.
 - Check any identity about moments, coefficients or spectra in **extended precision** (`mpmath`,
   `dps` raised to about 100) before trusting the double-precision result; the ill-conditioning of
   a moment sequence only shows up above machine precision.

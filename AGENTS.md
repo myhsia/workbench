@@ -155,8 +155,13 @@ instead of implying it was.
 
 - Label every number: **measured** (a run performed in this task), **derived** (computed from
   recorded data by a stated formula), or **fitted** (a parameter adjusted to match a target).
-- Record rejected variants and dead ends with the reason they failed, instead of deleting them; a
-  silently removed attempt reads as if it never existed.
+- Record rejected variants and dead ends with the reason they failed.  A rejected method's **code
+  may be deleted, but only on the user's explicit call**: the agent may propose a deletion and must
+  never perform one on its own initiative -- keeping is the default.  The lesson is mandatory and
+  goes in the repository's `REJECTED.md` **before** anything is deleted: what was tried, the
+  mechanism of failure, the measured numbers, and how to find or regenerate them.  Never delete the
+  record, and never delete a negative result you did not author; a silently removed attempt reads as
+  if it never existed.
 - State an approximation with its regime and residual; never let a clean-looking plot stand in for
   a tolerance.
 - **A green run is not evidence that it did anything.** A job that treats "nothing to do" as
@@ -211,7 +216,10 @@ not the obstacle -- measured on windows-latest with Win32-OpenSSH 9.5p2, a helpe
 - **Report status.**  Before reporting, run `git status -sb` in the global config repository
   (`~/.config/opencode`) and in every checkout of the current workspace (each sibling repository
   named by the workspace guide), then state for each: the branch, whether HEAD == `origin/main`,
-  and whether the tree is dirty.  Call out uncommitted changes (and whose they are) and any
+  and whether the tree is dirty.  **Never truncate it**: `git status -sb | head -1` prints only
+  the branch line and drops the ` M`/`??` lines, so it cannot answer "is the tree dirty" -- a dirty
+  config repository was reported as clean that way (2026-11-25), and the uncommitted rule it carried
+  was nearly lost.  Call out uncommitted changes (and whose they are) and any
   unpushed commit.
 - **Open issues are categorised in the session that sees them.**  Every issue carries one *subsystem*
   label, and its type is the forge's native issue type (`Bug`, `Feature`, `Task`), which is not a

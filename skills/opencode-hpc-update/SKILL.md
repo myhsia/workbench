@@ -46,20 +46,19 @@ OpenCode (international — try direct first, fall back to the proxy from the `n
 - `opencode --version` (CLI) and `opencode api get /api/info` (the running service) — they can differ
   after an upgrade; the service must be restarted by the user (`opencode service restart`) to pick up
   a new build, and that restart ends any running session, so never do it yourself.
-- **The campus Homebrew mirror can 403 a bottle.**  `~/.zprofile` points `HOMEBREW_API_DOMAIN` and
-  `HOMEBREW_BOTTLE_DOMAIN` at `mirrors.cernet.edu.cn/homebrew-bottles`; on 2026-11-24 that mirror
-  redirected the 2.4.0 bottle to `chinanet.mirrors.ustc.edu.cn`, which answered `403`, and Homebrew
-  died with `rb_file_s_rename … .incomplete → .json` after a 1.9 MB partial — not a formula problem.
-  Diagnose with `curl -sL -o /dev/null -w '%{http_code} %{size_download}'` on the bottle URL, then
-  bypass the mirror for one command without editing the profile:
-
-  ```sh
-  PROXY=$(cat ~/.config/opencode/proxy)
-  env -u HOMEBREW_API_DOMAIN -u HOMEBREW_BOTTLE_DOMAIN \
-    https_proxy="$PROXY" http_proxy="$PROXY" HOMEBREW_NO_AUTO_UPDATE=1 brew upgrade opencode
-  ```
-
-  The upgrade replaces the Cellar; the service keeps its old build until the user restarts it.
+- **The campus bottle mirror cannot serve Homebrew 7 at all.**  `~/.zprofile` keeps
+  `HOMEBREW_API_DOMAIN` on `mirrors.cernet.edu.cn/homebrew-bottles/api` (that endpoint answers the
+  right shape), but **`HOMEBREW_BOTTLE_DOMAIN` must stay unset**.  The mirror serves bottle tarballs
+  only: its OCI manifest path `.../homebrew/core/<name>/manifests/sha256:…` redirects to
+  `chinanet.mirrors.ustc.edu.cn` and answers **404** (measured 2026-11-25), and brew 7.0.16 aborts at
+  that 404 instead of falling back to GHCR, reporting the misleading
+  `rb_file_s_rename … .incomplete → .json`.  (The tarball path is worse: `403` without a browser UA,
+  and an 875-byte HTML page with one.)  Bottles and manifests therefore come from GHCR through the
+  proxy: `~/.zshrc` defines a `brew()` wrapper that **strips `HOMEBREW_BOTTLE_DOMAIN` per call** —
+  long-lived parents such as the OpenCode service still export it — and sets `https_proxy`/`http_proxy`
+  with the mirror hosts in `no_proxy`.  Keep using that wrapper; a bare `brew` inherits the stale
+  variable and fails again.  Verified after the change: `zstd 1.5.7_1 -> 1.6.0`, `ffmpeg 9.0.2_1 ->
+  9.1`, `brew outdated` empty.
 - Docs <https://opencode.ai/v2/docs/> and migration guide <https://opencode.ai/v2/docs/migrate-v1>
   (note the three V2 breaking changes: plugins, server API, `cli.json`).
 - Release notes: `https://api.github.com/repos/anomalyco/opencode/releases?per_page=5` (the old

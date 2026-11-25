@@ -73,9 +73,10 @@ runs `opencode service restart`, because that restart ends the session.
 Measured again on 2026-11-25: the service had been restarted by then and ran **2.4.0**, and the CLI was
 upgraded to **2.4.1** (`brew update` first — the formula still said 2.4.0, so `brew upgrade` alone
 answered "already installed"; then the documented mirror bypass, because `HOMEBREW_API_DOMAIN` still
-served the 403 bottle).  The service stays on 2.4.0 until the user restarts it, so the config-only
-provider picker trap (#60587 / #65793) remains live in the running TUI; 2.4.1 is the release that fixes
-it.  None of the 2.4.1 notes carries a `Breaking changes` section.  The v2.4.0 upgrade notes
+served the 403 bottle).  Measured on 2026-11-26: CLI and service both report **2.4.1**
+(`opencode --version`, `GET /api/info`), so the user has restarted the service and the config-only
+provider picker trap (#60587 / #65793, fixed in 2.4.1) is gone from the running TUI.  None of the
+2.4.1 notes carries a `Breaking changes` section.  The v2.4.0 upgrade notes
 that touch this setup and why they do not: the image tool is now `generate_image` (no permission rule
 names it, so nothing to remap); a plugin that follows a version updates itself (every plugin here is
 a local directory, and `opencode.json` names none); MCP servers negotiate the newest protocol first
@@ -199,9 +200,9 @@ Westlake HPC (campus — no proxy):
   in `opencode.json` is treated as disconnected, so the dialog falls back to the free-models list and
   shows **no items** — even though the provider works and the session keeps its model.  **Fixed in
   v2.4.1** (2026-11-23, #65793): a config-only provider lists its models without a `/connect` login,
-  so the trap and the steps below apply to a service older than that. Diagnosis and
-  fix (status at 2.2.7: the release notes never mention #60587 and `new-designs` is still `true`
-  here, so the trap is presumed live but was **not** re-tested in the TUI this round):
+  so the trap and the steps below apply to a service older than that.  Diagnosis and
+  fix (status 2026-11-26: CLI and service both report 2.4.1, the release that carries the fix, so the
+  trap no longer applies here; the picker itself was not re-opened to confirm):
   1. `opencode api get /api/model --header x-opencode-directory:<project>` — if the models are listed
      (with `/api/model/default`, `/api/agent`, `/api/command`, `/api/plugin` all valid too), the
      server is fine and the provider config is not at fault;

@@ -828,15 +828,20 @@ repeating it.
   a pattern with `\leaders`, give the box exactly one period (`\hbox to <period>`) and absorb the
   excess with `\hss` on both sides, and set the scratch box's height and depth to zero after
   building it, so that a decoration never changes the leading of the line it sits on.
-- **A class's fonts are TeX Live `public/` files, looked up by file name.**  A system font or a
-  family from the `adobe/` tree typesets on the author's machine and fails on a cloud TeX Live: the
-  reference template's default had to be replaced because `SourceSans3-*` lives under
-  `fonts/opentype/adobe/` and the family was renamed between TeX Live years (`SourceSansPro-*` in
-  older ones), so Overleaf had no such file and `\setmainfont` aborted.  Set every family from
-  `fonts/opentype/public/` by file name and guard it with `\IfFontExistsTF`, falling back to a
-  family that has shipped for a decade (TeX Gyre), so a missing file costs one warning instead of
-  the build.  `\includesvg`, `\includegraphics` and the wordmark assets are the same argument in
-  another form: the deliverable must build where the reader builds it.
+- **A class's fonts come from TeX Live packages, never from the system.**  Two shapes are
+  acceptable and both must build on a cloud TeX Live: a **Type1 package** under pdfTeX
+  (`newtxtext`+`newtxmath`, `[sfdefault]{FiraSans}`, `tgheros`) or an OTF family set by file name
+  under the Unicode engines.  A system font, or a family from the `adobe/` tree, typesets on the
+  author's machine and fails elsewhere: this template's first default lived in
+  `fonts/opentype/adobe/sourcesans/`, was renamed between TeX Live years (`SourceSansPro-*` in
+  older ones), and could not be resolved on Overleaf at all.  Set file-based families with
+  `\IfFontExistsTF` and a decade-old fallback (TeX Gyre), so a missing file costs one warning
+  instead of the build; the same argument covers `\includegraphics` assets and the wordmark.
+- **pdfTeX plus T1 loses the characters inputenc does not map.**  `U+2212` (minus) has no entry in
+  the utf8 table, so a document carrying `Am−1` compiles but loses or rejects the sign; map it with
+  `\sys_if_engine_pdftex:T { \DeclareUnicodeCharacter { 2212 } { \textminus } }`, guarded because
+  `inputenc` and that macro exist only under pdfTeX.  Enumerate the source's non-ASCII characters
+  before declaring a document engine-portable.
 - **A message with two parameters is `\msg_warning:nnnn`.**  The class is `nnn` for one argument,
   so `\msg_warning:nnn { mod } { name } { a } { b }` over-supplies an argument while the message
   body's `#2` stays undefined, and the failure surfaces far away (a "Missing \begin{document}"

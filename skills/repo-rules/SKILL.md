@@ -873,6 +873,19 @@ repeating it.
   Lua identifier (dots and underscores) *needs* `[int]`: without it `l3doc` emits a reference to
   a label it never defines.
 - Keep one blank `%` line between two consecutive entries.
+- **A `\changes` date is when the change was made, never the release date.**  In a package whose
+  changelog is generated from the `\changes` entries, each entry carries the date of the change
+  itself — the pull request's date, or the commit's author date when there is none
+  (`git log -1 --format=%ad --date=short`) — so the entries of one version differ and each one
+  records when it happened.  The release date lives in the build configuration (`date` in
+  `build.lua`), is chosen at release time, and must be no earlier than the latest entry of the
+  version being shipped.  A release edits that one field and nothing else in the sources: re-dating
+  the entries to the release day destroys the only record of when each change was made, and it is a
+  history rewrite, so the check that guards it belongs in the repository (require the release date
+  to be no earlier than every entry of the newest version).  Where a flattening has already
+  happened, the true date is recoverable: `git log --reverse -S '<the entry text>' -- <source>`
+  names the commit that first wrote it, and the repair belongs *in those commits*, not in a new
+  one that changes the dates again.
 - **In an `environment` entry the prose comes first and `syntax` closes it.**  `\begin{environment}`
   already opens a paragraph, so a `syntax` block placed directly after it renders with an empty
   line above; the entry reads description, then the block, then `\end{environment}`.  A

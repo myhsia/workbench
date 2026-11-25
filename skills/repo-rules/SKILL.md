@@ -828,6 +828,19 @@ repeating it.
   a pattern with `\leaders`, give the box exactly one period (`\hbox to <period>`) and absorb the
   excess with `\hss` on both sides, and set the scratch box's height and depth to zero after
   building it, so that a decoration never changes the leading of the line it sits on.
+- **A class's fonts are TeX Live `public/` files, looked up by file name.**  A system font or a
+  family from the `adobe/` tree typesets on the author's machine and fails on a cloud TeX Live: the
+  reference template's default had to be replaced because `SourceSans3-*` lives under
+  `fonts/opentype/adobe/` and the family was renamed between TeX Live years (`SourceSansPro-*` in
+  older ones), so Overleaf had no such file and `\setmainfont` aborted.  Set every family from
+  `fonts/opentype/public/` by file name and guard it with `\IfFontExistsTF`, falling back to a
+  family that has shipped for a decade (TeX Gyre), so a missing file costs one warning instead of
+  the build.  `\includesvg`, `\includegraphics` and the wordmark assets are the same argument in
+  another form: the deliverable must build where the reader builds it.
+- **A message with two parameters is `\msg_warning:nnnn`.**  The class is `nnn` for one argument,
+  so `\msg_warning:nnn { mod } { name } { a } { b }` over-supplies an argument while the message
+  body's `#2` stays undefined, and the failure surfaces far away (a "Missing \begin{document}"
+  after the front matter, here).  Count the parameters in the declared body and match the class.
 - **`\leaders` repeats its box and drops the remainder.**  Only whole copies fit, so the last
   fraction of the span stays empty: at 10.9095pt a one-point leader leaves 0.91pt blank at the end
   of a highlight whose left edge is exact.  A leader that is a bare rule stretches and fills the

@@ -287,6 +287,29 @@ A repository is not workable until it has **`AGENTS.md`** at its root and **`.op
 Load and apply the matching skill as soon as the trigger appears; do not ask the user whether a skill
 may be used.
 
+## Recordings and transcripts
+
+Voice memos and meeting recordings are transcribed locally with `mlx-whisper`, never uploaded: the
+venv is `~/.venvs/mlx-whisper` (built from `miniconda3`'s `python3.13`) and the weights live in
+`~/models/whisper-large-v3{,-turbo}` (downloaded by `curl` through the proxy; the HF snapshot helper
+managed ~1 MB/s where `curl` got 3–7 MB/s). Three measured pitfalls, all of which produced badly wrong
+output before they were found (2026-11-24, a 30-minute three-speaker Chinese discussion):
+
+- **Use `large-v3`, not `turbo`, for accented Chinese.** Turbo's distilled 4-layer decoder produced
+  `汉部量`/`纽约链` for Hamiltonian/Liouvillian where `large-v3` recovered `contraction`,
+  `normal order`, `Fock space` and `Ω_n`. `mlx_whisper` accepts `beam_size` and then raises
+  `NotImplementedError("Beam search decoder is not yet implemented")` — do not plan around it.
+- **`condition_on_previous_text=True` loops on low-SNR audio.** It emitted `它是在这里。` for two and a
+  half minutes. Always set it `False` for room recordings.
+- **iPad Voice Memos "stereo" is two incoherent mics.** Cross-correlation 0.54 but TDOA scattered over
+  −149…+13 samples, and averaging the channels *lowers* RMS by 1.7 dB — `ffmpeg -ac 1` damages speech.
+  Transcribe one channel at a time and use the second as an independent cross-check.
+
+Never present one decode as a transcript. Decode two channels independently, compare per turn, and mark
+every disagreement; a turn-level agreement rate is the only honest quality number (this recording: 20 %).
+One CPU/GPU decode at a time: two concurrent runs on an 8 GB M1 pushed 7 GB into swap and both slowed
+by 3–4×.
+
 ## Cluster use requires approval
 
 The HPC cluster is for work that genuinely exceeds this Mac: long DMRG/moments/FSSH sweeps, large

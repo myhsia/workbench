@@ -70,7 +70,13 @@ OpenCode (international — try direct first, fall back to the proxy from the `n
 
 Measured on 2026-11-24: v2.4.0 and v2.4.1 (both 2026-11-23) are the newest.  The CLI was upgraded to
 **2.4.0** that morning with `brew upgrade opencode`; the **service still runs 2.3.2** until the user
-runs `opencode service restart`, because that restart ends the session.  The v2.4.0 upgrade notes
+runs `opencode service restart`, because that restart ends the session.
+Measured again on 2026-11-25: the service had been restarted by then and ran **2.4.0**, and the CLI was
+upgraded to **2.4.1** (`brew update` first — the formula still said 2.4.0, so `brew upgrade` alone
+answered "already installed"; then the documented mirror bypass, because `HOMEBREW_API_DOMAIN` still
+served the 403 bottle).  The service stays on 2.4.0 until the user restarts it, so the config-only
+provider picker trap (#60587 / #65793) remains live in the running TUI; 2.4.1 is the release that fixes
+it.  None of the 2.4.1 notes carries a `Breaking changes` section.  The v2.4.0 upgrade notes
 that touch this setup and why they do not: the image tool is now `generate_image` (no permission rule
 names it, so nothing to remap); a plugin that follows a version updates itself (every plugin here is
 a local directory, and `opencode.json` names none); MCP servers negotiate the newest protocol first

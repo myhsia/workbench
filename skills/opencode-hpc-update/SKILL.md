@@ -76,7 +76,13 @@ answered "already installed"; then the documented mirror bypass, because `HOMEBR
 served the 403 bottle).  Measured on 2026-11-26: CLI and service both report **2.4.1**
 (`opencode --version`, `GET /api/info`), so the user has restarted the service and the config-only
 provider picker trap (#60587 / #65793, fixed in 2.4.1) is gone from the running TUI.  None of the
-2.4.1 notes carries a `Breaking changes` section.  The v2.4.0 upgrade notes
+2.4.1 notes carries a `Breaking changes` section.  Measured on 2026-11-27: v**2.4.2** was
+released 2026-11-26 with no `Breaking changes` (its upgrade notes scope a saved "always allow" web
+fetch to one site and keep automations running after a failed run; neither applies here, and no
+saved fetch approval exists), but the Homebrew formula still carries **2.4.1** — `brew update` then
+`brew outdated opencode` offered nothing, and `brew info` reports 2.4.1 — so CLI and service stay at
+2.4.1 and no upgrade was possible.  Expect the same one-day formula lag seen on 11-25.
+The v2.4.0 upgrade notes
 that touch this setup and why they do not: the image tool is now `generate_image` (no permission rule
 names it, so nothing to remap); a plugin that follows a version updates itself (every plugin here is
 a local directory, and `opencode.json` names none); MCP servers negotiate the newest protocol first

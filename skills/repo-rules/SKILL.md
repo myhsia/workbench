@@ -1298,15 +1298,21 @@ that changes how text is typeset has to keep working with it on and off.
   actually fail.  For a check with no network, put a `curl` shim on `PATH` that saves the
   `--config` file and exits 0: the field dump and the exact form are then visible with nothing
   sent.
-- **The upload can be CI's job.**  Trigger it on a published release, check out that tag, refuse to
-  run unless the build file's version equals the tag's, download the release's own archive so that
-  the bytes CTAN receives are the published ones, and run `l3build upload` with `y` on stdin —
-  the confirmation is the only prompt a complete form still has.  Leave `update` unset: `l3build`
-  sends `true` and falls back to `false` when CTAN reports that the package does not exist, so one
-  table serves a first release and every later one.  Keep the generated `.curlopt` as an artifact
-  when the job fails: it is the exact request and the only useful evidence.  Write any `run:` that
-  continues a command with a backslash as a literal block (`run: |`): a plain YAML scalar folds the
-  backslash-newline into a space and passes a literal `\` as an argument, which cost one dispatch.
+- **The whole release can be one CI job, and should be.**  Trigger it on the tag push, refuse to run
+  unless the build file's version equals the tag's, build the archive there, run `l3build upload`
+  with `y` on stdin — the confirmation is the only prompt a complete form still has — and publish
+  the GitHub release with the same files, so the bytes built, the bytes uploaded and the bytes
+  attached are one set.  This has to be one job: **a release created with the workflow token does
+  not start another workflow**, so an upload triggered by `release: published` never fires for a
+  CI-made release; CTAN asks for no credentials, which is what allows the archive to be sent from
+  the same job.  Keep a release-triggered upload workflow only as a manual re-upload path.
+  Leave `update` unset: `l3build` sends `true` and falls back to `false` when CTAN reports that the
+  package does not exist, so one table serves a first release and every later one.  Generate the
+  release notes from the changelog section the package already writes, never by hand.  Keep the
+  generated `.curlopt` as an artifact when the job fails: it is the exact request and the only
+  useful evidence.  Write any `run:` that continues a command with a backslash as a literal block
+  (`run: |`): a plain YAML scalar folds the backslash-newline into a space and passes a literal `\`
+  as an argument, which cost one dispatch.
 - **The archives hold no derived files.**  The flat tree carries the source, the `.ins`, the README
   and the manual; a `.sty`, `.lua` or `.def` that DocStrip writes belongs in the `.tds.zip` only,
   and a generated `CHANGELOG.md` belongs in neither.

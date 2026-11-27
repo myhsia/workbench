@@ -653,6 +653,82 @@ READMEs, and the changelog; code comments and docstrings; and commit messages.
   prints a different chunk and a different order as soon as a label is introduced, so a test that
   compares such a dump is rebaselined on purpose rather than assumed inert.
 
+## TikZ figures
+
+A hand-drawn figure is a composition of modules, not one coordinate system in which every part is
+placed by hand.
+
+- **A leaf module owns its own frame.**  Draw it in its own `tikzpicture` used as a node's text
+  (`\node[inner sep = 0pt] (osc) {\begin{tikzpicture}…\end{tikzpicture}};`), or as a `pic` when it
+  is placed at a point and never needs a sibling's anchor.  Inside the module the only coordinates
+  are the drawing's own (a Bezier control point, a ball radius, the spacing of two rails), and the
+  module is placed by an anchor, never by a position.
+- **A panel is a node that sizes itself.**  Its box is measured from the body and drawn on the
+  background layer, never `(x1,y1) rectangle (x2,y2)`: a rectangle at two corners does not follow
+  its content, so the content then has to be positioned by hand to stay inside and to keep a common
+  margin.  `fit` is the short form (`\node[sys panel, fit = (sysbody)] (sys) {};`) while the body's
+  position is free, but it centres the box on its body, so two equal boxes around bodies of
+  different height sit at different heights.  When the two panels must share a *top* edge, put each
+  body's north edge on one line (`anchor = north west` at `[xshift = \gap] otherbody.north east`),
+  measure `north − south` and `east − west`, and create each box with `minimum width`,
+  `minimum height = max + 2\inner sep` and `anchor = north` at `[yshift = \inner sep] body.north`.
+- **A node inside a module states its anchor.**  A bare `\node … at (x,y)` inherits the anchor of
+  the enclosing node's placement, and that reaches into the module's own picture: `below = … of`
+  leaves `anchor = north`, `right = … of` leaves `anchor = west`.  Measured on a mode ladder, the
+  first label sat 5.08 pt low (one box depth) because its enclosing node had been placed with
+  `below = … of`, while the three placed with `right = … of` came out right only because `west` is
+  vertically centred.  Write `anchor = center` (or whatever the node needs) on every node inside a
+  module, and give a module whose frame must not depend on its text an explicit
+  `\useasboundingbox` at its start, so a row of such modules stays aligned whatever the labels say.
+- **Compose by reference.**  `\node[right = <len> of A] (B) …`, `\draw (A.east) -- (B.west);`,
+  `(A.east |- B.west)`, `($(A.east)!0.5!(B.west)$)`, `above = <len> of {$(A)!0.5!(B)$}`.  Outside a
+  module a number survives only as a length (`node distance`, `xshift`, `inner sep`) or as a factor
+  in a `calc` coordinate; no placement may depend on another module's size.
+- **Panels of equal height are measured, not guessed.**  `\heightof`/`\depthof` do not exist, and
+  the math functions `height("node")` and `depth("node")` return the *text* height (measured
+  6.94 pt and 1.94 pt for a node 102 pt tall), so take `north` minus `south` with `\pgfextracty`,
+  keep the maximum and add twice the panel's `inner sep`: `minimum height` is checked *after*
+  `inner sep`, and a raw content height leaves the two boxes unequal.  The equality is then read off
+  the render (`mutool draw -F trace` gives the two boxes' extents), not assumed.
+- **A nested `tikzpicture` is a fresh picture.**  It does not inherit the outer picture's
+  `node distance` or its options, and the nodes inside it are invisible from outside, so the outer
+  picture may use only the module node's own anchors.  Give each inner picture the lengths it uses.
+- **A key list nested in a style goes on one line.**  `drop shadow = {opacity = 0.13, shadow
+  xshift = 2pt, shadow yshift = -3pt}` inside `\tikzset`; the three-line form raised `I do not know
+  the key '/tikz/ opacity'` for some styles under TeX Live 2026 (the key is reported with a leading
+  space), and pgfkeys then kept the library default `opacity = .5` while the build still finished,
+  so the shadow rendered four times heavier than the source asked.  Read the alpha in
+  `mutool draw -F trace` when a shadow looks wrong; a clean build is not evidence that the key was
+  accepted.
+- **Formatting.**  Two spaces per nesting level, not four.  A continuation line takes one space past
+  its statement, except a broken bracket list, which aligns under its first option
+  (`\node[inner sep = 0pt, outer sep = 0pt,` then `      below = ...]`).  Numbers carry neither a
+  leading nor a trailing zero (`.6pt`, `.25`, `.5ex`, `2` for `2.00`), and an expression inside a
+  coordinate is written compactly (`{\x*.25}`, `{1-\x}`).  A node that rides a path is
+  `node [ ... ]` with a space while a node statement keeps `\node[`; a relative segment is `--++`;
+  a decorative curve is `plot[domain = ..., smooth]`.  Align the `=` of sibling option lines
+  (`left  = .5ex`, `below = .5ex`), and place a label that belongs to a module's drawing at the call
+  site, on the statement that places the module (`{\spectral} node [below left] at (spec.north east)
+  {Ohmic};`).  No blank line opens or closes a picture body.  Where the sampling is load-bearing --
+  a curve whose turning points are computed, so that a level must end on the wall -- keep an explicit
+  `samples` and say why in the comment, because `smooth` fits a fixed 25 points and hides the check.
+  A grid of chips takes the widest header's width as the cell width (`\settowidth{\caselen}
+  {\sffamily\small anharmonic}`, then `minimum width = \caselen`) with the headers `above = ... of`
+  their cells, so the columns are even and the gap is a length one chooses rather than a by-product
+  of how long the labels happen to be.  A gap or a padding is a simple multiple -- `1ex`, `1.5ex`,
+  `2ex`, `1em`, `1.5em`, `3em` -- never a converted decimal such as `1.1em`; an `inner sep` is
+  3 pt (the natural value) or 6 pt, and nothing else; a comment is one phrase per part, with a
+  formula where the part is one.  A style that differs from another only by colour is not a second
+  style: keep one and write the colour at the call site (`\node[block, draw = sysred] …`), so the
+  `\tikzset` block lists each shape once.
+- **A schematic's ink comes from the model.**  When the drawn curve is a physical potential, plot
+  that function rather than tracing a look-alike, and place everything that encodes a quantity — a
+  level, a turning point, a band edge — by evaluating the same closed form, so one parameter at the
+  top of the file re-renders the whole figure and a level's ends meet the wall by construction
+  rather than by eye.  A hand-tuned list of heights looks right until the parameter moves; state the
+  model's closed form in a comment, and if the model has no closed form, say which approximation the
+  drawing uses and how far it is from the exact value.
+
 ## expl3 source style
 
 Applies to any `dtx` written in `expl3` under `%<@@=…>`; a project guide points here rather than

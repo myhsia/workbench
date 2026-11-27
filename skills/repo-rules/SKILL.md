@@ -723,7 +723,13 @@ placed by hand.
   3 pt (the natural value) or 6 pt, and nothing else; a comment is one phrase per part, with a
   formula where the part is one.  A style that differs from another only by colour is not a second
   style: keep one and write the colour at the call site (`\node[block, draw = sysred] …`), so the
-  `\tikzset` block lists each shape once.
+  `\tikzset` block lists each shape once.  A number that two places share is declared once: a
+  padding in three styles, the gap that is both a picture's `node distance` and a term of a derived
+  length, the title's height in its style and in the spring pitch.  The shared value may be a macro
+  in `ex`/`em`, but halve it with `/2`, never `.5\macro` — TeX concatenates the digits, so `.5` and
+  `2em` become `.52em`, and the error is a silently misplaced spring.  A colour is named for what it
+  marks, not for its hue -- `sys`, `bath`, `couple`, `well`, with `light`/`dark` for the shades --
+  and the RGB value carries the hue.
 - **A schematic's ink comes from the model.**  When the drawn curve is a physical potential, plot
   that function rather than tracing a look-alike, and place everything that encodes a quantity — a
   level, a turning point, a band edge — by evaluating the same closed form, so one parameter at the

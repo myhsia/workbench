@@ -734,7 +734,9 @@ placed by hand.
   that function rather than tracing a look-alike, and place everything that encodes a quantity — a
   level, a turning point, a band edge — by evaluating the same closed form, so one parameter at the
   top of the file re-renders the whole figure and a level's ends meet the wall by construction
-  rather than by eye.  A hand-tuned list of heights looks right until the parameter moves; state the
+  rather than by eye.  A *count* follows the same way: the number of levels that fit under a rim is the
+  floor of the inverted spectrum, not a typed integer, so raising the depth adds a level on its own.
+  A hand-tuned list of heights looks right until the parameter moves; state the
   model's closed form in a comment, and if the model has no closed form, say which approximation the
   drawing uses and how far it is from the exact value.
 

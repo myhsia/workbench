@@ -668,10 +668,13 @@ placed by hand.
   its content, so the content then has to be positioned by hand to stay inside and to keep a common
   margin.  `fit` is the short form (`\node[sys panel, fit = (sysbody)] (sys) {};`) while the body's
   position is free, but it centres the box on its body, so two equal boxes around bodies of
-  different height sit at different heights.  When the two panels must share a *top* edge, put each
-  body's north edge on one line (`anchor = north west` at `[xshift = \gap] otherbody.north east`),
-  measure `north − south` and `east − west`, and create each box with `minimum width`,
-  `minimum height = max + 2\inner sep` and `anchor = north` at `[yshift = \inner sep] body.north`.
+  different height sit at different heights.  When the two panels must share a *height* and a *top*
+  edge, put each body's north edge on one line (`anchor = north west` at `[xshift = \gap]
+  otherbody.north east`) and fit each box around its own body, the shorter one also around one point
+  on the taller body's far edge: `\coordinate (base) at (tallbody.south -| shortbody.west);` then
+  `fit = (shortbody) (base)` beside `fit = (tallbody)`.  `fit` then gives the equal height and the
+  shared top with no measurement, and places the box, so no `anchor`/`at` is needed.  `(A -| B)`
+  takes the x of B and the y of A, which is what keeps that point inside the short panel's width.
 - **A node inside a module states its anchor.**  A bare `\node … at (x,y)` inherits the anchor of
   the enclosing node's placement, and that reaches into the module's own picture: `below = … of`
   leaves `anchor = north`, `right = … of` leaves `anchor = west`.  Measured on a mode ladder, the
